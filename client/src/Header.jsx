@@ -1,7 +1,10 @@
 function Header() {
     return (
         <>
-            {/* <!-- Navigation Menu --> */}
+            {/* <div class="w-screen bg-black flex flex-col">
+            <div class="bg-green-200">NAVBAR WORKING</div> */}
+
+            {/* <!-- Navigation Menu --> */}        
             <nav className="text-black p-4"> {/* bg-gray-800 text-white */}
             <ul className="flex space-x-8">
                 <li><a href="/" className="hover:text-slate-200">Home</a></li>
