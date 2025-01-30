@@ -1,19 +1,22 @@
 import { Routes, Route } from "react-router";
 import ScheduleContainer from "./ScheduleContainer";
 import ListContainer from './ListContainer'
+import TasksContainer from "./TasksContainer";
 
 import App from './App'
 import ComingSoon from './ComingSoon'
 import ShadBtn from './ShadBtn'
+import CSS from './CSS'
 
 function AppRoutes() {
     return (
         <Routes>
             <Route path="/" element={<App />} />
-            <Route path="tasks" element={<ComingSoon endpoint="tasks" />} />
+            <Route path="tasks" element={<TasksContainer />} />
             <Route path="list" element={<ListContainer />} />
             <Route path="schedule" element={<ScheduleContainer />} />
             <Route path="gr" element={<ShadBtn />} />
+            <Route path="css" element={<CSS />} />
             <Route path="*" element={<ComingSoon endpoint="404" />} />
         </Routes>
     )
