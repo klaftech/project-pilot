@@ -1,0 +1,6 @@
+.env
+.venv
+server/__pycache__
+server/archive
+server/instance
+server/migrations
