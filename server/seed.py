@@ -104,8 +104,39 @@ with app.app_context():
         #pin_end="",
         days_length=14
     )
+    task_4 = Task(
+        name='Foundation',
+        project_id=project_1.id,
+        group_id=group_1.id,
+        # plan_start="",
+        #plan_end="",
+        #pin_start="",
+        #pin_end="",
+        days_length=14
+    )
+    task_5 = Task(
+        name='Survey',
+        project_id=project_1.id,
+        group_id=group_1.id,
+        # plan_start="",
+        #plan_end="",
+        #pin_start="",
+        #pin_end="",
+        days_length=3
+    )
+    task_6 = Task(
+        name='Apply for Permits',
+        project_id=project_1.id,
+        group_id=group_1.id,
+        # plan_start="",
+        #plan_end="",
+        #pin_start="",
+        #pin_end="",
+        days_length=7
+    )
+
     print('Adding Task objects to transaction...')
-    db.session.add_all([task_1, task_2, task_3])
+    db.session.add_all([task_1, task_2, task_3, task_4, task_5, task_6])
     print('Committing transaction...')
     db.session.commit()
     print('Complete.')
@@ -116,12 +147,32 @@ with app.app_context():
         task_id=task_2.id,
         dependent_task_id=task_1.id
     )
+    td_11 = TaskDependency(
+        task_id=task_2.id,
+        dependent_task_id=task_1.id
+    )
     td_2 = TaskDependency(
         task_id=task_3.id,
         dependent_task_id=task_2.id
     )
+    td_3 = TaskDependency(
+        task_id=task_4.id,
+        dependent_task_id=task_3.id
+    )
+    td_4 = TaskDependency(
+        task_id=task_5.id,
+        dependent_task_id=task_3.id
+    )
+    td_5 = TaskDependency(
+        task_id=task_5.id,
+        dependent_task_id=task_6.id
+    )
+    td_6 = TaskDependency(
+        task_id=task_6.id,
+        dependent_task_id=task_1.id
+    )
     print('Adding TaskDependency objects to transaction...')
-    db.session.add_all([td_1, td_2])
+    db.session.add_all([td_1, td_2, td_3, td_4, td_5, td_6])
     print('Committing transaction...')
     db.session.commit()
     print('Complete.')
