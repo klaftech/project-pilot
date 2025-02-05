@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_bcrypt import Bcrypt 
 
+app = Flask(__name__)
 # full-stack deployment
 # app = Flask(
 #     __name__,
@@ -14,10 +15,9 @@ from flask_bcrypt import Bcrypt
 #     static_folder='../client/dist',
 #     template_folder='../client/dist'
 # )
-app = Flask(__name__)
-@app.errorhandler(404)
-def not_found(e):
-    return render_template("index.html")
+# @app.errorhandler(404)
+# def not_found(e):
+#     return render_template("index.html")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db' 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False     

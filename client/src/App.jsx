@@ -1,13 +1,11 @@
-
-import ShadBtn from './ShadBtn'
-import TableContainer from './data-table/PaymentTableContainer'
+import TasksTable from './data-table/TasksTable'
 import ChartCard from './data-table/ChartCard'
-import Header from './Header'
+import Navbar from './Navbar'
 
-function App() {
+function App({tasks}) {
   return (
     <>
-      <Header />
+      <Navbar />
 
       <div className="container mx-auto p-6">
 
@@ -52,7 +50,7 @@ function App() {
       <div className="container mx-auto p-6">
           <div className="mx-auto">
           {/* <div className="mx-auto max-w-md overflow-hidden rounded-xl bg-white shadow-md md:max-w-2xl"> */}
-          <TableContainer />
+          <TasksTable tasks={tasks} />
         </div>
       </div>
     </>

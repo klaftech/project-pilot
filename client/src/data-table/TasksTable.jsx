@@ -1,11 +1,11 @@
 import DataTable from './components/DataTable'
 import {columns} from './TasksTableColumns.jsx'
-import { tasks_data } from '../tasks_data.js'
+//import { tasks_data } from '../tasks_data.js'
 
-export function TasksTable() {
+export function TasksTable({tasks}) {
     
-    //convert object to array
-    const tasks = Object.values(tasks_data)
+    //convert object to array (get from parent component instead)
+    //const tasks = Object.values(tasks_data)
 
     // // data shape
     // const tasks = [
