@@ -34,8 +34,8 @@ with app.app_context():
         username="user",
         email="user@example.com"
     )
-    user_1.password = "123"
-    user_2.password = "123"
+    user_1.password_hash = "123"
+    user_2.password_hash = "123"
     print('Adding User objects to transaction...')
     db.session.add_all([user_1, user_2])
     print('Committing transaction...')

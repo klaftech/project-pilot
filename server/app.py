@@ -5,6 +5,7 @@ from flask import request, abort, make_response, session
 from flask_restful import Resource
 
 from werkzeug.exceptions import NotFound, Unauthorized
+from datetime import datetime, time
 
 # local imports
 from config import app, db, api
@@ -20,6 +21,12 @@ def authenticate_user():
         raise Unauthorized    
 
 
+def validate_date_input(date_string, date_format):
+    try:
+        datetime.strptime(date_string, date_format)
+        return True
+    except ValueError:
+        return False
 
 class UserSignup(Resource):
     def post(self):
@@ -46,7 +53,7 @@ class UserLogin(Resource):
         if user and user.authenticate(data['password']):
             session['user_id'] = user.id
             return make_response(user.to_dict(only=('id','name','email')), 200)
-        return make_response({"errors": ["Login Error"]}, 402)
+        return make_response({"errors": ["Login Error"]}, 403)
 
 class UserLogout(Resource):
     def delete(self):
@@ -84,12 +91,18 @@ class Tasks(Resource):
                 name = data['name'],
                 project_id = data['project_id'],
                 group_id = data['group_id'],
-                plan_start = data['plan_start'],
-                plan_end = data['plan_end'],
-                pin_start = data['pin_start'],
-                pin_end = data['pin_end'],
+                #plan_start = data['plan_start'], #gets populated from project_id.start
+                #plan_end = data['plan_end'], #gets populated from project.id.end
+                #pin_start = data['pin_start'],
+                #pin_end = data['pin_end'],
                 days_length = data['days_length']
             )
+
+            if 'pin_start' in data and validate_date_input(data['pin_start'], "%Y-%m-%d"):
+                new_record.pin_start = datetime.strptime(data['pin_start'], "%Y-%m-%d")
+            if 'pin_end' in data and validate_date_input(data['pin_end'], "%Y-%m-%d"):
+                new_record.pin_end = datetime.strptime(data['pin_end'], "%Y-%m-%d")
+
         except ValueError as e:
             abort(422, e.args[0])
         
@@ -127,25 +140,22 @@ class TaskByID(Resource):
             return make_response({"error": f"Model ID: {id} not found"}, 404)
         data = request.get_json()
         try:
+            if ('complete_status' in data) and (data['complete_status']) and not (model.complete_status):
+                print('TASK MARKED COMPLETE')
+                user = User.query.filter_by(id=session["user_id"]).first()
+
+                model.complete_status = data['complete_status']
+                model.complete_comment = "marked complete on app"
+                model.complete_date = datetime.combine(datetime.now(), time.min)
+                model.complete_user_id = user.id
+
             for attr,value in data.items():
                 setattr(model, attr, value)
             
-            # if 'name' in data:
-            #     model.name = data['name']
-            # if 'project_id' in data:
-            #     model.project_id = data['project_id']
-            # if 'group_id' in data:
-            #     model.group_id = data['group_id']
-            # if 'plan_start' in data:
-            #     model.plan_start = data['plan_start']
-            # if 'plan_end' in data:
-            #     model.plan_end = data['plan_end']
-            # if 'pin_start' in data:
-            #     model.pin_start = data['pin_start']
-            # if 'pin_end' in data:
-            #     model.pin_end = data['pin_end']
-            # if 'days_length' in data:
-            #     model.days_length = data['days_length']
+            if 'pin_start' in data:
+                model.pin_start = datetime.strptime(data['pin_start'], "%Y-%m-%d")
+            if 'pin_end' in data:
+                model.pin_end = datetime.strptime(data['pin_end'], "%Y-%m-%d")
                 
         except ValueError as e:
             return make_response({"error": e.args}, 422)
@@ -179,7 +189,7 @@ class TaskByID(Resource):
 
 
 
-class TaskDependencies(Resource):
+class Dependencies(Resource):
     @classmethod
     def find_task_model_by_id(cls, id):
         #return RoutineItem.query.get_or_404(id)
@@ -188,36 +198,27 @@ class TaskDependencies(Resource):
             return model
         else:
             return False
-
+        
+    # def get(self, task_id):
+        # task_model = self.__class__.find_task_model_by_id(task_id)
+        # if not task_model:
+        #     return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
+        # tasks = [task.to_dict() for task in TaskDependency.query.filter(TaskDependency.task_id == task_model.id).all()]
+        # return make_response(tasks, 200)
     
-    def get(self, task_id):
-        # user_id = session.get('user_id')
-        # if not user_id:
-        #     return make_response({"error": "User not logged in"}, 401)
-        # tasks = [task.to_dict(rules=('-user',)) for task in Task.query.filter(Task.user_id == user_id).all()]
-        
-        task_model = self.__class__.find_task_model_by_id(task_id)
-        if not task_model:
-            return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
-        
-        tasks = [task.to_dict() for task in TaskDependency.query.filter(TaskDependency.task_id == task_model.id).all()]
-        return make_response(tasks, 200)
-    
-    def post(self, task_id):
-        # user_id = session.get('user_id')
-        # if not user_id:
-        #     return make_response({"error": "User not logged in"}, 401)
-        
-        task_model = self.__class__.find_task_model_by_id(task_id)
-        if not task_model:
-            return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
-        
+    def post(self):
         data = request.get_json()
         try:
-            request_data_id = data['dependent_task_id']
-            dependent_task_model = self.__class__.find_task_model_by_id(request_data_id)
+            task_id = data['task_id']
+            parent_task_id = data['dependent_task_id']
+
+            task_model = self.__class__.find_task_model_by_id(task_id)
+            if not task_model:
+                return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
+
+            dependent_task_model = self.__class__.find_task_model_by_id(parent_task_id)
             if not dependent_task_model:
-                return make_response({"error": f"DependentTask Model ID: {request_data_id} not found"}, 404)
+                return make_response({"error": f"Task Model ID: {parent_task_id} not found"}, 404)
 
             new_record = TaskDependency(
                 task_id = task_model.id,
@@ -242,7 +243,7 @@ class TaskDependencies(Resource):
         return make_response(new_record.to_dict(), 201)
     
 
-class TaskDependencyByID(Resource):
+class DependencyByID(Resource):
     @classmethod
     def find_model_by_id(cls, id):
         #return RoutineItem.query.get_or_404(id)
@@ -279,6 +280,94 @@ class TaskDependencyByID(Resource):
 
 
 
+def find_task_model_by_id(id):
+    #return RoutineItem.query.get_or_404(id)
+    model = Task.query.filter_by(id=id).first()
+    if model:
+        return model
+    else:
+        return False
+
+@app.route('/api/tasks/<task_id>/dependencies', methods=['GET'])
+def get_dependencies_current(task_id):
+    task_model = find_task_model_by_id(task_id)
+    if not task_model:
+        return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
+    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in TaskDependency.query.filter(TaskDependency.task_id == task_model.id).all()]
+    return make_response(tasks, 200)
+
+@app.route('/api/tasks/<task_id>/descendents', methods=['GET'])
+def get_dependencies_descendents(task_id):
+    task_model = find_task_model_by_id(task_id)
+    if not task_model:
+        return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
+    
+    #recursively get children
+    descendents = {}
+    if task_model.children_tasks:
+        from collections import deque
+        children = deque([child.owner_task for child in task_model.children_tasks])
+        while children:
+            current_task = children.popleft()
+            descendents[current_task.id] = current_task
+            
+            if current_task.children_tasks:
+                for child in current_task.children_tasks:
+                    children.append(child.owner_task)
+
+    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in descendents.values()]
+    return make_response(tasks, 200)
+
+@app.route('/api/tasks/<task_id>/ancestors', methods=['GET'])
+def get_dependencies_ancestors(task_id):
+    task_model = find_task_model_by_id(task_id)
+    if not task_model:
+        return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
+    
+    #recursively get parents
+    ancestors = {}
+    if task_model.parent_tasks:
+        from collections import deque
+        parents = deque([parent.parent_task for parent in task_model.parent_tasks])
+        while parents:
+            current_task = parents.popleft()
+            ancestors[current_task.id] = current_task
+            
+            if current_task.parent_tasks:
+                for parent in current_task.parent_tasks:
+                    parents.append(parent.parent_task)
+
+    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in ancestors.values()]
+    return make_response(tasks, 200)
+
+
+@app.route('/api/tasks/<task_id>/available', methods=['GET'])
+def get_dependencies_available(task_id):
+    task_model = find_task_model_by_id(task_id)
+    if not task_model:
+        return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
+    
+    #recursively get parents
+    ancestors = {}
+    if task_model.parent_tasks:
+        from collections import deque
+        parents = deque([parent.parent_task for parent in task_model.parent_tasks])
+        while parents:
+            current_task = parents.popleft()
+            ancestors[current_task.id] = current_task
+            
+            if current_task.parent_tasks:
+                for parent in current_task.parent_tasks:
+                    parents.append(parent.parent_task)
+
+    # until here is copy of ancestors above
+    ancestors = set([task for task in ancestors.values()])
+    all_tasks = set([task for task in Task.query.filter(Task.id != task_model.id).all()])
+    available_tasks_set = all_tasks - ancestors
+    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in available_tasks_set]
+    return make_response(tasks, 200)
+
+
 def recursively_update_children(task_model):
     logger = []
     logger.append("RECURSIVELY UPDATING CHILDREN: ")
@@ -313,8 +402,9 @@ api.add_resource(UserLogin, '/api/login')
 api.add_resource(UserLogout, '/api/logout')
 api.add_resource(UserAuthorize, '/api/authorize')
 
-api.add_resource(TaskDependencies, '/api/tasks/<int:task_id>/dependencies')
-api.add_resource(TaskDependencyByID, '/api/tasks/dependencies/<int:id>')
+api.add_resource(Dependencies, '/api/dependencies')
+api.add_resource(DependencyByID, '/api/dependencies/<int:id>')
+#api.add_resource(DependencyByTask, '/api/dependencies/task/<int:task_id>') #using decorator instead
 
 api.add_resource(Tasks, '/api/tasks')
 api.add_resource(TaskByID, '/api/tasks/<int:id>')
