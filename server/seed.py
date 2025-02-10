@@ -45,10 +45,14 @@ with app.app_context():
 
     print('Creating Projects...')
     project_1 = Project(
-        name='123 Main Street Building'
+        name='123 Main Street Building',
+        project_type='house',
+        description="Single-Family Home"
     )
     project_2 = Project(
-        name='Amazon Warehouse'
+        name='Amazon Warehouse',
+        project_type='commercial',
+        description="Steel work"
     )
     print('Adding Project objects to transaction...')
     db.session.add_all([project_1, project_2])

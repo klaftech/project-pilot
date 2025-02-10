@@ -196,7 +196,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"name\": \"tester\",\n  \"username\": \"test\",\n  \"email\": \"e@example.com\",\n  \"password\": \"123\" \n}",
+					"raw": "{\n  \"name\": \"tester\",\n \"email\": \"e@example.com\",\n  \"password\": \"123\",\n  \"confirmPassword\": \"123\" \n}",
 					"options": {
 						"raw": {
 							"language": "json"
