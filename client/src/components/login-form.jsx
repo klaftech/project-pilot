@@ -1,4 +1,5 @@
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form'
+import { Link } from 'react-router'
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -95,9 +96,9 @@ export function LoginForm({
               </div>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
-                <a href="/signup" className="underline underline-offset-4">
+                <Link to="/signup" className="underline underline-offset-4">
                   Sign up
-                </a>
+                </Link>
               </div>
             </div>
           </form>
@@ -105,8 +106,8 @@ export function LoginForm({
       </Card>
       <div
         className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary  ">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
+        By clicking continue, you agree to our <Link to="#">Terms of Service</Link>{" "}
+        and <Link to="#">Privacy Policy</Link>.
       </div>
     </div>)
   );

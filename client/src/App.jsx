@@ -1,5 +1,5 @@
 import TasksTable from './data-table/TasksTable'
-import ChartCard from './data-table/ChartCard'
+import ChartCard from './ChartCard'
 import Navbar from './Navbar'
 
 function App({tasks}) {

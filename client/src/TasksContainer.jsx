@@ -1,30 +1,30 @@
 import Navbar from './Navbar'
-//import { tasks_data } from './tasks_data.js' 
 import TaskCard from './TaskCard'
-import { Separator } from "@/components/ui/separator"
 import TaskForm from './TaskForm'
-import { useState } from 'react'
+//import { tasks_data } from './tasks_data.js' 
+import ShowAlert from './ShowAlert'
+import { getToday, isDateToday, getDiffToday } from './helpers.js'
+
+import { useState, useContext } from 'react'
+import { useNavigate } from 'react-router'
+
+import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { ChevronRight } from "lucide-react";
 
-export function TasksContainer({tasks}) {
+import ProjectContext from './context/ProjectContext'
+
+export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
     
-    //convert object to array
-    //const tasks = Object.values(tasks_data)
-
-    // // data shape
-    // const tasks = [
-    //     {
-    //       "id": "206",
-    //       "name": "Sign Contract",
-    //       "start": "2025-01-29",
-    //       "end": "2025-02-05",
-    //       "days_length": 7,
-    //       "progress": 0
-    //     },
+    const navigate = useNavigate();
+    const {project, setProject} = useContext(ProjectContext);
+    //console.log("ProjectContext ",project)
 
     const [isOpen, setIsOpen] = useState(false)
     const [formScenario, setFormScenario] = useState(false)
     const [taskEditObject, setTaskEditObject] = useState(null)
+    const [alert, setAlert] = useState(null)
 
     const handleClickEdit = (task) => {
         setTaskEditObject(task)
@@ -32,17 +32,94 @@ export function TasksContainer({tasks}) {
         setIsOpen(!isOpen)
     }
 
+    const handleClickView = (task) => {
+        navigate('/task/'+task.id)
+    }
+
+    const handleClickComplete = async (task) => {
+        const url = "api/tasks/"+task.id
+        try {
+            const response = await fetch(
+                url,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        complete_status: true,
+                    }),
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                },
+            )
+            if(!response.ok){
+                //throw new Error(`Response status: ${response.status}`);
+                throw new Error(response.status);
+            }
+            
+            const data = await response.json()
+            console.log("onClickComplete(): task updated")
+            console.log("onClickComplete() response: ",data)
+            
+            pushUpdateTask(data)
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const handleClickDelete = async (task) => {
+        const url = "api/tasks/"+task.id
+        try {
+            const response = await fetch(
+                url,
+                {
+                    method: "DELETE",
+                },
+            )
+            if(!response.ok){
+                //throw new Error(`Response status: ${response.status}`);
+                if(response.status == "424"){
+                    const data = await response.json()
+                    throw new Error(data.error)
+                } else {
+                    throw new Error(response.status);
+                }
+            }
+            
+            console.log("onClickDelete(): task deleted")
+            
+            reloadTasks()
+        } catch (error) {
+            console.log(error.message)
+            setAlert(error.message)
+        }
+    }
+
+    if(tasks.length > 0){
+        const task_start = tasks[1].start
+        task_start.setHours(0,0,0,0)
+        console.log("TS",task_start)
+        console.log("TD",getToday())
+        console.log("M",task_start.getTime() === getToday().getTime())
+    }
+    
     return (
         <>
-            <Navbar />
+            <Navbar/>
 
-            <Button onClick={()=>{
-                setIsOpen(!isOpen)
-                setFormScenario("create")
-                setTaskEditObject(null)
-            }} variant="outline">Create Task</Button>
+            {alert && <ShowAlert message={alert}/>}
             
-            <TaskForm isOpen={isOpen} setIsOpen={setIsOpen} taskEditObject={taskEditObject} formScenario={formScenario} />
+            <div className="flex items-center px-2 m-1">
+                <Button onClick={()=>{
+                        setIsOpen(!isOpen)
+                        setFormScenario("create")
+                        setTaskEditObject(null)
+                    }} variant="outline">Create Task
+                </Button>
+                <ChevronRight />
+                <Badge>Project {project}</Badge>
+            </div>
+
+            <TaskForm isOpen={isOpen} setIsOpen={setIsOpen} taskEditObject={taskEditObject} formScenario={formScenario} pushUpdateTask={pushUpdateTask} />
             
             {/* <div className="container mx-auto p-6">
                 { 
@@ -61,7 +138,6 @@ export function TasksContainer({tasks}) {
                 </div>
             </div> */}
 
-
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6">
                 <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col">
@@ -71,8 +147,10 @@ export function TasksContainer({tasks}) {
                     <Separator orientation="horizontal" />
                     <div className="container mx-auto p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-6">
-                            {tasks.map((task) => {
-                                return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} />
+                            {tasks.filter(task => {
+                                return isDateToday(task.start) && task.complete_status == false 
+                            }).map((task) => {                               
+                                return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
                             })}
                         </div>
                     </div>
@@ -86,8 +164,10 @@ export function TasksContainer({tasks}) {
                     <Separator orientation="horizontal" />
                     <div className="container mx-auto p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-6">
-                            {tasks.map((task) => {
-                                return <TaskCard key={task.id} task={task} />
+                            {tasks.filter(task => {
+                                return getDiffToday(task.start) <= 7 && getDiffToday(task.start) > 0 && task.complete_status == false
+                            }).map((task) => {
+                                return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
                             })}
                         </div>
                     </div>
@@ -95,13 +175,15 @@ export function TasksContainer({tasks}) {
 
                 <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col">
                     <div className="text-center">
-                        DELAYED
+                        DUE
                     </div>
                     <Separator orientation="horizontal" />
                     <div className="container mx-auto p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-6">
-                            {tasks.map((task) => {
-                                return <TaskCard key={task.id} task={task} />
+                            {tasks.filter(task => {
+                                return getDiffToday(task.start) < 0 && task.complete_status == false
+                            }).map((task) => {
+                                return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
                             })}
                         </div>
                     </div>
