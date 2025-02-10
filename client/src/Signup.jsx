@@ -1,18 +1,19 @@
-import { LoginForm } from "@/components/login-form"
+import { SignupForm } from "@/components/signup-form"
+import { SignupSuccess } from "@/components/signup-success"
 import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from 'react-router'
 import UserContext from './context/UserContext'
 
-import { GalleryVerticalEnd } from "lucide-react"
 import MainLogo from '/logo.webp'
 import Logo from '/logo_transparent.png'
 
-export default function LoginPage() {
+export default function SignupPage() {
 
     const [serverErrors, setServerErrors] = useState(null)
+    const [signupSuccess, setSignupSuccess] = useState(false)
     const {user, setUser} = useContext(UserContext);
     const navigate = useNavigate();
-    
+
     useEffect(() => {
         if(user) {
             console.log("user is already logged in, redirecting to /")
@@ -20,13 +21,18 @@ export default function LoginPage() {
         }
     }, [])
 
-    const handleLogin = async (form_data) => {
+    const handleSignup = async (form_data) => {
         try {
             const response = await fetch(
-                "api/login",
+                "api/signup",
                 {
                     method: "POST",
-                    body: JSON.stringify({ email: form_data['email'], password: form_data['password'] }),
+                    body: JSON.stringify({ 
+                        name: form_data['name'], 
+                        email: form_data['email'], 
+                        password: form_data['password'],
+                        confirmPassword: form_data['confirmPassword']
+                     }),
                     headers: {
                         "Content-Type": "application/json",
                     },
@@ -38,10 +44,14 @@ export default function LoginPage() {
             }
             
             const data = await response.json()
-            console.log('Successfully Logged In. Navigating to /')
+            console.log('User successfully created.')
             console.log(data)
-            setUser(data)
-            navigate('/');
+            setSignupSuccess(true)
+            
+            // if we want to auto-login
+            //console.log('User successfully created. Navigating to /')
+            //setUser(data)
+            //navigate('/');
         } catch (error) {
             setServerErrors(error)
             //console.log(error)
@@ -58,7 +68,8 @@ export default function LoginPage() {
           </div>
           ProjectPilot
         </Link>
-        <LoginForm serverErrors={serverErrors} onLoginSubmit={handleLogin} />
+        {signupSuccess && <SignupSuccess />}
+        {!signupSuccess && <SignupForm serverErrors={serverErrors} onSignupSubmit={handleSignup} />}
       </div>
     </div>
   )

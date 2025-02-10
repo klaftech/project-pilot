@@ -2,6 +2,7 @@
 import { DataTableColumnHeader } from "./components/DataTableColumnHeader";
 import { createColumnHelper } from "@tanstack/react-table";
 const columnHelper = createColumnHelper();
+import StatusBadge from "../StatusBadge";
 
 import { 
   MoreHorizontal,
@@ -20,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+import { useNavigate } from "react-router";
 
 // {
 //     "id": "591",
@@ -29,7 +31,6 @@ import {
 //     "days_length": 14,
 //     "progress": 0
 // },
-
 
 const columns = [
   columnHelper.display({
@@ -70,7 +71,7 @@ const columns = [
     header: "Status",
     cell: ({ row }) => {  
         // return <div className="text-right font-medium">Pending</div>;
-        return <Badge variant="destructive">Pending</Badge>
+        return <StatusBadge task={row.original} />
     },
     enableSorting: false,
     enableHiding: true,
@@ -84,7 +85,7 @@ const columns = [
         ),
         cell: ({ row }) => {
             const progress = parseFloat(row.getValue("progress"));        
-            return <div className="text-right font-medium">{progress}%</div>;
+            return <div className="text-left font-medium">{progress}%</div>;
         },
     }
   ),
@@ -96,7 +97,7 @@ const columns = [
         ),
         cell: ({ row }) => {
           const length = parseFloat(row.getValue("days_length"));        
-          return <div className="text-right font-medium">{length} days</div>;
+          return <div className="text-left font-medium">{length} days</div>;
         },
     }
   ),
@@ -112,7 +113,7 @@ const columns = [
         month: '2-digit',
         day: '2-digit'
       }).format(date)
-      return <div className="text-right font-medium">{formatted}</div>;
+      return <div className="text-left font-medium">{formatted}</div>;
     },
   }),
 
@@ -127,7 +128,7 @@ const columns = [
         month: '2-digit',
         day: '2-digit'
       }).format(date)
-      return <div className="text-right font-medium">{formatted}</div>;
+      return <div className="text-left font-medium">{formatted}</div>;
     },
   }),
 
@@ -136,7 +137,8 @@ const columns = [
     id: "actions",
     cell: ({ row }) => {
       const task = row.original;
-
+      const navigate = useNavigate();
+      
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -153,7 +155,7 @@ const columns = [
               Copy task details
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View task</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/task/'+task.id)}>View task</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

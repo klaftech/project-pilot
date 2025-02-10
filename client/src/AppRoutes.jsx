@@ -1,24 +1,44 @@
-import { Routes, Route, useNavigate } from "react-router";
+import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useEffect, useState, useContext } from 'react'
 import ScheduleContainer from "./ScheduleContainer";
 import ListContainer from './ListContainer'
 import TasksContainer from './TasksContainer';
+import Signup from './Signup'
 import Login from './Login'
 import Logout from './Logout'
 
-import UserContext from './context/UserContext'
+import { taskBuilder, taskDefault } from './helpers.js'
 
-import TaskInnerForm from './TaskInnerForm'
+import UserContext from './context/UserContext'
+import ProjectContext from './context/ProjectContext'
+
+import ToastDemo from "./ToastDemo";
+import TaskInnerForm from './_TaskInnerForm'
+import TaskDetailsById from './TaskDetailsById'
+import ProjectDetailsById from './ProjectDetailsById'
+import ProjectOverview from './ProjectOverview'
 import App from './App'
 import ComingSoon from './ComingSoon'
-import CSS from './CSS'
+import CSS from './_CSS'
 
 function AppRoutes() {
+    
+    // ********************************************************************
+    // ********************* START USER AUTHORIZATION *********************
+    // ********************************************************************
     const {user, setUser} = useContext(UserContext);
+    const {project, setProject} = useContext(ProjectContext);
     const navigate = useNavigate()
+    let location = useLocation()
+    //console.log("AppRoutes ContextProject: ",project)
+    //console.log("AppRoutes ContextUser: ",user)
+    //console.log(location)
 
     useEffect(() => {
-        fetchUser()
+        console.log(location.pathname)
+        if(location.pathname != "/signup"){
+            fetchUser()
+        }
     }, [])
 
     const fetchUser = () => (
@@ -29,34 +49,30 @@ function AppRoutes() {
                 .then(data => {
                     setUser(data)
                     console.log("user validated by session: "+data.email+" ID:"+data.id)
+                    
+                    //set default selected project to 1
+                    setProject(1)
                 })
             } else {
                 navigate('/login')
             }
         })
     )
-
+    // ********************************************************************
+    // ********************** ENG USER AUTHORIZATION **********************
+    // ********************************************************************
     
 
-
-
+    
     // ********************************************************************
     // ******************** START MANAGE TASKS DATA ***********************
     // ********************************************************************
-    const defaultTask = [
-        {
-            "id": null,
-            "name": null,
-            "start": null,
-            "end": null,
-            "days_length": null,
-            "progress": null
-        }
-    ]
     const [tasks, setTasks] = useState([])
 
     useEffect(() => {
-        fetchTasks()
+        if((location.pathname != "/signup") && (location.pathname != "/login")){
+            fetchTasks()
+        }
     }, [])
 
     const fetchTasks = () => (
@@ -65,7 +81,7 @@ function AppRoutes() {
             if(res.ok){
                 res.json()
                 .then(data => {
-                    buildTasksShape(data)
+                    buildTaskList(data)
                     //console.log(data)
                 })
             } else {
@@ -74,20 +90,30 @@ function AppRoutes() {
         })
     )
     
-    const buildTasksShape = (tasks) => {
-        const task_json = tasks.map(task => {
-            return {
-                "id": task.id,
-                "name": task.name,
-                "start": task.sched_start.slice(0,10), //remove time
-                "end": task.sched_end.slice(0,10), // remove time
-                "days_length": task.days_length,
-                "progress": task.progress
-            }
+    const buildTaskList = (tasks) => {
+        const tasklist = tasks.map(task => {
+            return taskBuilder(task)
         })
-        setTasks(task_json)
+        setTasks(tasklist)
+        console.log('AppRoutes: tasklist reloaded')
     }
 
+    const handleUpdateTask = (data) => {
+        // ideally, we can just filter and replace the object in the tasklist state,
+        // howeve, since updating a task may cause cascading schedule changes, we must re-load all tasklist data
+        // 
+        // we can check if this task already exists in state (otherwise, new record, must re-update?), 
+        // if it does, check if dates changed (we only have cascading changes on date edit, otherwise was simple name change)
+        // only if there is any date change must we re-load full tasklist
+        // WHAT ABOUT MARKING COMPLETE???? that would cascade dependent tasks....
+        
+        // for now, just reload all date....
+        fetchTasks()
+    }
+
+    const handleReloadTasks = () => {
+        fetchTasks()
+    }
     //console.log(tasks)
     // ********************************************************************
     // ******************** END MANAGE TASKS DATA *************************
@@ -95,22 +121,26 @@ function AppRoutes() {
 
 
 
-
-
-    if(!user) return (
+    if((!user) && (location.pathname != "/signup")) return (
         <Login/>
     )
     
     return (
         <Routes>
             <Route path="/" element={<App tasks={tasks} />} />
-            <Route path="tasks" element={<TasksContainer tasks={tasks} />} />
+            <Route path="project/:projectId" element={<ProjectDetailsById />} />
+            <Route path="overview" element={<ProjectOverview />} />
+            <Route path="task/:taskId" element={<TaskDetailsById tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
+            <Route path="tasks" element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
             <Route path="list" element={<ListContainer tasks={tasks} />} />
-            <Route path="schedule" element={<ScheduleContainer />} />
-            <Route path="css" element={<CSS />} />
+            <Route path="schedule" element={<ScheduleContainer tasks={tasks} />} />
+            <Route path="signup" element={<Signup />} />
             <Route path="login" element={<Login />} />
             <Route path="logout" element={<Logout updateUser={setUser} />} />
             <Route path="form" element={<TaskInnerForm />} />
+            <Route path="toast" element={<ToastDemo />} />
+            <Route path="css" element={<CSS />} />
+            
             <Route path="*" element={<ComingSoon endpoint="404" />} />
         </Routes>
     )

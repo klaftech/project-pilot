@@ -13,36 +13,45 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export function LoginForm({
-  className,
-  serverErrors, 
-  onLoginSubmit
-}) {
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod"
 
+export function SignupForm({ className, serverErrors, onSignupSubmit }) 
+{
   const form = useForm()
 
+  const signupSchema = z.object({
+    name: z.string({ required_error: "Full name is required.", })
+      .min(2, { message: "Name must be at least 2 characters.", }),
+    email: z.string().email(),
+    password: z.string().min(4, { message: "Please enter a secure password.", }),
+    confirmPassword: z.string().min(4, { message: "Please enter a secure password.", }),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+});
+
   const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
+      name: '',
       email: '',
-      password: ''
+      password: '',
+      confirmPassword: '',
     }
   });
-
-  // const onSubmit = (data) => {
-  //   console.log(data);
-  // };
 
   return (
     (<div className={cn("flex flex-col gap-6", className)}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome back</CardTitle>
+          <CardTitle className="text-xl">Signup</CardTitle>
           {/* <CardDescription>
             Login with your Apple or Google account
           </CardDescription> */}
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onLoginSubmit)}>
+          <form onSubmit={handleSubmit(onSignupSubmit)}>
             <div className="grid gap-6">
               {/* <div className="flex flex-col gap-4">
                 <Button variant="outline" className="w-full">
@@ -72,32 +81,39 @@ export function LoginForm({
               {serverErrors ? 
                 <div className="grid gap-6">
                   <div className="text-red-400 font-extrabold grid gap-2">
-                    Login Error
+                    Signup Error
                   </div>
                 </div> : ""}
 
               <div className="grid gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input {...register('email')} id="email" type="email" placeholder="m@example.com" required />
+                  <Label htmlFor="name">Name</Label>
+                  <Input {...register('name')} id="name" type="text" placeholder="John Doe" required />
+                  {errors.name && <span>{errors.name.message}</span>}
                 </div>
                 <div className="grid gap-2">
-                  <div className="flex items-center">
-                    <Label htmlFor="password">Password</Label>
-                    {/* <a href="#" className="ml-auto text-sm underline-offset-4 hover:underline">
-                      Forgot your password?
-                    </a> */}
-                  </div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input {...register('email')} id="email" type="email" placeholder="m@example.com" required />
+                  {errors.email && <span>{errors.email.message}</span>}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
                   <Input {...register('password')} id="password" type="password" required />
+                  {errors.password && <span>{errors.password.message}</span>}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input {...register('confirmPassword')} id="confirmPassword" type="password" required />
+                  {errors.confirmPassword && <span>{errors.confirmPassword.message}</span>}
                 </div>
                 <Button type="submit" className="w-full">
-                  Login
+                  Signup
                 </Button>
               </div>
               <div className="text-center text-sm">
-                Don&apos;t have an account?{" "}
-                <Link to="/signup" className="underline underline-offset-4">
-                  Sign up
+                Already have an account?{" "}
+                <Link to="/login" className="underline underline-offset-4">
+                  Login
                 </Link>
               </div>
             </div>

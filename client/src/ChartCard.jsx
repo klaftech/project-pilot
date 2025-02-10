@@ -1,5 +1,5 @@
 import { TrendingUp } from "lucide-react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, PieChart } from "recharts"
 
 import {
   Card,
@@ -35,6 +35,19 @@ const chartConfig = {
   },
 }
 
+const data = [
+  { name: 'Project', children: [
+    { name: 'Phase 1', children: [
+      { name: 'Task 1', value: 20 },
+      { name: 'Task 2', value: 30 }
+    ]},
+    { name: 'Phase 2', children: [
+      { name: 'Task 3', value: 15 },
+      { name: 'Task 4', value: 25 }
+    ]}
+  ]}
+];
+
 export default function ChartCard() {
   return (
     <Card>
@@ -45,7 +58,14 @@ export default function ChartCard() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
+        {/* <Treemap
+          width={730}
+          height={250}
+          data={data}
+        /> */}
+
+        {/* Important: Remember to set a min-h-[VALUE] on the ChartContainer component. This is required for the chart be responsive. */}
+        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
           <AreaChart
             accessibilityLayer
             data={chartData}

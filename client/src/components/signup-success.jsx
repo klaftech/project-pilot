@@ -1,6 +1,4 @@
-import { useForm } from 'react-hook-form'
 import { Link } from 'react-router'
-
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,41 +8,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
-export function LoginForm({
-  className,
-  serverErrors, 
-  onLoginSubmit
-}) {
-
-  const form = useForm()
-
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: {
-      email: '',
-      password: ''
-    }
-  });
-
-  // const onSubmit = (data) => {
-  //   console.log(data);
-  // };
-
+export function SignupSuccess({ className }) {
   return (
     (<div className={cn("flex flex-col gap-6", className)}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome back</CardTitle>
+          <CardTitle className="text-xl">Signup Successful</CardTitle>
           {/* <CardDescription>
             Login with your Apple or Google account
           </CardDescription> */}
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onLoginSubmit)}>
             <div className="grid gap-6">
-              {/* <div className="flex flex-col gap-4">
+              
+              {/*
+              <div className="flex flex-col gap-4">
                 <Button variant="outline" className="w-full">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path
@@ -67,41 +46,22 @@ export function LoginForm({
                 <span className="relative z-10 bg-background px-2 text-muted-foreground">
                   Or continue with
                 </span>
-              </div> */}
+              </div>
+              */}
 
-              {serverErrors ? 
+             
                 <div className="grid gap-6">
-                  <div className="text-red-400 font-extrabold grid gap-2">
-                    Login Error
+                  <div className="grid gap-2">
+                    Your account have been successfully created. 
                   </div>
-                </div> : ""}
-
-              <div className="grid gap-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input {...register('email')} id="email" type="email" placeholder="m@example.com" required />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center">
-                    <Label htmlFor="password">Password</Label>
-                    {/* <a href="#" className="ml-auto text-sm underline-offset-4 hover:underline">
-                      Forgot your password?
-                    </a> */}
+                  <div className="grid gap-2">
+                    For your security, please login to your new account.
                   </div>
-                  <Input {...register('password')} id="password" type="password" required />
+                  <Link to="/login">
+                    <Button variant="outline" className="w-full">Continue to Login</Button>
+                  </Link>
                 </div>
-                <Button type="submit" className="w-full">
-                  Login
-                </Button>
-              </div>
-              <div className="text-center text-sm">
-                Don&apos;t have an account?{" "}
-                <Link to="/signup" className="underline underline-offset-4">
-                  Sign up
-                </Link>
-              </div>
             </div>
-          </form>
         </CardContent>
       </Card>
       <div

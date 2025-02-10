@@ -1,7 +1,7 @@
 // https://www.shadcnblocks.com/block/navbar1/
 
 import { NavLink, Link } from 'react-router'
-import { Book, Menu, Sunset, Trees, Zap, House } from "lucide-react";
+import { Book, Menu, Sunset, Trees, Zap, House, Building, Factory, BrickWall, Wrench } from "lucide-react";
 
 import {
   Accordion,
@@ -26,14 +26,19 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+import { useEffect, useState, useContext } from 'react'
+import UserContext from './context/UserContext'
+import Logo from '/logo_transparent.png'
+
 const AppNavbar = ({
   logo = {
     url: "/",
-    src: "https://www.shadcnblocks.com/images/block/block-1.svg",
+    // src: "https://www.shadcnblocks.com/images/block/block-1.svg",
+    src: Logo,
     alt: "logo",
     title: "ProjectPilot",
   },
-  menu = [
+  menuPROP = [
     { title: "Home", url: "/" },
     {
         title: "Projects",
@@ -148,6 +153,162 @@ const AppNavbar = ({
     signup: { text: "Sign up", url: "/signup" },
   },
 }) => {
+  
+
+  // ********************************************************************
+  // ********************* BEGIN PROJECTS LOADING ***********************
+  // ********************************************************************
+  const {user, setUser} = useContext(UserContext);
+  //const {project, setProject} = useContext(ProjectContext);
+  //console.log("InNav: ",project)
+  
+  const [projects, setProjects] = useState([])
+
+  useEffect(() => {
+    fetchProjects()
+  }, [user])
+  //trigger reload on user context change (login or full reload)
+
+  const fetchProjects = () => (
+      fetch('/api/projects')
+      .then(res => {
+          if(res.ok){
+              res.json()
+              .then(data => {
+                  setProjects(data)
+                  console.log("projects loaded into Navbar")
+              })
+          } else {
+              console.log('failed to fetch projects')
+          }
+      })
+  )
+  // ********************************************************************
+  // *********************** ENG PROJECTS LOADING ***********************
+  // ********************************************************************
+
+  
+  const projectTypeIcons = {
+    house: <House className="size-5 shrink-0" />,
+    commercial: <Building className="size-5 shrink-0" />,
+    industrial: <Factory className="size-5 shrink-0" />,
+    renovation: <BrickWall className="size-5 shrink-0" />,
+  }
+
+  const renderProjectMenuItems = (project) => {
+    return {
+      key: project.id,
+      title: project.name,
+      description: project.description,
+      icon: projectTypeIcons[project.project_type] ?? <Wrench className="size-5 shrink-0" />,
+      url: "/project/"+project.id,
+    }
+  }
+
+  const menu = [
+    { title: "Home", url: "/" },
+    {
+        title: "Projects",
+        url: "/",
+        items: projects.map(project => renderProjectMenuItems(project)),
+        // items: [
+        //   {
+        //     title: "123 Main St",
+        //     description: "123 Main St Project",
+        //     icon: <House className="size-5 shrink-0" />,
+        //     url: "/",
+        //   },
+        // ],
+    },
+    {
+        title: "Tasks",
+        description: "View Task Cards",
+        icon: <Book className="size-5 shrink-0" />,
+        url: "/tasks",
+    },
+    {
+        title: "List",
+        description: "View List of Tasks",
+        icon: <Book className="size-5 shrink-0" />,
+        url: "/list",
+    },
+    {
+        title: "Schedule",
+        description: "View Schedule",
+        icon: <Book className="size-5 shrink-0" />,
+        url: "/schedule",
+    },
+    // {
+    //   title: "Products",
+    //   url: "#",
+    //   items: [
+    //     {
+    //       title: "Blog",
+    //       description: "The latest industry news, updates, and info",
+    //       icon: <Book className="size-5 shrink-0" />,
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Company",
+    //       description: "Our mission is to innovate and empower the world",
+    //       icon: <Trees className="size-5 shrink-0" />,
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Careers",
+    //       description: "Browse job listing and discover our workspace",
+    //       icon: <Sunset className="size-5 shrink-0" />,
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Support",
+    //       description:
+    //         "Get in touch with our support team or visit our community forums",
+    //       icon: <Zap className="size-5 shrink-0" />,
+    //       url: "#",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Resources",
+    //   url: "#",
+    //   items: [
+    //     {
+    //       title: "Help Center",
+    //       description: "Get all the answers you need right here",
+    //       icon: <Zap className="size-5 shrink-0" />,
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Contact Us",
+    //       description: "We are here to help you with any questions you have",
+    //       icon: <Sunset className="size-5 shrink-0" />,
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Status",
+    //       description: "Check the current status of our services and APIs",
+    //       icon: <Trees className="size-5 shrink-0" />,
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Terms of Service",
+    //       description: "Our terms and conditions for using our services",
+    //       icon: <Book className="size-5 shrink-0" />,
+    //       url: "#",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Pricing",
+    //   url: "#",
+    // },
+    // {
+    //   title: "Blog",
+    //   url: "#",
+    // },
+  ]
+  
   return (
     <section className="py-4">
       <div className="container">
