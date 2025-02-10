@@ -5,11 +5,14 @@ from flask import request, abort, make_response, session
 from flask_restful import Resource
 
 from werkzeug.exceptions import NotFound, Unauthorized
-from datetime import datetime, time
+from datetime import datetime, timedelta, time, date
+from sqlalchemy import func
 
 # local imports
 from config import app, db, api
 from models import db, User, Project, Group, Task, TaskDependency, TaskUser
+
+
 
 # the following adds route-specific authorization
 @app.before_request
@@ -32,9 +35,12 @@ class UserSignup(Resource):
     def post(self):
         try:
             data = request.get_json()
+            if data['password'] != data['confirmPassword']:
+                raise Exception("Passwords do not match")
+            
             user = User(
                 name=data['name'],
-                email=data['email']
+                email=data['email'],
             )
             user.password_hash=data['password']
             db.session.add(user)
@@ -159,6 +165,9 @@ class TaskByID(Resource):
                 
         except ValueError as e:
             return make_response({"error": e.args}, 422)
+        
+        # recalculate schedule and commit
+        model.calculate_schedule()
         db.session.commit()
 
         #recursively process dependencies
@@ -288,13 +297,16 @@ def find_task_model_by_id(id):
     else:
         return False
 
+
 @app.route('/api/tasks/<task_id>/dependencies', methods=['GET'])
 def get_dependencies_current(task_id):
     task_model = find_task_model_by_id(task_id)
     if not task_model:
         return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
+    
     tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in TaskDependency.query.filter(TaskDependency.task_id == task_model.id).all()]
     return make_response(tasks, 200)
+
 
 @app.route('/api/tasks/<task_id>/descendents', methods=['GET'])
 def get_dependencies_descendents(task_id):
@@ -302,21 +314,9 @@ def get_dependencies_descendents(task_id):
     if not task_model:
         return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
     
-    #recursively get children
-    descendents = {}
-    if task_model.children_tasks:
-        from collections import deque
-        children = deque([child.owner_task for child in task_model.children_tasks])
-        while children:
-            current_task = children.popleft()
-            descendents[current_task.id] = current_task
-            
-            if current_task.children_tasks:
-                for child in current_task.children_tasks:
-                    children.append(child.owner_task)
-
-    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in descendents.values()]
+    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in set(task_model.get_descendents())]
     return make_response(tasks, 200)
+
 
 @app.route('/api/tasks/<task_id>/ancestors', methods=['GET'])
 def get_dependencies_ancestors(task_id):
@@ -324,20 +324,7 @@ def get_dependencies_ancestors(task_id):
     if not task_model:
         return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
     
-    #recursively get parents
-    ancestors = {}
-    if task_model.parent_tasks:
-        from collections import deque
-        parents = deque([parent.parent_task for parent in task_model.parent_tasks])
-        while parents:
-            current_task = parents.popleft()
-            ancestors[current_task.id] = current_task
-            
-            if current_task.parent_tasks:
-                for parent in current_task.parent_tasks:
-                    parents.append(parent.parent_task)
-
-    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in ancestors.values()]
+    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in set(task_model.get_ancestors())]
     return make_response(tasks, 200)
 
 
@@ -347,25 +334,22 @@ def get_dependencies_available(task_id):
     if not task_model:
         return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
     
-    #recursively get parents
-    ancestors = {}
-    if task_model.parent_tasks:
-        from collections import deque
-        parents = deque([parent.parent_task for parent in task_model.parent_tasks])
-        while parents:
-            current_task = parents.popleft()
-            ancestors[current_task.id] = current_task
-            
-            if current_task.parent_tasks:
-                for parent in current_task.parent_tasks:
-                    parents.append(parent.parent_task)
-
-    # until here is copy of ancestors above
-    ancestors = set([task for task in ancestors.values()])
-    all_tasks = set([task for task in Task.query.filter(Task.id != task_model.id).all()])
-    available_tasks_set = all_tasks - ancestors
-    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in available_tasks_set]
+    tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks','-dependencies')) for task in task_model.get_available()]
     return make_response(tasks, 200)
+
+
+@app.route('/api/projects', methods=['GET'])
+def get_projects():
+    projects = [project.to_dict() for project in Project.query.all()]
+    return make_response(projects, 200)
+
+@app.route('/api/projects/<project_id>', methods=['GET'])
+def get_project_details(project_id):
+    model = Project.query.filter_by(id=project_id).first()
+    if not model:
+        return make_response({"error": f"Project ID: {project_id} not found"}, 404)
+    
+    return make_response(model.to_dict(), 200)
 
 
 def recursively_update_children(task_model):
