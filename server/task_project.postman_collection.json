@@ -31,7 +31,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"name\": \"Plant Tress\",\n  \"project_id\": \"1\",\n  \"group_id\": \"1\",\n  \"plan_start\": \"\",\n  \"plan_end\": \"\",\n  \"pin_start\": \"\",\n  \"pin_end\": \"\",\n  \"days_length\": \"14\" \n}",
+					"raw": "{\n  \"name\": \"Plant Tress\",\n  \"project_id\": \"1\",\n  \"group_id\": \"1\",\n \"pin_start\": \"\",\n  \"pin_end\": \"\",\n  \"days_length\": \"14\" \n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -183,6 +183,122 @@
 					"port": "5555",
 					"path": [
 						"api/dependencies",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "groups",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5555/api/groups",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5555",
+					"path": [
+						"api/groups"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "groups",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Planning\", \"project_id\": \"1\" \n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5555/api/groups",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5555",
+					"path": [
+						"api/groups"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "groups/<int:id>",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5555/api/groups/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5555",
+					"path": [
+						"api/groups",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "groups/<int:id>",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Planning2\", \"project_id\": \"1\" \n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5555/api/groups/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5555",
+					"path": [
+						"api/groups",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "groups/<int:id>",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5555/api/groups/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5555",
+					"path": [
+						"api/groups",
 						"1"
 					]
 				}

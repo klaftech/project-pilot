@@ -10,7 +10,7 @@ from sqlalchemy import func
 
 # local imports
 from config import app, db, api
-from models import db, User, Project, Group, Task, TaskDependency, TaskUser
+from models import db, User, Project, Group, Task, TaskDependency, TaskUpdate, TaskUser
 
 
 
@@ -79,6 +79,145 @@ class UserAuthorize(Resource):
             abort(401, "Unauthorized") #should be 401
             #raise Unauthorized
 
+
+class Groups(Resource):
+    def get(self):
+        # user_id = session.get('user_id')
+        # if not user_id:
+        #     return make_response({"error": "User not logged in"}, 401)
+        groups = [group.to_dict(rules=('-tasks','-project')) for group in Group.query.all()]
+        return make_response(groups, 200)
+    
+    def post(self):
+        data = request.get_json()
+        try:
+            new_record = Group(
+                name = data['name'],
+                project_id = data['project_id']
+            )
+        except ValueError as e:
+            abort(422, e.args[0])
+        
+        db.session.add(new_record)
+        db.session.commit()
+        
+        return make_response(new_record.to_dict(), 201)
+    
+
+class GroupByID(Resource):
+    @classmethod
+    def find_model_by_id(cls, id):
+        model = Group.query.filter_by(id=id).first()
+        if model:
+            return model
+        else:
+            return False
+
+    def get(self, id):
+        model = self.__class__.find_model_by_id(id)
+        if not model:
+            return make_response({"error": f"Model ID: {id} not found"}, 404)
+        return make_response(model.to_dict(rules=('-tasks','-project')), 200)
+           
+    def patch(self, id):
+        model = self.__class__.find_model_by_id(id)
+        if not model:
+            return make_response({"error": f"Model ID: {id} not found"}, 404)
+        data = request.get_json()
+        try:
+            for attr,value in data.items():
+                setattr(model, attr, value) 
+        except ValueError as e:
+            return make_response({"error": e.args}, 422)
+        
+        db.session.commit()
+
+        return make_response(model.to_dict(), 202)
+    
+    def delete(self, id):
+        model = self.__class__.find_model_by_id(id)
+        if not model:
+            return make_response({"error": f"Model ID: {id} not found"}, 404)
+        
+        # if there are tasks linked to this group, do not allow delete
+        if model.tasks:
+            tasks_list = ""
+            for task in model.tasks:
+                tasks_list = tasks_list + f'{task.name} (ID: {task.id}), '
+            return make_response({"error": f"There are tasks linked to this group: {tasks_list}"}, 424) # 424: failed dependency
+        
+        db.session.delete(model)
+        db.session.commit()
+        return make_response("", 204)
+
+
+
+
+class TaskUpdates(Resource):
+    def get(self):
+        # user_id = session.get('user_id')
+        # if not user_id:
+        #     return make_response({"error": "User not logged in"}, 401)
+        updates = [update.to_dict(rules=('-task',)) for update in TaskUpdate.query.all()]
+        return make_response(updates, 200)
+    
+    def post(self):
+        data = request.get_json()
+        try:
+            new_record = TaskUpdate(
+                task_id = data['task_id'],
+                task_status = data['task_status'],
+                message = data['message'],
+            )
+        except ValueError as e:
+            abort(422, e.args[0])
+        
+        db.session.add(new_record)
+        db.session.commit()
+        
+        return make_response(new_record.to_dict(), 201)
+    
+
+class TaskUpdateByID(Resource):
+    @classmethod
+    def find_model_by_id(cls, id):
+        model = TaskUpdate.query.filter_by(id=id).first()
+        if model:
+            return model
+        else:
+            return False
+
+    def get(self, id):
+        model = self.__class__.find_model_by_id(id)
+        if not model:
+            return make_response({"error": f"Model ID: {id} not found"}, 404)
+        return make_response(model.to_dict(rules=('-task',)), 200)
+           
+    def patch(self, id):
+        model = self.__class__.find_model_by_id(id)
+        if not model:
+            return make_response({"error": f"Model ID: {id} not found"}, 404)
+        data = request.get_json()
+        try:
+            for attr,value in data.items():
+                setattr(model, attr, value) 
+        except ValueError as e:
+            return make_response({"error": e.args}, 422)
+        
+        db.session.commit()
+
+        return make_response(model.to_dict(), 202)
+    
+    def delete(self, id):
+        model = self.__class__.find_model_by_id(id)
+        if not model:
+            return make_response({"error": f"Model ID: {id} not found"}, 404)
+        
+        db.session.delete(model)
+        db.session.commit()
+        return make_response("", 204)
+
+
 class Tasks(Resource):
     def get(self):
         # user_id = session.get('user_id')
@@ -88,19 +227,12 @@ class Tasks(Resource):
         return make_response(tasks, 200)
     
     def post(self):
-        # user_id = session.get('user_id')
-        # if not user_id:
-        #     return make_response({"error": "User not logged in"}, 401)
         data = request.get_json()
         try:
             new_record = Task(
                 name = data['name'],
                 project_id = data['project_id'],
                 group_id = data['group_id'],
-                #plan_start = data['plan_start'], #gets populated from project_id.start
-                #plan_end = data['plan_end'], #gets populated from project.id.end
-                #pin_start = data['pin_start'],
-                #pin_end = data['pin_end'],
                 days_length = data['days_length']
             )
 
@@ -114,10 +246,7 @@ class Tasks(Resource):
         
         db.session.add(new_record)
         db.session.commit()
-
-        # calculate schedule for new record
-        new_record.calculate_schedule()
-        db.session.commit()
+        #new_record.calculate_schedule() moved to model.before_insert
         
         return make_response(new_record.to_dict(), 201)
     
@@ -137,7 +266,6 @@ class TaskByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
-        #return make_response(model.to_dict(rules=('-children_tasks','-parent_tasks')), 200) # apparently children_tasks can cause recursion error
         return make_response(model.to_dict(), 200)
            
     def patch(self, id):
@@ -146,6 +274,13 @@ class TaskByID(Resource):
             return make_response({"error": f"Model ID: {id} not found"}, 404)
         data = request.get_json()
         try:
+            # # determine if changes are non-schedule affecting, to bypass recursively updating dependencies
+            # non_affecting_fields = ['name','group_id']
+            # non_affected = False
+            # for field in non_affecting_fields:
+            #     if field in data:
+            #         non_affected = True
+
             if ('complete_status' in data) and (data['complete_status']) and not (model.complete_status):
                 print('TASK MARKED COMPLETE')
                 user = User.query.filter_by(id=session["user_id"]).first()
@@ -156,20 +291,20 @@ class TaskByID(Resource):
                 model.complete_user_id = user.id
 
             for attr,value in data.items():
-                setattr(model, attr, value)
+               setattr(model, attr, value)
             
-            if 'pin_start' in data:
-                model.pin_start = datetime.strptime(data['pin_start'], "%Y-%m-%d")
-            if 'pin_end' in data:
-                model.pin_end = datetime.strptime(data['pin_end'], "%Y-%m-%d")
+            # if 'pin_start' in data:
+            #     model.pin_start = datetime.strptime(data['pin_start'], "%Y-%m-%d")
+            # if 'pin_end' in data:
+            #     model.pin_end = datetime.strptime(data['pin_end'], "%Y-%m-%d")
                 
         except ValueError as e:
             return make_response({"error": e.args}, 422)
         
-        # recalculate schedule and commit
-        model.calculate_schedule()
+        #model.calculate_schedule() moved to model.before_insert
         db.session.commit()
 
+        # if non_affected == True:
         #recursively process dependencies
         recursively_update_children(model)
         
@@ -386,12 +521,17 @@ api.add_resource(UserLogin, '/api/login')
 api.add_resource(UserLogout, '/api/logout')
 api.add_resource(UserAuthorize, '/api/authorize')
 
-api.add_resource(Dependencies, '/api/dependencies')
-api.add_resource(DependencyByID, '/api/dependencies/<int:id>')
-#api.add_resource(DependencyByTask, '/api/dependencies/task/<int:task_id>') #using decorator instead
+api.add_resource(Groups, '/api/groups')
+api.add_resource(GroupByID, '/api/groups/<int:id>')
+
+api.add_resource(TaskUpdates, '/api/updates')
+api.add_resource(TaskUpdateByID, '/api/updates/<int:id>')
 
 api.add_resource(Tasks, '/api/tasks')
 api.add_resource(TaskByID, '/api/tasks/<int:id>')
+
+api.add_resource(Dependencies, '/api/dependencies')
+api.add_resource(DependencyByID, '/api/dependencies/<int:id>')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

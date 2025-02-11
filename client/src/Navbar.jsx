@@ -38,6 +38,7 @@ const AppNavbar = ({
     alt: "logo",
     title: "ProjectPilot",
   },
+  /*
   menuPROP = [
     { title: "Home", url: "/" },
     {
@@ -140,8 +141,9 @@ const AppNavbar = ({
     //   url: "#",
     // },
   ],
+  */
   mobileExtraLinks = [
-    { name: "Elchonon Klafter", url: "https://klaftech.com" },
+    { name: "Developed by Elchonon Klafter", url: "https://klaftech.com" },
     // { name: "Press", url: "#" },
     // { name: "Contact", url: "#" },
     // { name: "Imprint", url: "#" },
@@ -176,7 +178,7 @@ const AppNavbar = ({
               res.json()
               .then(data => {
                   setProjects(data)
-                  console.log("projects loaded into Navbar")
+                  //console.log("projects loaded into Navbar")
               })
           } else {
               console.log('failed to fetch projects')
@@ -310,7 +312,7 @@ const AppNavbar = ({
   ]
   
   return (
-    <section className="py-4">
+    <section className="py-4 pr-4 pl-4">
       <div className="container">
         <nav className="hidden justify-between lg:flex">
           <div className="flex items-center gap-6">
@@ -327,13 +329,13 @@ const AppNavbar = ({
             </div>
           </div>
           <div className="flex gap-2">
-            <NavLink to={auth.signup.url}>
+            {/* <NavLink to={auth.signup.url}>
                 <Button className="flex gap-2" variant="outline" size="sm">
                     {auth.signup.text}
                 </Button>
-            </NavLink>
+            </NavLink> */}
             <NavLink to={auth.logout.url}>
-                {/* <Button asChild size="sm"> */}
+                {/*<Button asChild size="sm">*/}
                 <Button className="flex gap-2" size="sm">
                     {auth.logout.text}
                 </Button>
@@ -385,11 +387,11 @@ const AppNavbar = ({
                     </div>
                   </div>
                   <div className="flex flex-col gap-3">
-                    <NavLink className="flex flex-col gap-3" to={auth.signup.url}>
+                    {/* <NavLink className="flex flex-col gap-3" to={auth.signup.url}>
                         <Button variant="outline">
                             {auth.signup.text}
                         </Button>
-                    </NavLink>
+                    </NavLink> */}
                     <NavLink className="flex flex-col gap-3" to={auth.logout.url}>
                         <Button>
                             {auth.logout.text}

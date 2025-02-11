@@ -94,13 +94,31 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
         }
     }
 
-    if(tasks.length > 0){
-        const task_start = tasks[1].start
-        task_start.setHours(0,0,0,0)
-        console.log("TS",task_start)
-        console.log("TD",getToday())
-        console.log("M",task_start.getTime() === getToday().getTime())
-    }
+    // if(tasks.length > 0){
+    //     const task_start = tasks[0].start
+    //     task_start.setHours(0,0,0,0)
+    //     //console.log("TS",task_start)
+    //     //console.log("TD",getToday())
+    //     //console.log("M",task_start.getTime() === getToday().getTime())
+    // }
+
+    const tasksToday = tasks.filter(task => {
+        return isDateToday(task.start) && task.complete_status == false 
+    }).map((task) => {                               
+        return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
+    })
+
+    const tasksUpcoming = tasks.filter(task => {
+        return getDiffToday(task.start) <= 7 && getDiffToday(task.start) > 0 && task.complete_status == false
+    }).map((task) => {
+        return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
+    })
+
+    const tasksDue = tasks.filter(task => {
+        return getDiffToday(task.start) < 0 && task.complete_status == false
+    }).map((task) => {
+        return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
+    })
     
     return (
         <>
@@ -147,11 +165,7 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
                     <Separator orientation="horizontal" />
                     <div className="container mx-auto p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-6">
-                            {tasks.filter(task => {
-                                return isDateToday(task.start) && task.complete_status == false 
-                            }).map((task) => {                               
-                                return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
-                            })}
+                            {tasksToday.length > 0 ? tasksToday : "All caught up!"}
                         </div>
                     </div>
                 </div>
@@ -164,11 +178,7 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
                     <Separator orientation="horizontal" />
                     <div className="container mx-auto p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-6">
-                            {tasks.filter(task => {
-                                return getDiffToday(task.start) <= 7 && getDiffToday(task.start) > 0 && task.complete_status == false
-                            }).map((task) => {
-                                return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
-                            })}
+                            {tasksUpcoming.length > 0 ? tasksUpcoming : "All caught up!"}
                         </div>
                     </div>
                 </div>
@@ -180,11 +190,7 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
                     <Separator orientation="horizontal" />
                     <div className="container mx-auto p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-6">
-                            {tasks.filter(task => {
-                                return getDiffToday(task.start) < 0 && task.complete_status == false
-                            }).map((task) => {
-                                return <TaskCard key={task.id} task={task} onClickEdit={handleClickEdit} onClickView={handleClickView} onClickComplete={handleClickComplete} onClickDelete={handleClickDelete} />
-                            })}
+                            {tasksDue.length > 0 ? tasksDue : "All caught up!"}
                         </div>
                     </div>
                 </div>

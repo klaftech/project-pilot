@@ -32,8 +32,7 @@ const App = ({tasks}) => {
 
   const groups = {}
   tasks.forEach(task => {
-    
-    const get_group = groups[task.group.id] ?? false
+    const get_group = groups[task.group.id] ?? 1
     
     let group_start
     if (get_group == false){
@@ -70,17 +69,33 @@ const App = ({tasks}) => {
       type: 'project',
       start: values.start,
       end: values.end,
-      // progress: group.progress,
+      progress: 0,
       isDisabled: true,
       hideChilren: false,
-      displayOrder: parseInt(group_id)  
+      displayOrder: parseInt(group_id),
     }  
     preppedGroups.push(group)
   }
   const joinedTasks = scheduledTasks.concat(preppedGroups);
-  //console.log('preppedGroups ',preppedGroups)
-  //console.log('joinedTasks ',joinedTasks)
-  //console.log('formatted tasks: ',scheduledTasks)
+  const sortedTasks = joinedTasks.sort((a, b) => {
+    if (a.start.getTime() !== b.start.getTime()) {
+      return a.start.getTime() - b.start.getTime() //sort by start date
+    }
+    if(a.type !== b.type){
+      return a.type.localeCompare(b.type) //sort type alphabetically (puts project before task)
+    }
+    return 0 //if all parameters are equal, maintain original order
+    // return a.start.getTime() - b.start.getTime() || a.type - b.type
+  }).map((element, index) => {
+    const new_element = {...element}
+    new_element['displayOrder'] = index+1
+    return new_element
+  })
+
+  // console.log('preppedGroups ',preppedGroups)
+  // console.log('joinedTasks ',joinedTasks)
+  // console.log('formatted tasks: ',scheduledTasks)
+  // console.log('sortedTasks: ',sortedTasks)
 
 
   let columnWidth = 65;
@@ -156,7 +171,7 @@ const App = ({tasks}) => {
 
       <div className="flex gap-6">
         <Gantt
-            tasks={joinedTasks}
+            tasks={sortedTasks}
             viewMode={view}
             onDateChange={handleTaskChange}
             onDelete={handleTaskDelete}
