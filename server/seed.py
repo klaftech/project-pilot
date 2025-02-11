@@ -3,6 +3,37 @@ from models import db, User, Project, Group, Task, TaskDependency, TaskUser
 from datetime import datetime
 
 with app.app_context():
+
+    def recursively_update_children(task_model):
+        logger = []
+        logger.append("RECURSIVELY UPDATING CHILDREN: ")
+
+        #recursively process dependencies
+        if task_model.children_tasks:
+            from collections import deque
+            children = deque([child.owner_task for child in task_model.children_tasks])
+            while children:
+                current_task = children.popleft()
+                
+                logger.append('##############################################')
+                logger.append(f'Recursively Updating: {current_task.name}')
+                
+                recalc = current_task.calculate_schedule()
+                for message in recalc:
+                    logger.append(f'=> {message}')
+                db.session.commit()
+                logger.append(f'Successfully Updated')
+
+                if current_task.children_tasks:
+                    for child in current_task.children_tasks:
+                        children.append(child.owner_task)
+                        logger.append(f'    Child Added: {child.owner_task.name}')
+        else:
+            logger.append("No children found")
+        print(*logger, sep='\n')
+
+
+
     print('Deleting existing TaskUsers...')
     TaskUser.query.delete()
 
@@ -26,12 +57,10 @@ with app.app_context():
     print('Creating Users...')
     user_1 = User(
         name="Admin", 
-        username="admin",
         email="admin@example.com"
     )
     user_2 = User(
         name='User',
-        username="user",
         email="user@example.com"
     )
     user_1.password_hash = "123"
@@ -50,7 +79,7 @@ with app.app_context():
         description="Single-Family Home"
     )
     project_2 = Project(
-        name='Amazon Warehouse',
+        name='Factory Warehouse',
         project_type='commercial',
         description="Steel work"
     )
@@ -82,8 +111,6 @@ with app.app_context():
         name='Sign Contract',
         project_id=project_1.id,
         group_id=group_1.id,
-        #plan_start="",
-        #plan_end="",
         #pin_start="",
         #pin_end="",
         days_length=7
@@ -92,9 +119,7 @@ with app.app_context():
         name='Site Work',
         project_id=project_1.id,
         group_id=group_1.id,
-        #plan_start="",
-        #plan_end="",
-        pin_start=datetime.strptime("2026-01-01", "%Y-%m-%d"),
+        # pin_start=datetime.strptime("2026-01-01", "%Y-%m-%d"),
         #pin_end="",
         days_length=30
     )
@@ -102,8 +127,6 @@ with app.app_context():
         name='Level Site',
         project_id=project_1.id,
         group_id=group_1.id,
-        # plan_start="",
-        #plan_end="",
         #pin_start="",
         #pin_end="",
         days_length=14
@@ -112,8 +135,6 @@ with app.app_context():
         name='Foundation',
         project_id=project_1.id,
         group_id=group_1.id,
-        # plan_start="",
-        #plan_end="",
         #pin_start="",
         #pin_end="",
         days_length=14
@@ -122,8 +143,6 @@ with app.app_context():
         name='Survey',
         project_id=project_1.id,
         group_id=group_1.id,
-        # plan_start="",
-        #plan_end="",
         #pin_start="",
         #pin_end="",
         days_length=3
@@ -132,8 +151,6 @@ with app.app_context():
         name='Apply for Permits',
         project_id=project_1.id,
         group_id=group_1.id,
-        # plan_start="",
-        #plan_end="",
         #pin_start="",
         #pin_end="",
         days_length=7
@@ -202,4 +219,13 @@ with app.app_context():
     print('Complete.')
 
 
-
+    print('Recursively updating dependencies for all tasks...')
+    recursively_update_children(task_1)
+    recursively_update_children(task_2)
+    recursively_update_children(task_3)
+    recursively_update_children(task_4)
+    recursively_update_children(task_5)
+    recursively_update_children(task_6)
+    print('Committing transaction...')
+    db.session.commit()
+    print('Complete.')

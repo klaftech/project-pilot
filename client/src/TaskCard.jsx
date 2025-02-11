@@ -22,8 +22,11 @@ export function TaskCard({ task, onClickEdit, onClickView, onClickComplete, onCl
                 <Progress value={50} className="w-[60%]" />
             </div> */}
             <p className="font-medium">{task.name}</p>
-            <p className="text-muted-foreground"><StatusBadge task={task} /></p>
-            
+            {/* <p className="text-muted-foreground"></p> */}
+            <div>
+                <StatusBadge task={task} />
+            </div>
+
             <p className="py-3 text-sm text-muted-foreground">
             {isDateToday(task.start) ? "Today" : formatDatePretty(task.start)} - {isDateToday(task.end) ? "Today" : formatDatePretty(task.end)}
             </p>

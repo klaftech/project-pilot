@@ -1,7 +1,15 @@
 //convert string to javascript date object
 export const stringToDate = (string) => {
-    return new Date(string.replace(" ","T"))
+    if(string != null){
+        return new Date(string.replace(" ","T"))
+    } else {
+        return string
+    }        
     //"pin_start": task.pin_start.slice(0,10), //remove time
+}
+
+export const isDate = (value) => {
+    return value instanceof Date && !isNaN(value);
 }
 
 export const taskBuilder = (task) => {

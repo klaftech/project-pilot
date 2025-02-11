@@ -51,12 +51,7 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
                     method: request_method,
                     body: JSON.stringify({
                         ...form_data, 
-                        project_id: 1, 
-                        group_id: 1,
-                        //plan_start: null, //gets populated in backend from project_id.start
-                        //plan_end: null, //gets populated in backend from project_id.end
-                        //pin_start: null, //gets formatted above into form_data
-                        //pin_end: null //gets formatted above into form_data
+                        project_id: 1,
                     }),
                     headers: {
                         "Content-Type": "application/json",
@@ -90,8 +85,8 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
 
     const defaultTaskFormValues = {
         name: '',
-        project_id: 1,
-        group_id: 1,
+        //project_id: undefined,
+        group_id: undefined,
         pin_start: undefined,
         pin_end: undefined,
         days_length: 0
@@ -100,6 +95,8 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
     const taskSchema = z.object({
         name: z.string({ required_error: "Task name is required.", })
             .min(2, { message: "Task name must be at least 2 characters.", }),
+        project_id: z.coerce.number({ required_error: "Project must be selected.", }).int().positive(),
+        group_id: z.coerce.number({ required_error: "Group must be selected.", }).int().positive(),
         days_length: z.coerce
             .number({ required_error: "Task Length is required.", })
             .int()
@@ -142,6 +139,8 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
             }
 
             form.setValue('name', data.name);
+            form.setValue('project_id', data.project_id);
+            form.setValue('group_id', data.group_id);
             form.setValue('days_length', data.days_length);
             form.setValue('pin_start', pin_start);
             form.setValue('pin_end', pin_end);

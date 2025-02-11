@@ -69,7 +69,7 @@ const ProjectDetailsById = () => {
             }
         })
     }
-    console.log("ProjectObj: ",projectObj)
+    //console.log("ProjectObj: ",projectObj)
 
     if(!projectObj){
       return <h2>Project Loading</h2>

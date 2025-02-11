@@ -3,6 +3,8 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates, Session
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.attributes import set_committed_value
+from sqlalchemy.orm import attributes
+#from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy import event, func
 
@@ -187,6 +189,26 @@ class Group(db.Model, SerializerMixin):
         '-tasks.children_tasks'
     )
 
+    @validates('name','project_id')
+    def validate_unique_name(self, key, value):
+        if key == "project_id":
+            if Project.query.filter(Project.id == value).first() == None:
+                raise ValueError('Project ID must be linked to existing project.')
+        name = None
+        project_id = None
+        if key == "name" and self.project_id != None:
+            name = value
+            project_id = self.project_id
+        if key == "project_id" and self.name != None:
+            name = self.name
+            project_id = value
+
+        if project_id != None and name != None:
+            if Group.query.filter(Group.id != self.id).filter(Group.name == name).filter(Group.project_id == project_id).first() != None:
+                raise ValueError('Project & Name combination must be unique')
+            
+        return value
+
     def __repr__(self):
         return f'<Group {self.name} (ID: {self.id}, Project: {self.project_id})>'
 
@@ -215,33 +237,29 @@ class Task(db.Model, SerializerMixin):
     project = db.relationship('Project', back_populates="tasks")
     group = db.relationship('Group', back_populates="tasks")
     complete_user = db.relationship('User', back_populates="completed_tasks")
+    updates = db.relationship('TaskUpdate', back_populates="task")
+
+    @validates('days_length')
+    def validate_days_length(self, key, value):
+        if not isinstance(value, int):
+            try:
+                return int(value)
+            except ValueError:
+                raise ValueError('Days length must be an integer')
+        return value
     
-    # @hybrid_property
-    # def dependencies_ids(self):
-    #     raise AttributeError('Dependencies_ids is not readable')
-
-    # @dependencies_ids.setter
-    # def depend(self, dependencies_list):
-    #     current_dependencies = [dependency for dependency in self.dependencies]
-    #     new_dependencies = []
-    #     for dependency in dependencies_list:
-
-        
-        # from sqlalchemy.dialects.sqlite import insert
-        
-        # for dependency in dependencies_list:
-        
-        #     stmt = (
-        #         insert(TaskDependency)
-        #         .values(
-        #             task_id=self.id,
-        #             dependency_id=dependency
-        #         ).on_conflict_do_nothing(
-        #             index_elements=['id']
-        #         )
-        #     )
-
-
+    # # run validation when any task schedule change happens
+    @validates('plan_start','plan_end','pin_start','pin_end','sched_start','sched_end','complete_date')
+    def validate_dates(self, attr, value):
+        if not isinstance(value, datetime):
+            for format in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
+                try:
+                    return datetime.strptime(value, format)
+                except ValueError:
+                    pass
+            raise ValueError(f'{attr} must be a valid date.')
+        return value
+    
     serialize_rules = (
         'dependencies', #default does not serializer association proxy
         '-parent_tasks.owner_task', #avoid recursion
@@ -253,8 +271,11 @@ class Task(db.Model, SerializerMixin):
         #'-project', #block all
         #'-group', #block all
         #'-complete_user', #block all
+        '-updates.task',
         '-project.tasks',
         '-project.groups',
+        '-project.stats',
+        '-project.schedule',
         '-group.tasks',
         '-group.project',
         '-complete_user.completed_tasks',
@@ -381,70 +402,79 @@ class Task(db.Model, SerializerMixin):
     def calculate_schedule(self):
         
         def handle_pin_start():
-            allow_move = True
-            logger.append(f'Processing Pinned Start Date.')
+            if self.pin_start:
+                allow_move = True
+                logger.append(f'Processing Pinned Start Date.')
 
-            # we only need to validate_before_after for task with parents
-            # check that pin_start is later than sched_start
-            #if pin is earlier than earliest possible start (from parent/pointing tasks), simply ignore pin start
-            if not self.parent_tasks and not self.validate_before_after(self.sched_start, self.pin_start):
-                allow_move = False
-                logger.append(f'Pin Start Ignored. Pin start is earlier than earliest possible start from parent tasks.')
-                
-            if allow_move:
-                # update task start
-                logger.append(f'Pin Start Honored. Start Date moved from {self.sched_start} to {self.pin_start}.')
-                self.sched_start = self.pin_start 
-                self.pin_honored = True
+                # we only need to validate_before_after for task with parents
+                # check that pin_start is later than sched_start
+                #if pin is earlier than earliest possible start (from parent/pointing tasks), simply ignore pin start
+                if not self.parent_tasks and not self.validate_before_after(self.sched_start, self.pin_start):
+                    allow_move = False
+                    logger.append(f'Pin Start Ignored. Pin start is earlier than earliest possible start from parent tasks.')
+                    
+                if allow_move:
+                    # update task start
+                    logger.append(f'Pin Start Honored. Start Date moved from {self.sched_start} to {self.pin_start}.')
+                    self.sched_start = self.pin_start 
+                    self.pin_honored = True
 
-                # confirm that there is valid timeframe to complete task, otherwise just push end date forward
-                if not self.validate_start_end_against_length(self.sched_start, self.sched_end, self.days_length):
-                    # not enough time from pin start to today+days_length, so push up sched_end to be pin_start+days_length
-                    new_sched_end = self.sched_start + timedelta(days = self.days_length)
-                    logger.append(f'Pin Start-Schedule End Conflict. Insufficient time to complete task. Schedule End changed from {self.sched_end} to {new_sched_end}.')     
-                    self.sched_end = new_sched_end      
+                    # confirm that there is valid timeframe to complete task, otherwise just push end date forward
+                    if not self.validate_start_end_against_length(self.sched_start, self.sched_end, self.days_length):
+                        # not enough time from pin start to today+days_length, so push up sched_end to be pin_start+days_length
+                        new_sched_end = self.sched_start + timedelta(days = self.days_length)
+                        logger.append(f'Pin Start-Schedule End Conflict. Insufficient time to complete task. Schedule End changed from {self.sched_end} to {new_sched_end}.')     
+                        self.sched_end = new_sched_end      
 
 
         def handle_pin_end():
-            allow_move = True
-            logger.append(f'Processing Pinned End Date.')
+            if self.pin_end:
+                allow_move = True
+                logger.append(f'Processing Pinned End Date.')
 
-            # everything takes precendence over pin_end, 
-            # we will always ignore it in favor of any other calculation consideration
+                # everything takes precendence over pin_end, 
+                # we will always ignore it in favor of any other calculation consideration
 
-            # we only need to validate_before_after for task with parents
-            # check that pin_end is later than sched_end
-            # if pin end is before scheduled end (calculated from parent/pointing task or pinned start, ignore pin end, because that date is shorter task_length beginning after earliest pointing task's finish
-            if not self.parent_tasks and not self.validate_before_after(self.sched_end, self.pin_end):
-                allow_move = False
-                logger.append(f'Pin End Ignored. Pin End is earlier than earliest possible end time from parent tasks.')
-            
-            if allow_move:
-                # ensure that enough time exists to complete task
-                # can only happen if pin end is very much in the future
-                if self.validate_start_end_against_length(self.sched_start, self.pin_end, self.days_length):
-                    # update task end
-                    logger.append(f'Pin End Honored. End Date moved from {self.sched_end} to {self.pin_end}.')
-                    self.sched_end = self.pin_end
-                    self.pin_honored = True                       
-                else:
-                    # not enough time from scheduled start to pin_end, so push up sched_end to be pin_start+days_length
-                    new_sched_end = self.sched_start + timedelta(days = self.days_length)
-                    logger.append(f'Schedules Start-Pin End Conflict. Insufficient time to complete task. Schedule End changed from {self.sched_end} to {new_sched_end}.')
-                    self.sched_end = new_sched_end
-                    
-                    #process conflict below, or:
-                    #raise Exception(f'Invalid pinned time. Not enough time allocated for task. Defined dates: {self.sched_start} - {self.pin_end}. Task Length: {self.days_length}')
-                    
-                    
+                # we only need to validate_before_after for task with parents
+                # check that pin_end is later than sched_end
+                # if pin end is before scheduled end (calculated from parent/pointing task or pinned start, ignore pin end, because that date is shorter task_length beginning after earliest pointing task's finish
+                if not self.parent_tasks and not self.validate_before_after(self.sched_end, self.pin_end):
+                    allow_move = False
+                    logger.append(f'Pin End Ignored. Pin End is earlier than earliest possible end time from parent tasks.')
+                
+                if allow_move:
+                    # ensure that enough time exists to complete task
+                    # can only happen if pin end is very much in the future
+                    if self.validate_start_end_against_length(self.sched_start, self.pin_end, self.days_length):
+                        # update task end
+                        logger.append(f'Pin End Honored. End Date moved from {self.sched_end} to {self.pin_end}.')
+                        self.sched_end = self.pin_end
+                        self.pin_honored = True                       
+                    else:
+                        # not enough time from scheduled start to pin_end, so push up sched_end to be pin_start+days_length
+                        new_sched_end = self.sched_start + timedelta(days = self.days_length)
+                        logger.append(f'Schedules Start-Pin End Conflict. Insufficient time to complete task. Schedule End changed from {self.sched_end} to {new_sched_end}.')
+                        self.sched_end = new_sched_end
+                        
+                        #process conflict below, or:
+                        #raise Exception(f'Invalid pinned time. Not enough time allocated for task. Defined dates: {self.sched_start} - {self.pin_end}. Task Length: {self.days_length}')
+                        
+                        
         
         logger = []
         logger.append(f'Task: #{self.id} {self.name}')
 
         # default task start is project.start, otherwise use today's date
-        if not self.project.start:
-            default_start = datetime.combine(datetime.now(), time.min) # use today as start
-        default_start = self.project.start
+        if not self.project:
+            # if we're running before initial commit, project serialization not set create, so get project data manually
+            project = Project.query.filter(Project.id == self.project_id).first()
+            if not project.start:
+                # if for any reason project start is not yet defined, use today's date for the task
+                default_start = datetime.combine(datetime.now(), time.min) # use today as start
+            else:
+                default_start = project.start
+        else:
+            default_start = self.project.start
         logger.append(f'Default Start from Project: {default_start}')
 
         # Task: headless task
@@ -509,77 +539,25 @@ class Task(db.Model, SerializerMixin):
         print(*logger, sep='\n')
         return logger
 
-
-    # # run validation when any task schedule change happens
-    # @validates('plan_start','plan_end','days_length')
-    # def validate_task(self, attr, value):
-    #     pass
-
-
     
     def __repr__(self):
         return f'<Task {self.name}>'
     
 
-# FINAL: validate DAG as validates.
-# run event to update times after
-# Function to execute on save
-def update_timestamp(mapper, connection, target):
-    if not target.sched_start:
-        target.sched_start = datetime.combine(datetime.now(), time.min)
-    if not target.sched_end:
-        target.sched_end = datetime.combine(datetime.now(), time.min)
+class TaskUpdate(db.Model, SerializerMixin):
+    __tablename__ = "task_updates"
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+    task_status = db.Column(db.String)
+    message = db.Column(db.String)
+    timestamp = db.Column(db.DateTime, server_default=db.func.now())
+
+    task = db.relationship("Task", back_populates="updates")
+    serialize_rules = ('-task',)
+
+    def __repr__(self):
+        return f'<TaskUpdate ID: {self.id}, Task: {self.task_id}, Status: {self.task_status}>'
     
-    if not target.pin_start:
-        target.pin_start = datetime.combine(datetime.now(), time.min)
-    if not target.pin_end:
-        target.pin_end = datetime.combine(datetime.now(), time.min)
-
-    if not target.plan_start:
-        target.plan_start = datetime.combine(datetime.now(), time.min)
-    if not target.plan_end:
-        target.plan_end = datetime.combine(datetime.now(), time.min)
-
-# Attach the event listener
-event.listen(Task, 'before_insert', update_timestamp)
-event.listen(Task, 'before_update', update_timestamp)
-
-#@event.listens_for(Task, "after_insert")
-def update_dependencies_recursively(mapper, connection, target):
-    pass
-    #target.calculate_schedule()
-    #target.progress = target.progress+1
-    #recursively_process_dependencies(target)
-    # if target.children_tasks:
-    #     for child in target.children_tasks:
-    #         # ensure that we can get parent's schedule end date
-    #         if not child.child_task.id:
-    #             raise Exception(f'Fatal Error loading TaskDependency ID: {child.id}. Dependency: {child.child_task.name} {child.child_task.id}')
-            
-    #         #print(f'{child.child_task.id} {child.child_task.name} {type(child.child_task)}')
-    #         #child.child_task.progress = 5
-    #         set_committed_value(child.child_task, 'progress', 5)
-    #         #child.child_task.calculate_schedule()
-    #         #print(f'Dependencies Updated')
-    
-
-#event.listen(Task, 'before_insert', update_dependencies_recursively)
-#event.listen(Task, 'before_update', update_dependencies_recursively)
-
-# not in use, handled on app.py
-# def recursively_process_dependencies(self):
-#     #self.progress = 5
-#     #print('updated')
-
-#     if self.children_tasks:
-#         for child in self.children_tasks:
-#             # ensure that we can get parent's schedule end date
-#             if not child.owner_task.id:
-#                 raise Exception(f'Fatal Error loading TaskDependency ID: {child.id}. Dependency: {child.child_task.name} {child.child_task.id}')
-#             #child.child_task.progress = 5
-#             child.owner_task.calculate_schedule()
-#             print(f'Dependencies Updated')
-
 
 
 class TaskUser(db.Model, SerializerMixin):
@@ -640,4 +618,76 @@ class TaskDependency(db.Model, SerializerMixin):
     
     def __repr__(self):
         return f'<TaskDependency ID: {self.id}, Task: {self.task_id}, DependentTask: {self.dependent_task_id}>'
+
+
+
+
+
+def update_schedule(mapper, connection, target):
+    # TODO: only run if there are changes to scheduling values
+    target.calculate_schedule()
+
+event.listen(Task, 'before_insert', update_schedule) #dependencies do not yet exist
+event.listen(Task, 'before_update', update_schedule)
+
+# FINAL NOTE: working. however, moved in favor of null on default and calculate simplisticly
+# # FINAL: validate DAG as validates.
+# # run event to update times after
+# # Function to execute on save
+# def update_timestamp(mapper, connection, target):
+#     if not target.sched_start:
+#         target.sched_start = datetime.combine(datetime.now(), time.min)
+#     if not target.sched_end:
+#         target.sched_end = datetime.combine(datetime.now(), time.min)
     
+#     if not target.pin_start:
+#         target.pin_start = datetime.combine(datetime.now(), time.min)
+#     if not target.pin_end:
+#         target.pin_end = datetime.combine(datetime.now(), time.min)
+
+#     if not target.plan_start:
+#         target.plan_start = datetime.combine(datetime.now(), time.min)
+#     if not target.plan_end:
+#         target.plan_end = datetime.combine(datetime.now(), time.min)
+
+# # Attach the event listener
+# #event.listen(Task, 'before_insert', update_timestamp)
+# #event.listen(Task, 'before_update', update_timestamp)
+
+
+# #@event.listens_for(Task, "after_insert")
+# def update_dependencies_recursively(mapper, connection, target):
+#     pass
+#     #target.calculate_schedule()
+#     #target.progress = target.progress+1
+#     #recursively_process_dependencies(target)
+#     # if target.children_tasks:
+#     #     for child in target.children_tasks:
+#     #         # ensure that we can get parent's schedule end date
+#     #         if not child.child_task.id:
+#     #             raise Exception(f'Fatal Error loading TaskDependency ID: {child.id}. Dependency: {child.child_task.name} {child.child_task.id}')
+            
+#     #         #print(f'{child.child_task.id} {child.child_task.name} {type(child.child_task)}')
+#     #         #child.child_task.progress = 5
+#     #         set_committed_value(child.child_task, 'progress', 5)
+#     #         #child.child_task.calculate_schedule()
+#     #         #print(f'Dependencies Updated')
+    
+
+# #event.listen(Task, 'before_insert', update_dependencies_recursively)
+# #event.listen(Task, 'before_update', update_dependencies_recursively)
+
+# # not in use, handled on app.py
+# # def recursively_process_dependencies(self):
+# #     #self.progress = 5
+# #     #print('updated')
+
+# #     if self.children_tasks:
+# #         for child in self.children_tasks:
+# #             # ensure that we can get parent's schedule end date
+# #             if not child.owner_task.id:
+# #                 raise Exception(f'Fatal Error loading TaskDependency ID: {child.id}. Dependency: {child.child_task.name} {child.child_task.id}')
+# #             #child.child_task.progress = 5
+# #             child.owner_task.calculate_schedule()
+# #             print(f'Dependencies Updated')
+

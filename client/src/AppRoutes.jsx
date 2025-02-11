@@ -35,7 +35,6 @@ function AppRoutes() {
     //console.log(location)
 
     useEffect(() => {
-        console.log(location.pathname)
         if(location.pathname != "/signup"){
             fetchUser()
         }
@@ -127,19 +126,23 @@ function AppRoutes() {
     
     return (
         <Routes>
-            <Route path="/" element={<App tasks={tasks} />} />
+            <Route path="/" element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
+            {/*}
             <Route path="project/:projectId" element={<ProjectDetailsById />} />
-            <Route path="overview" element={<ProjectOverview />} />
             <Route path="task/:taskId" element={<TaskDetailsById tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
             <Route path="tasks" element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
             <Route path="list" element={<ListContainer tasks={tasks} />} />
             <Route path="schedule" element={<ScheduleContainer tasks={tasks} />} />
             <Route path="signup" element={<Signup />} />
+            */}
             <Route path="login" element={<Login />} />
             <Route path="logout" element={<Logout updateUser={setUser} />} />
+
+            {/* <Route path="overview" element={<ProjectOverview tasks={tasks} />} />
             <Route path="form" element={<TaskInnerForm />} />
             <Route path="toast" element={<ToastDemo />} />
-            <Route path="css" element={<CSS />} />
+            <Route path="css" element={<CSS />} /> */}
+            {/*<Route path="/" element={<App tasks={tasks} />} />*/}
             
             <Route path="*" element={<ComingSoon endpoint="404" />} />
         </Routes>

@@ -39,7 +39,7 @@ export default function ProgressBar({progress}) {
         { id: "1", name: "L1", value: progress },
         { id: "2", name: "L2", value: 100-progress }
     ];
-    console.log(data)
+    //console.log(data)
 
     return (
       <>
