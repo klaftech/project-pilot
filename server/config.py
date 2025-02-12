@@ -1,4 +1,6 @@
 # library imports
+import os
+from dotenv import load_dotenv
 from flask import Flask, render_template
 from flask_cors import CORS
 from flask_migrate import Migrate
@@ -7,22 +9,28 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_bcrypt import Bcrypt 
 
-app = Flask(__name__)
-# full-stack deployment
-# app = Flask(
-#     __name__,
-#     static_url_path='',
-#     static_folder='../client/dist',
-#     template_folder='../client/dist'
-# )
-# @app.errorhandler(404)
-# def not_found(e):
-#     return render_template("index.html")
+# load environment variables from the .env file (if present)
+load_dotenv()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db' 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False     
+# backend only deployment
+# app = Flask(__name__) 
+
+# full-stack deployment
+app = Flask(
+    __name__,
+    static_url_path='',
+    static_folder='../client/dist',
+    template_folder='../client/dist'
+)
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("index.html")
+
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI') #'sqlite:///app.db' 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False                                  
-app.secret_key = 'd0f124ef117b1411449d4eb7381a0749bb7bfc5715d9c47275ebf51c8d282ebd'
+app.secret_key = os.getenv('SECRET_KEY')
 
 metadata = MetaData(
   naming_convention={

@@ -12,6 +12,9 @@ flask-restful = "*"
 flask-bcrypt = "*"
 flask = "*"
 ipdb = "*"
+gunicorn = "*"
+psycopg2-binary = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
