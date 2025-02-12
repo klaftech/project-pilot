@@ -2,7 +2,7 @@ import { formatDatePretty, isDate } from './helpers.js'
 import Navbar from './Navbar.jsx'
 import OverviewTable from './OverviewTable'
 
-import OverviewSimpleTable from './OverviewSimpleTable'
+import OverviewSimpleTable from './_OverviewSimpleTable.jsx'
 import DataTable from 'react-data-table-component';
 import StatusBadge from './StatusBadge'
 

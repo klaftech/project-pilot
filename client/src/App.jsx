@@ -1,60 +1,156 @@
-import TasksTable from './data-table/TasksTable'
-import ChartCard from './ChartCard'
-import Navbar from './Navbar'
+import { Routes, Route, useNavigate, useLocation } from "react-router";
+import { useEffect, useState, useContext } from 'react'
 
-function App({tasks}) {
-  return (
-    <>
-      <Navbar />
+import ProjectDetailsById from './ProjectDetailsById'
+import TaskDetailsById from './TaskDetailsById'
+import TasksContainer from './TasksContainer';
+import ListContainer from './ListContainer'
+import ScheduleContainer from "./ScheduleContainer";
+import OverviewContainer from './OverviewContainer'
+import Signup from './Signup'
+import Login from './Login'
+import Logout from './Logout'
+import HTTP404 from './HTTP404'
 
-      <div className="container mx-auto p-6">
+import { taskBuilder } from './helpers.js'
+import UserContext from './context/UserContext'
+import ProjectContext from './context/ProjectContext'
 
-        {/* 
-        grid-cols-1: For very small screens (mobile phones), it will show one column.
-        sm:grid-cols-2: For small screens, it will display two cards per row.
-        md:grid-cols-3: For medium screens (tablets), it will display three cards per row.
-        lg:grid-cols-4: For larger screens (laptops), it will display four cards per row.
-        xl:grid-cols-5: For extra large screens (desktops), it will display five cards per row.
-        */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          
-          <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col">
-            <h3 className="text-xl font-semibold">Card Title 1</h3>
-            <p className="text-gray-500 mt-2">This is a brief description of the card content.</p>
-          </div>
-          
-          <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col">
-            <h3 className="text-xl font-semibold">Card Title 2</h3>
-            <p className="text-gray-500 mt-2">This is a brief description of the card content.</p>
-          </div>
-          
-          <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col">
-            <h3 className="text-xl font-semibold">Card Title 3</h3>
-            <p className="text-gray-500 mt-2">This is a brief description of the card content.</p>
-          </div>
-          
-          <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col">
-            <h3 className="text-xl font-semibold">Card Title 4</h3>
-            <p className="text-gray-500 mt-2">This is a brief description of the card content.</p>
-          </div>
-        </div>
-      </div>
-      
-      {/* <div className="mx-auto max-w-md overflow-hidden rounded-xl bg-white shadow-md md:max-w-2xl"></div> */}
-      <div className="container mx-auto p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          <ChartCard />
-        </div>
-      </div>
-      
-      <div className="container mx-auto p-6">
-          <div className="mx-auto">
-          {/* <div className="mx-auto max-w-md overflow-hidden rounded-xl bg-white shadow-md md:max-w-2xl"> */}
-          <TasksTable tasks={tasks} />
-        </div>
-      </div>
-    </>
-  )
+import ToastDemo from "./_ToastDemo";
+import TaskInnerForm from './_TaskInnerForm'
+import AppDev from './_AppDev'
+
+function App() {
+    
+    // ********************************************************************
+    // ********************* START USER AUTHORIZATION *********************
+    // ********************************************************************
+    const {user, setUser} = useContext(UserContext);
+    const {project, setProject} = useContext(ProjectContext);
+    const navigate = useNavigate()
+    let location = useLocation()
+    //console.log("AppRoutes ContextProject: ",project)
+    //console.log("AppRoutes ContextUser: ",user)
+    //console.log(location)
+
+    useEffect(() => {
+        if(location.pathname != "/signup"){
+            fetchUser()
+        }
+    }, [])
+
+    const fetchUser = () => (
+        fetch('/api/authorize')
+        .then(res => {
+            if(res.ok){
+                res.json()
+                .then(data => {
+                    const defaultSelectedProject=1
+                    const user_obj = {...data}
+                    user_obj.selectedProject = defaultSelectedProject
+                    setUser(user_obj)
+                    console.log("user validated by session: "+data.email+" ID:"+data.id)
+                    
+                    //set default selected project to 1
+                    //setProject(defaultSelectedProject)
+                })
+            } else {
+                navigate('/login')
+            }
+        })
+    )
+    // if(user){
+    //     console.log("UserSelectedProject: ",user.selectedProject)
+    // }
+    // ********************************************************************
+    // ********************** ENG USER AUTHORIZATION **********************
+    // ********************************************************************
+    
+
+    // ********************************************************************
+    // ******************** START MANAGE TASKS DATA ***********************
+    // ********************************************************************
+    const [tasks, setTasks] = useState([])
+
+    useEffect(() => {
+        if((location.pathname != "/signup") && (location.pathname != "/login")){
+            fetchTasks()
+        }
+    }, [location.pathname])
+
+    const fetchTasks = () => {
+        let project_filter = ""
+        if(user && user.selectedProject){
+            project_filter = "?project_id="+user.selectedProject
+        }
+        fetch('/api/tasks'+project_filter)
+        .then(res => {
+            if(res.ok){
+                res.json()
+                .then(data => {
+                    buildTaskList(data)
+                    //console.log(data)
+                })
+            } else {
+                console.log("error fetching tasks")
+            }
+        })
+    }
+    
+    const buildTaskList = (tasks) => {
+        const tasklist = tasks.map(task => {
+            return taskBuilder(task)
+        })
+        setTasks(tasklist)
+        console.log('AppRoutes: tasklist reloaded')
+    }
+
+    const handleUpdateTask = (data) => {
+        // ideally, we can just filter and replace the object in the tasklist state,
+        // howeve, since updating a task may cause cascading schedule changes, we must re-load all tasklist data
+        // 
+        // we can check if this task already exists in state (otherwise, new record, must re-update?), 
+        // if it does, check if dates changed (we only have cascading changes on date edit, otherwise was simple name change)
+        // only if there is any date change must we re-load full tasklist
+        // WHAT ABOUT MARKING COMPLETE???? that would cascade dependent tasks....
+        
+        // for now, just reload all date....
+        fetchTasks()
+    }
+
+    const handleReloadTasks = () => {
+        fetchTasks()
+    }
+    //console.log(tasks)
+    // ********************************************************************
+    // ******************** END MANAGE TASKS DATA *************************
+    // ********************************************************************
+
+
+    if((!user) && (location.pathname != "/signup")) return (
+        <Login/>
+    )
+    
+    return (
+        <Routes>
+            <Route path="/" element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
+            <Route path="project/:projectId" element={<ProjectDetailsById />} />
+            <Route path="task/:taskId" element={<TaskDetailsById tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
+            <Route path="tasks" element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
+            <Route path="list" element={<ListContainer tasks={tasks} />} />
+            <Route path="schedule" element={<ScheduleContainer tasks={tasks} />} />
+            <Route path="overview" element={<OverviewContainer tasks={tasks} />} />
+            <Route path="signup" element={<Signup />} />
+            <Route path="login" element={<Login />} />
+            <Route path="logout" element={<Logout updateUser={setUser} />} />
+
+            <Route path="form" element={<TaskInnerForm />} />
+            <Route path="toast" element={<ToastDemo />} />
+            <Route path="dev" element={<AppDev tasks={tasks} />} />
+            
+            <Route path="*" element={<HTTP404 endpoint={location.pathname} />} />
+        </Routes>
+    )
 }
 
 export default App
