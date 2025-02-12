@@ -1,6 +1,6 @@
 import Navbar from './Navbar'
 import TaskCard from './TaskCard'
-import TaskForm from './TaskForm'
+import DialogTaskForm from './DialogTaskForm'
 //import { tasks_data } from './tasks_data.js' 
 import ShowAlert from './ShowAlert'
 import { getToday, isDateToday, getDiffToday } from './helpers.js'
@@ -138,7 +138,7 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
                 {user && user.selectedProject && <Badge>Project {user.selectedProject}</Badge>}
             </div>
 
-            <TaskForm isOpen={isOpen} setIsOpen={setIsOpen} taskEditObject={taskEditObject} formScenario={formScenario} pushUpdateTask={pushUpdateTask} />
+            <DialogTaskForm isOpen={isOpen} setIsOpen={setIsOpen} taskEditObject={taskEditObject} formScenario={formScenario} pushUpdateTask={pushUpdateTask} />
             
             {/* <div className="container mx-auto p-6">
                 { 

@@ -1,14 +1,12 @@
-import { StrictMode } from 'react'
-
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router";
-import AppRoutes from "./AppRoutes";
+import React, { StrictMode } from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router';
 import './index.css'
 
-import UserContextProvider from './context/UserContextProvider'
-import ProjectContextProvider from './context/ProjectContextProvider'
-import { Toaster } from "@/components/ui/toaster"
+import App from "./App";
+import UserContextProvider from './context/UserContextProvider';
+import ProjectContextProvider from './context/ProjectContextProvider';
+import { Toaster } from "@/components/ui/toaster";
 
 const root = document.getElementById("root");
 
@@ -17,7 +15,7 @@ ReactDOM.createRoot(root).render(
       <BrowserRouter>
         <UserContextProvider>
           <ProjectContextProvider>
-            <AppRoutes />
+            <App />
             <Toaster />
           </ProjectContextProvider>
         </UserContextProvider>
