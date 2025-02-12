@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
+
 import FormFields from '@/components/form/FormFields'
 import FormWrapper from '@/components/form/FormWrapper'
 
@@ -46,9 +47,9 @@ function DialogTaskForm({ isOpen, setIsOpen, formScenario, taskEditObject, pushU
                 </DialogHeader>
 
                 <FormWrapper formScenario={formScenario} taskEditObj={taskEditObject} pushUpdateTask={pushUpdateTask} submitHook={handleSubmitHook} >
-                    <FormFields form={()=>true} />
+                    <FormFields form="" />
                     <DialogFooter>
-                        <Button type="submit">Save changes</Button>
+                        <Button type="submit">Save changes</Button>    
                     </DialogFooter>
                 </FormWrapper>
 

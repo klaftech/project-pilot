@@ -14,6 +14,20 @@ export const getTaskStatus = (task) => {
     return status
 }
 
+export const getReadableTaskStatus = (status) => {
+    let read = "N/A"
+    if(status == "completed"){
+        read = "Completed"
+    } else if(status == "delayed"){
+        read = "Delayed"
+    } else if(status == "in_progress"){
+        read = "In Progress"
+    } else if(status == "scheduled"){
+        read = "Scheduled"
+    }
+    return read
+}
+
 export const taskBuilder = (task) => {
     return {
         "id": task.id,

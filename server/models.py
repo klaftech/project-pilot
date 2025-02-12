@@ -264,6 +264,8 @@ class Task(db.Model, SerializerMixin):
         'dependencies', #default does not serializer association proxy
         '-parent_tasks.owner_task', #avoid recursion
         '-children_tasks.parent_task', #avoid recursion
+        '-children_tasks.owner_task.children_tasks', #avoid nested recursive data (a tasks child's owner is itself... so don't show it's child all over again)
+        '-children_tasks.owner_task.dependencies', #avoid nested recursive data (a tasks child's owner is itself... so don't show dependencies)
         '-dependencies.owner_task',
         '-dependencies.children_tasks',
         '-dependencies.parent_task',

@@ -15,6 +15,8 @@ import {
 
 const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, children }) => {
     
+    const [serverErrors, setServerErrors] = useState()
+
     const defaultFetchParams = {
         url: "/api/tasks", 
         request_method: "POST"
@@ -25,7 +27,8 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
     //console.log("onLoad formScenario: ",formScenario)
 
     const onTaskSubmit = async (form_data) => {
-        
+        console.log("onTaskSubmit() fired")
+
         const url = fetchParams.url
         const request_method = fetchParams.request_method
         
@@ -78,25 +81,28 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
             
 
         } catch (error) {
-            //setServerErrors(error)
-            console.log(error)
+            setServerErrors(error)
+            //console.log(error)
         }
     }
 
     const defaultTaskFormValues = {
         name: '',
-        //project_id: undefined,
-        group_id: undefined,
+        //project_id: '',
+        group_id: '',
+        days_length: '',
         pin_start: undefined,
         pin_end: undefined,
-        days_length: 0
     }
 
     const taskSchema = z.object({
         name: z.string({ required_error: "Task name is required.", })
             .min(2, { message: "Task name must be at least 2 characters.", }),
-        project_id: z.coerce.number({ required_error: "Project must be selected.", }).int().positive(),
-        group_id: z.coerce.number({ required_error: "Group must be selected.", }).int().positive(),
+        //project_id: z.coerce.number({ required_error: "Project must be selected.", }).int().positive(),
+        group_id: z.coerce
+            .number({ required_error: "Group must be selected.", })
+            .int({ message: "Group must be selected.", })
+            .positive({ message: "Group must be selected.", }),
         days_length: z.coerce
             .number({ required_error: "Task Length is required.", })
             .int()
@@ -150,10 +156,22 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
             form.reset(defaultTaskFormValues)
         }
     },[taskEditObj])
+    //console.log({...form})
+
+    const onError = (errors, event) => {
+        //console.log(event)
+        //console.log(errors)
+        setServerErrors(errors)
+    }
+    
+    if(serverErrors){
+        console.log("Submission Errors:")
+        console.log(serverErrors)
+    }
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onTaskSubmit)}>
+            <form onSubmit={form.handleSubmit(onTaskSubmit, onError)}>                
                 {children}
             </form>
         </Form>
