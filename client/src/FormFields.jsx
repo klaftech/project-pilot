@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -27,6 +27,7 @@ import {
     FormLabel,
     FormMessage,
   } from "@/components/ui/form"
+import UserContext from './context/UserContext'
 
 const FormFields = ({ form }) => {
     
@@ -35,29 +36,21 @@ const FormFields = ({ form }) => {
     // ********************************************************************
     // const [projects, setProjects] = useState([])
     const [groups, setGroups] = useState([])
+    const {user, setUser} = useContext(UserContext);
 
     useEffect(() => {
-        // fetchProjects()
         fetchGroups()
     }, [])
 
-    // const fetchProjects = () => (
-    //     fetch('/api/projects')
-    //     .then(res => {
-    //         if(res.ok){
-    //             res.json()
-    //             .then(data => {
-    //                 setProjects(data)
-    //                 //console.log(data)
-    //             })
-    //         } else {
-    //             console.log("error fetching projects")
-    //         }
-    //     })
-    // )
+    const fetchGroups = () => {
+        // TODO: possibly can get project_id from current task
+        // apparantly because of how we are loading the FormWrapper and FormFields, this component is not really getting the form instance in the props
+        let project_filter = ""
+        if(user && user.selectedProject){
+            project_filter = "?project_id="+user.selectedProject
+        }
 
-    const fetchGroups = () => (
-        fetch('/api/groups')
+        fetch('/api/groups'+project_filter)
         .then(res => {
             if(res.ok){
                 res.json()
@@ -69,7 +62,7 @@ const FormFields = ({ form }) => {
                 console.log("error fetching groups")
             }
         })
-    )
+    }
     
     return (
         <>

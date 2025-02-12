@@ -1,7 +1,7 @@
 // https://www.shadcnblocks.com/block/navbar1/
 
 import { NavLink, Link } from 'react-router'
-import { Book, Menu, Sunset, Trees, Zap, House, Building, Factory, BrickWall, Wrench } from "lucide-react";
+import { Book, Menu, Sunset, Trees, Zap, House, Building, Factory, BrickWall, Wrench, SquareCheck } from "lucide-react";
 
 import {
   Accordion,
@@ -202,7 +202,7 @@ const AppNavbar = ({
       key: project.id,
       title: project.name,
       description: project.description,
-      icon: projectTypeIcons[project.project_type] ?? <Wrench className="size-5 shrink-0" />,
+      icon: projectTypeIcons[project.project_type] ?? <SquareCheck className="size-5 shrink-0" />,
       url: "/project/"+project.id,
     }
   }
@@ -240,6 +240,12 @@ const AppNavbar = ({
         icon: <Book className="size-5 shrink-0" />,
         url: "/schedule",
     },
+    {
+      title: "Overview",
+      description: "Project Overview",
+      icon: <Book className="size-5 shrink-0" />,
+      url: "/overview",
+  },
     // {
     //   title: "Products",
     //   url: "#",

@@ -18,7 +18,7 @@ import {
   Clock
 } from "lucide-react";
 
-import ProjectContext from './context/ProjectContext'
+import UserContext from './context/UserContext'
 
 // https://npm.runkit.com/react-data-table-component
 // https://react-data-table-component.netlify.app/?path=/docs/api-custom-conditional-formatting--docs
@@ -31,8 +31,7 @@ const ProjectDetailsById = () => {
     //console.log(params)
     const projectId = params.projectId
 
-    const {project, setProject} = useContext(ProjectContext);
-
+    const {user, setUser} = useContext(UserContext);
     const [projectObj, setProjectObj] = useState()
     const [error, setError] = useState(null)
 
@@ -60,7 +59,10 @@ const ProjectDetailsById = () => {
                     setProjectObj(data)
 
                     // set context
-                    setProject(data.id)
+                    //setProject(data.id)
+                    const user_obj = {...user}
+                    user_obj.selectedProject = data.id
+                    setUser(user_obj)
                 })
             } else {
                 //console.log("project not found")
@@ -119,7 +121,8 @@ const ProjectDetailsById = () => {
       },
       {
         name: 'Group',
-        selector: row => projectObj.groups.length > 0 ? projectObj.groups.filter(group => group.id == row.group_id)[0].name : "",
+        //selector: row => projectObj.groups.length > 0 ? projectObj.groups.filter(group => group.id == row.group_id)[0].name : "",
+        selector: row => row.group_id,
       },
       {
         name: 'Scheduled Start',

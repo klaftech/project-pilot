@@ -13,13 +13,14 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChevronRight } from "lucide-react";
 
+import UserContext from './context/UserContext'
 import ProjectContext from './context/ProjectContext'
 
 export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
     
     const navigate = useNavigate();
-    const {project, setProject} = useContext(ProjectContext);
-    //console.log("ProjectContext ",project)
+    const {user, setUser} = useContext(UserContext);
+    //const {userProject, setUserProject} = useContext(ProjectContext);
 
     const [isOpen, setIsOpen] = useState(false)
     const [formScenario, setFormScenario] = useState(false)
@@ -134,7 +135,7 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
                     }} variant="outline">Create Task
                 </Button>
                 <ChevronRight />
-                <Badge>Project {project}</Badge>
+                {user && user.selectedProject && <Badge>Project {user.selectedProject}</Badge>}
             </div>
 
             <TaskForm isOpen={isOpen} setIsOpen={setIsOpen} taskEditObject={taskEditObject} formScenario={formScenario} pushUpdateTask={pushUpdateTask} />

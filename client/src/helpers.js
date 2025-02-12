@@ -1,3 +1,18 @@
+export const getTaskStatus = (task) => {
+    let status
+    if(task.complete_status == true){
+        status = "completed"
+    } else if(task.end < new Date()){
+        status = "delayed"
+    } else if(task.start <= new Date() && task.end >= new Date()){
+        status = "in_progress"
+    } else {
+        status = "scheduled"
+    }
+    return status
+}
+
+
 //convert string to javascript date object
 export const stringToDate = (string) => {
     if(string != null){
@@ -24,10 +39,10 @@ export const taskBuilder = (task) => {
         "progress": task.progress,
         "complete_status": task.complete_status, 
         //"dependencies": task.dependencies.map(task => taskBuilder(task)) //as of now we dont need full recursive dependencies.
-        "dependencies": task.dependencies.map(task => task.id), //sending array of IDs. if changing this, ensure that updated in GanttChart.jsx as well 
+        "dependencies": task.dependencies ? task.dependencies.map(task => task.id) : [], //sending array of IDs. if changing this, ensure that updated in GanttChart.jsx as well 
         "group": {
-            "id": task.group.id,
-            "name": task.group.name,
+            "id": task.group ? task.group.id : null,
+            "name": task.group ? task.group.name : null,
         },
     }
 }
