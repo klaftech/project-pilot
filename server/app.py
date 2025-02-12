@@ -17,7 +17,7 @@ from models import db, User, Project, Group, Task, TaskDependency, TaskUpdate, T
 # the following adds route-specific authorization
 @app.before_request
 def authenticate_user():
-    open_access_list = ["usersignup", "userlogin", "userlogout", "userauthorize"]
+    open_access_list = [None,"static","usersignup", "userlogin", "userlogout", "userauthorize"]
     
     # if the user is in session OR the request endpoint is open-access, the request will be processed as usual
     if request.endpoint not in open_access_list and not session.get("user_id"):
