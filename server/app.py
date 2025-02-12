@@ -85,7 +85,13 @@ class Groups(Resource):
         # user_id = session.get('user_id')
         # if not user_id:
         #     return make_response({"error": "User not logged in"}, 401)
-        groups = [group.to_dict(rules=('-tasks','-project')) for group in Group.query.all()]
+        groups_query = Group.query
+        
+        project_filter = request.args.get("project_id")
+        if project_filter != None:
+            groups_query = groups_query.filter(Group.project_id == project_filter)
+        
+        groups = [group.to_dict(rules=('-tasks','-project')) for group in groups_query.all()]
         return make_response(groups, 200)
     
     def post(self):
@@ -223,7 +229,14 @@ class Tasks(Resource):
         # user_id = session.get('user_id')
         # if not user_id:
         #     return make_response({"error": "User not logged in"}, 401)
-        tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks')) for task in Task.query.order_by(Task.sched_start.desc()).all()]
+        
+        tasks_query = Task.query.order_by(Task.sched_start.desc())  
+
+        project_filter = request.args.get("project_id")
+        if project_filter != None:
+            tasks_query = tasks_query.filter(Task.project_id == project_filter)
+          
+        tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks')) for task in tasks_query.all()]
         return make_response(tasks, 200)
     
     def post(self):
