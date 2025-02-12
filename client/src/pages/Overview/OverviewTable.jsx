@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from 'react'
-import { taskBuilder, getTaskStatus } from '../../utils/task.js';
+import { taskBuilder, getTaskStatus } from '@/utils/task.js';
 
 function OverviewTable() {
     const [projects, setProjects] = useState([])
@@ -73,7 +73,7 @@ function OverviewTable() {
                         return (
                             <TableRow key={project.id}>
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.name}</TableCell>
-                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.stats.project.status}</TableCell>
+                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{project.stats.project.status}</TableCell>
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.stats.project.completion_percent}%</TableCell>
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.stats.project.count_completed}/{project.stats.project.count_tasks}</TableCell>
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.stats.week.count_scheduled_completed}/{project.stats.week.count_scheduled}</TableCell>

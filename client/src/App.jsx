@@ -11,6 +11,7 @@ import Signup from './pages/Signup/Signup'
 import Login from './pages/Login/Login'
 import Logout from './pages/Logout/Logout'
 import HTTP404 from './pages/404/HTTP404'
+import Navbar from './components/Navbar'
 
 import { taskBuilder } from './utils/task.js'
 import UserContext from './context/UserContext'
@@ -132,6 +133,8 @@ function App() {
     )
     
     return (
+        <>
+        <Navbar /> {/* since adding to App instead of individual pages, navigation pane doesn't auto-close on selection, moved to save on projects reload */}
         <Routes>
             <Route path="/" element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
             <Route path="project/:projectId" element={<ProjectDetailsById />} />
@@ -150,6 +153,7 @@ function App() {
             
             <Route path="*" element={<HTTP404 endpoint={location.pathname} />} />
         </Routes>
+        </>
     )
 }
 

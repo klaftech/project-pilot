@@ -1,6 +1,7 @@
 import { useParams } from "react-router"
 import { useEffect, useState, useContext } from 'react'
-import { stringToDate, formatDatePretty, formatDatePrettyMMDD } from '../../utils/date.js'
+import { stringToDate, formatDatePretty, formatDatePrettyMMDD } from '@/utils/date.js'
+import { getTaskStatus, getReadableTaskStatus } from '@/utils/task.js'
 
 import Navbar from '../../components/Navbar.jsx'
 import ProgressBar from './ProgressBar.jsx'
@@ -119,11 +120,11 @@ const ProjectDetailsById = () => {
         name: 'Task',
         selector: row => row.name,
       },
-      {
-        name: 'Group',
-        //selector: row => projectObj.groups.length > 0 ? projectObj.groups.filter(group => group.id == row.group_id)[0].name : "",
-        selector: row => row.group_id,
-      },
+      // {
+      //   name: 'Group',
+      //   //selector: row => projectObj.groups.length > 0 ? projectObj.groups.filter(group => group.id == row.group_id)[0].name : "",
+      //   selector: row => row.group_id,
+      // },
       {
         name: 'Scheduled Start',
         selector: row => formatDatePretty(stringToDate(row.sched_start)),
@@ -135,13 +136,13 @@ const ProjectDetailsById = () => {
       },
       {
         name: 'Status',
-        selector: row => row.complete_status ? "Completed" : "Scheduled",
+        selector: row => getReadableTaskStatus(getTaskStatus(row)),
       },
     ];
 
     return (
         <>
-          <Navbar />
+          {/* <Navbar /> */}
 
           {/* <div className="container mx-auto p-6"> */}
           <section className="py-32">

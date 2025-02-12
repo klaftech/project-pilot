@@ -123,7 +123,7 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
     
     return (
         <>
-            <Navbar/>
+            {/* <Navbar/> */}
 
             {alert && <ShowAlert message={alert}/>}
             

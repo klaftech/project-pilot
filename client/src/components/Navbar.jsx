@@ -161,18 +161,22 @@ const AppNavbar = ({
   // ********************* BEGIN PROJECTS LOADING ***********************
   // ********************************************************************
   const {user, setUser} = useContext(UserContext);
+  const [userState, setUserState] = useState(user)
   //const {project, setProject} = useContext(ProjectContext);
   //console.log("InNav: ",project)
   
   const [projects, setProjects] = useState([])
 
   useEffect(() => {
-    fetchProjects()
-  }, [user])
+    if(projects.length <= 0){
+      fetchProjects()
+      console.log("projects fetch")
+    }
+  }, [])
   //trigger reload on user context change (login or full reload)
 
   const fetchProjects = () => (
-      fetch('/api/projects')
+    fetch('/api/projects')
       .then(res => {
           if(res.ok){
               res.json()

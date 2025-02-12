@@ -103,7 +103,7 @@ function ScheduleContainer({ tasks }) {
     
     return (
         <>
-            <Navbar />
+            {/* <Navbar /> */}
             <div className="container mx-auto p-6">
                 {sortedTasks && sortedTasks.length > 0 && <GanttChart tasks={sortedTasks} setTasks={handleSetTasks} />}
                 {!sortedTasks || sortedTasks.length <= 0 && <p>No tasks found for this project.</p>}

@@ -46,6 +46,7 @@ function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
             if(res.ok){
                 res.json()
                 .then(data => {
+                    //console.log("data received. converting dates and updating state")
                     //manually convert top-level date strings to JS Date objects
                     data.sched_start = stringToDate(data.sched_start)
                     data.sched_end = stringToDate(data.sched_end)
@@ -64,7 +65,7 @@ function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
             }
         })
     }
-    console.log("TaskObj: ",taskObj)
+    //console.log("TaskObj: ",taskObj)
 
     const handleReloadTaskObj = () => {
         fetchTask()
@@ -72,7 +73,7 @@ function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
 
     return (
         <>  
-            <Navbar />
+            {/* <Navbar /> */}
             <div className="flex justify-center items-center">
                 <Tabs defaultValue="details" className="w-[400px]">
                 <TabsList className="grid w-full grid-cols-2">
@@ -81,6 +82,7 @@ function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
                     {/* <TabsTrigger value="password">Password</TabsTrigger> */}
                 </TabsList>
                 {error}
+                {!taskObj && <p>Building task details and dependencies...</p>}
                 <TabsContent value="details">
                     {!error && taskObj && <DetailsCardForm taskObj={taskObj} pushUpdateTask={pushUpdateTask} reloadTaskObj={handleReloadTaskObj} />}
                 </TabsContent>

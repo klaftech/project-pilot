@@ -278,7 +278,7 @@ const FormFields = ({ form }) => {
                         </PopoverContent>
                     </Popover>
                     <FormDescription>
-                        Pin the task start to a specific date.
+                        Task will not begin before this date.
                     </FormDescription>
                     <FormMessage />
                     </FormItem>
@@ -323,7 +323,7 @@ const FormFields = ({ form }) => {
                         </PopoverContent>
                     </Popover>
                     <FormDescription>
-                        Pin the task end to a specific date.
+                        Task will not end before this date.
                     </FormDescription>
                     <FormMessage />
                     </FormItem>
