@@ -346,7 +346,7 @@ class Task(db.Model, SerializerMixin):
     def get_available(self):
         ancestors = set(self.get_ancestors())
         descendents = set(self.get_descendents())
-        all_tasks = set([task for task in Task.query.filter(Task.id != self.id).all()])
+        all_tasks = set([task for task in Task.query.filter(Task.id != self.id).filter(Task.project_id == self.project_id).all()])
         available_tasks_set = all_tasks - ancestors - descendents
         return available_tasks_set
 
