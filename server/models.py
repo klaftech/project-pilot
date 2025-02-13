@@ -57,8 +57,8 @@ class Project(db.Model, SerializerMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
-    start = db.Column(db.DateTime, nullable=True, default=datetime.strptime("2020-01-01", "%Y-%m-%d"))
-    end = db.Column(db.DateTime, nullable=True, default=datetime.strptime("2020-01-01", "%Y-%m-%d"))
+    start = db.Column(db.DateTime, nullable=True, default=datetime.strptime("2025-01-01", "%Y-%m-%d"))
+    end = db.Column(db.DateTime, nullable=True, default=datetime.strptime("2025-01-01", "%Y-%m-%d"))
     project_type = db.Column(db.String, default="house")
     description = db.Column(db.String, nullable=True)
 
@@ -470,7 +470,7 @@ class Task(db.Model, SerializerMixin):
         if not self.project:
             # if we're running before initial commit, project serialization not set create, so get project data manually
             project = Project.query.filter(Project.id == self.project_id).first()
-            if not project.start:
+            if not project:
                 # if for any reason project start is not yet defined, use today's date for the task
                 default_start = datetime.combine(datetime.now(), time.min) # use today as start
             else:

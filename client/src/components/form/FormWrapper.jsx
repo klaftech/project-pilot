@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { useForm } from 'react-hook-form'
 import { format } from "date-fns"
 import { z } from "zod";
@@ -12,9 +12,11 @@ import {
     FormLabel,
     FormMessage,
   } from "@/components/ui/form"
+import UserContext from '@/context/UserContext'
 
 const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, children }) => {
     
+    const {user, setUser} = useContext(UserContext);
     const [serverErrors, setServerErrors] = useState()
 
     const defaultFetchParams = {
@@ -27,6 +29,13 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
     //console.log("onLoad formScenario: ",formScenario)
 
     const onTaskSubmit = async (form_data) => {
+
+        let project_id = 4
+        if(user && user.selectedProject){
+            project_id = user.selectedProject
+        }
+
+        
         console.log("onTaskSubmit() fired")
 
         const url = fetchParams.url
@@ -47,15 +56,21 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
             console.log("formData.pin_end (formatted): ",form_data.pin_end)
         }
 
+        if(request_method == "POST"){
+            form_data = {
+                ...form_data, 
+                project_id: project_id,
+            }
+        }
+
+        console.log(form_data)
+
         try {
             const response = await fetch(
                 url,
                 {
                     method: request_method,
-                    body: JSON.stringify({
-                        ...form_data, 
-                        project_id: 1,
-                    }),
+                    body: JSON.stringify({...form_data}),
                     headers: {
                         "Content-Type": "application/json",
                     },
