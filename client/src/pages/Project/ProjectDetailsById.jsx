@@ -3,7 +3,8 @@ import { useEffect, useState, useContext } from 'react'
 import { stringToDate, formatDatePretty, formatDatePrettyMMDD } from '@/utils/date.js'
 import { getTaskStatus, getReadableTaskStatus } from '@/utils/task.js'
 
-import Navbar from '../../components/Navbar.jsx'
+import UserContext from '@/context/UserContext.jsx'
+import Navbar from '@/components/Navbar.jsx'
 import ProgressBar from './ProgressBar.jsx'
 
 import { Separator } from "@/components/ui/separator";
@@ -18,8 +19,6 @@ import {
   Circle,
   Clock
 } from "lucide-react";
-
-import UserContext from '../../context/UserContext.jsx'
 
 // https://npm.runkit.com/react-data-table-component
 // https://react-data-table-component.netlify.app/?path=/docs/api-custom-conditional-formatting--docs

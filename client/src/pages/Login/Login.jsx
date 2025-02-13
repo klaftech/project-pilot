@@ -1,7 +1,7 @@
 import { LoginForm } from "@/pages/Login/login-form"
 import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from 'react-router'
-import UserContext from '../../context/UserContext'
+import UserContext from '@/context/UserContext'
 
 import { GalleryVerticalEnd } from "lucide-react"
 import MainLogo from '/logo.webp'
