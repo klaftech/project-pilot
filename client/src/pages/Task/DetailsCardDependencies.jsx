@@ -136,11 +136,11 @@ function DetailsCardDependencies({ taskObj, tasks, pushUpdateTask, reloadTasks }
         }
     }
     
-    if(availableTasks.length <= 0 || ancestors.length <= 0){
-        return ( 
-            <LoadingWrapper />
-        )
-    }
+    // if(availableTasks.length <= 0 || ancestors.length <= 0){
+    //     return ( 
+    //         <LoadingWrapper />
+    //     )
+    // }
 
     return (
         <>
