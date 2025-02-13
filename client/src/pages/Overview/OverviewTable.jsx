@@ -2,6 +2,7 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from 'react'
 import { taskBuilder, getTaskStatus } from '@/utils/task.js';
+import LoadingCard from "@/components/LoadingCard"
 
 function OverviewTable() {
     const [projects, setProjects] = useState([])
@@ -28,15 +29,20 @@ function OverviewTable() {
                     setProjects(data)
                 })
             } else {
-                //console.log("unable to load projects data")
+                console.log("unable to load projects data")
                 //throw new Error(res.status);
-                setError("Unable to load projects data.")
+                //setError("Unable to load projects data.")
             }
         })
     }
 
-    if(!projects){
-        return <h2>Projects Loading</h2>
+    if(projects.length <= 0){
+        return ( 
+            <>
+            <h2>Projects Loading</h2>
+            <LoadingCard />
+            </>
+        )
     }
 
     // get max amount of tasks of all projects for determining amount of columns

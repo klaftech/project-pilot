@@ -129,14 +129,19 @@ function App() {
 
 
     if((!user) && (location.pathname != "/signup")) return (
-        <Login/>
+        <Login />
     )
-    
+
+    /* bypass issue of Navbar showing on signup page */
+    if(location.pathname == "/signup") return (
+        <Signup />
+    )
+
     return (
         <>
         <Navbar /> {/* since adding to App instead of individual pages, navigation pane doesn't auto-close on selection, moved to save on projects reload */}
         <Routes>
-            <Route path="/" element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
+            <Route index element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
             <Route path="project/:projectId" element={<ProjectDetailsById />} />
             <Route path="task/:taskId" element={<TaskDetailsById tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
             <Route path="tasks" element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
