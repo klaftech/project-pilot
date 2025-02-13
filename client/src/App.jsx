@@ -46,23 +46,14 @@ function App() {
             if(res.ok){
                 res.json()
                 .then(data => {
-                    const defaultSelectedProject=1
-                    const user_obj = {...data}
-                    user_obj.selectedProject = defaultSelectedProject
-                    setUser(user_obj)
+                    setUser(data)
                     console.log("user validated by session: "+data.email+" ID:"+data.id)
-                    
-                    //set default selected project to 1
-                    //setProject(defaultSelectedProject)
                 })
             } else {
                 navigate('/login')
             }
         })
     )
-    // if(user){
-    //     console.log("UserSelectedProject: ",user.selectedProject)
-    // }
     // ********************************************************************
     // ********************** ENG USER AUTHORIZATION **********************
     // ********************************************************************
@@ -74,16 +65,16 @@ function App() {
     const [tasks, setTasks] = useState([])
 
     useEffect(() => {
-        if((location.pathname != "/signup") && (location.pathname != "/login")){
+        if((user) && (location.pathname != "/signup") && (location.pathname != "/login")){
             fetchTasks()
         }
-    }, [location.pathname])
+    }, [location.pathname, user])
 
     const fetchTasks = () => {
-        let project_filter = ""
-        if(user && user.selectedProject){
-            project_filter = "?project_id="+user.selectedProject
-        }
+        // let project_filter = ""
+        // if(user && user.selectedProject){
+            const project_filter = "?project_id="+user.selectedProject
+        // }
         fetch('/api/tasks'+project_filter)
         .then(res => {
             if(res.ok){

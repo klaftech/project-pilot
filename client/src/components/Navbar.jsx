@@ -183,6 +183,22 @@ const AppNavbar = ({
               .then(data => {
                   setProjects(data)
                   //console.log("projects loaded into Navbar")
+
+                  // let defaultSelectedProject = 0
+                  // if(data.length < 1){
+                  //   //no results
+                  //   defaultSelectedProject = 0
+                  // } else if(data.length == 1){
+                  //   //single result
+                  //   defaultSelectedProject = data.id
+                  // } else {
+                  //   //multiple results
+                  //   defaultSelectedProject = data[0].id
+                  // }
+                  // const user_obj = {...user}
+                  // user_obj.selectedProject = defaultSelectedProject
+                  // setUser(user_obj)
+                  // console.log(user_obj)
               })
           } else {
               console.log('failed to fetch projects')
