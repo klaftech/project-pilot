@@ -2,6 +2,11 @@
 
 ProjectPilot is a innovative project management platform that asynchronously handles project scheduling based on task rules and dependencies. The project dashboard features robust reporting and a high-level overview of the project progress, making it easy to quickly pinpoint bottlenecks and delays.
 
+## Demo
+[Live Demo](https://project-pilot-c7k9.onrender.com/)
+
+[Presentation Slides](https://docs.google.com/presentation/d/1EcQUvc2fFBbMIu7x39l0bFjSWCR0OthasWq1PwccOoo/edit?usp=sharing)
+
 ## Overview 
 This is a project management system that allows scheduling and task management of dependent tasks across multi-phase projects. 
 The system predicts project and task completion timeline, by factoring in the cascading effect of delays of predecessor tasks. 
