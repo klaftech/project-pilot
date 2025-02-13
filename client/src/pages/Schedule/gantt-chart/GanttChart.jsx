@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from 'react-router'
 import { Gantt, ViewMode } from "gantt-task-react";
 import { ViewSwitcher } from "./ViewSwitcher";
 import { getStartEndDateForProject } from "./helper";
@@ -7,6 +8,7 @@ import { getStartEndDateForProject } from "./helper";
 import "gantt-task-react/dist/index.css";
 
 const App = ({ tasks, setTasks }) => {
+  const navigate = useNavigate();
   const [view, setView] = useState(ViewMode.Month);
   const [isChecked, setIsChecked] = useState(true);
 
@@ -52,7 +54,8 @@ const App = ({ tasks, setTasks }) => {
   };
 
   const handleDblClick = (task) => {
-    alert("On Double Click event Id:" + task.id);
+    //alert("On Double Click event Id:" + task.id);
+    navigate('/task/'+task.id)
   };
 
   const handleClick = (task) => {
