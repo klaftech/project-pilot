@@ -100,7 +100,7 @@ function ScheduleContainer({ tasks }) {
     const handleSetTasks = (data) => {
         console.log("setTasks fired on ScheduleContainer. no action defined yet.")
     }
-    
+
     return (
         <>
             {/* <Navbar /> */}

@@ -23,6 +23,7 @@ import {
 // https://npm.runkit.com/react-data-table-component
 // https://react-data-table-component.netlify.app/?path=/docs/api-custom-conditional-formatting--docs
 import DataTable from 'react-data-table-component';
+import LoadingWrapper from "@/components/LoadingWrapper.jsx"
 
 const ProjectDetailsById = () => {
 
@@ -74,7 +75,7 @@ const ProjectDetailsById = () => {
     //console.log("ProjectObj: ",projectObj)
 
     if(!projectObj){
-      return <h2>Project Loading</h2>
+      return <LoadingWrapper />
     }
 
     const projectStats = [
