@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from 'react'
 import { taskBuilder, getTaskStatus } from '@/utils/task.js';
-import LoadingCard from "@/components/LoadingCard"
+import LoadingWrapper from "@/components/LoadingWrapper"
 
 function OverviewTable() {
     const [projects, setProjects] = useState([])
@@ -38,10 +38,7 @@ function OverviewTable() {
 
     if(projects.length <= 0){
         return ( 
-            <>
-            <h2>Projects Loading</h2>
-            <LoadingCard />
-            </>
+            <LoadingWrapper />
         )
     }
 

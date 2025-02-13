@@ -36,6 +36,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import DetailsCardAncestors from './DetailsCardAncestors'
+import LoadingWrapper from "@/components/LoadingWrapper"
 
 function DetailsCardDependencies({ taskObj, tasks, pushUpdateTask, reloadTasks }) {
     /* 
@@ -135,6 +136,12 @@ function DetailsCardDependencies({ taskObj, tasks, pushUpdateTask, reloadTasks }
         }
     }
     
+    if(availableTasks.length <= 0 || ancestors.length <= 0){
+        return ( 
+            <LoadingWrapper />
+        )
+    }
+
     return (
         <>
             <Card>

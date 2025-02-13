@@ -24,6 +24,7 @@ import { useEffect, useState } from 'react'
 import DetailsCardDependencies from "./DetailsCardDependencies.jsx"
 import DetailsCardForm from './DetailsCardForm.jsx'
 import Navbar from '@/components/Navbar.jsx'
+import LoadingWrapper from "@/components/LoadingWrapper.jsx"
 
 function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
     let params = useParams()
@@ -69,6 +70,12 @@ function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
 
     const handleReloadTaskObj = () => {
         fetchTask()
+    }
+
+    if(!taskObj){
+        return ( 
+            <LoadingWrapper />
+        )
     }
 
     return (
