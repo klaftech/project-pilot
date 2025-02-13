@@ -2,7 +2,7 @@ import { SignupForm } from "@/pages/Signup/signup-form"
 import { SignupSuccess } from "@/pages/Signup/signup-success"
 import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from 'react-router'
-import UserContext from '../../context/UserContext'
+import UserContext from '@/context/UserContext'
 
 import MainLogo from '/logo.webp'
 import Logo from '/logo_transparent.png'

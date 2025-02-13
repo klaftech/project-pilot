@@ -1,25 +1,25 @@
 import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useEffect, useState, useContext } from 'react'
 
-import ProjectDetailsById from './pages/Project/ProjectDetailsById'
-import TaskDetailsById from './pages/Task/TaskDetailsById'
-import TasksContainer from './pages/Tasks/TasksContainer';
-import ListContainer from './pages/List/ListContainer'
-import ScheduleContainer from "./pages/Schedule/ScheduleContainer";
-import OverviewContainer from './pages/Overview/OverviewContainer'
-import Signup from './pages/Signup/Signup'
-import Login from './pages/Login/Login'
-import Logout from './pages/Logout/Logout'
-import HTTP404 from './pages/404/HTTP404'
-import Navbar from './components/Navbar'
+import ProjectDetailsById from '@/pages/Project/ProjectDetailsById'
+import TaskDetailsById from '@/pages/Task/TaskDetailsById'
+import TasksContainer from '@/pages/Tasks/TasksContainer';
+import ListContainer from '@/pages/List/ListContainer'
+import ScheduleContainer from "@/pages/Schedule/ScheduleContainer";
+import OverviewContainer from '@/pages/Overview/OverviewContainer'
+import Signup from '@/pages/Signup/Signup'
+import Login from '@/pages/Login/Login'
+import Logout from '@/pages/Logout/Logout'
+import HTTP404 from '@/pages/404/HTTP404'
+import Navbar from '@/components/Navbar'
 
-import { taskBuilder } from './utils/task.js'
-import UserContext from './context/UserContext'
-import ProjectContext from './context/ProjectContext'
+import { taskBuilder } from '@/utils/task.js'
+import UserContext from '@/context/UserContext'
+import ProjectContext from '@/context/ProjectContext'
 
-import ToastDemo from "./dev/_ToastDemo";
-import TaskInnerForm from './dev/_TaskInnerForm'
-import AppDev from './dev/_AppDev'
+import ToastDemo from "@/dev/_ToastDemo";
+import TaskInnerForm from '@/dev/_TaskInnerForm'
+import AppDev from '@/dev/_AppDev'
 
 function App() {
     
