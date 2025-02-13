@@ -59,7 +59,8 @@ const App = ({ tasks, setTasks }) => {
   };
 
   const handleClick = (task) => {
-    console.log("On Click event Id:" + task.id);
+    //console.log("On Click event Id:" + task.id);
+    navigate('/task/'+task.id)
   };
 
   const handleSelect = (task, isSelected) => {

@@ -79,7 +79,7 @@ with app.app_context():
         description="Single-Family Home"
     )
     project_2 = Project(
-        name='Factory Warehouse',
+        name='Factory Renovation',
         project_type='commercial',
         description="Steel work"
     )
@@ -134,7 +134,7 @@ with app.app_context():
     task_4 = Task(
         name='Foundation',
         project_id=project_1.id,
-        group_id=group_1.id,
+        group_id=group_2.id,
         #pin_start="",
         #pin_end="",
         days_length=14
@@ -142,7 +142,7 @@ with app.app_context():
     task_5 = Task(
         name='Survey',
         project_id=project_1.id,
-        group_id=group_1.id,
+        group_id=group_2.id,
         #pin_start="",
         #pin_end="",
         days_length=3
