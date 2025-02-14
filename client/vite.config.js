@@ -10,6 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  build: {
+    outDir: "../client/dist"  // Ensure the output path matches the expected directory
+  },
   preview: {
     port: 4000,
   },
