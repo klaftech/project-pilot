@@ -10,9 +10,10 @@ from sqlalchemy import func
 
 # local imports
 # sets absolute path for deployment
-# import sys
-# import os
-# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from config import app, db, api
 from models import db, User, Project, Group, Task, TaskDependency, TaskUpdate, TaskUser
 
