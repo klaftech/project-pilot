@@ -18,6 +18,7 @@ load_dotenv()
 # full-stack deployment
 app = Flask(
     __name__,
+    instance_path="/tmp/flask-instance",
     static_url_path='',
     static_folder='../client/dist',
     template_folder='../client/dist'
@@ -27,8 +28,8 @@ def not_found(e):
     return render_template("index.html")
 
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
-#app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False                                  
 app.secret_key = os.getenv('SECRET_KEY')
