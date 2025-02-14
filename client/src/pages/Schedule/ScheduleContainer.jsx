@@ -19,7 +19,6 @@ function ScheduleContainer({ tasks }) {
         isDisabled: true,
         //fontSize: '100',
         //project: 'SAS',
-        hideChilren: false,
         // displayOrder: task.id
     }));
 
@@ -65,7 +64,7 @@ function ScheduleContainer({ tasks }) {
             end: values.end,
             progress: 0,
             isDisabled: true,
-            hideChilren: false,
+            hideChilren: false, //project type only
             displayOrder: parseInt(group_id),
         }  
         preppedGroups.push(group)

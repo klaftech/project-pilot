@@ -55,12 +55,16 @@ const App = ({ tasks, setTasks }) => {
 
   const handleDblClick = (task) => {
     //alert("On Double Click event Id:" + task.id);
-    navigate('/task/'+task.id)
+    if(task.type == "task"){
+      navigate('/task/'+task.id)
+    }
   };
 
   const handleClick = (task) => {
     //console.log("On Click event Id:" + task.id);
-    navigate('/task/'+task.id)
+    if(task.type == "task"){
+      navigate('/task/'+task.id)
+    }
   };
 
   const handleSelect = (task, isSelected) => {
@@ -89,6 +93,8 @@ const App = ({ tasks, setTasks }) => {
         <Gantt
             tasks={tasks}
             viewMode={view}
+            locale="en-US"
+            todayColor="#f0f080"
             onDateChange={handleTaskChange}
             onDelete={handleTaskDelete}
             onProgressChange={handleProgressChange}
