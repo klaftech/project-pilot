@@ -60,7 +60,6 @@ const ProjectDetailsById = () => {
                     setProjectObj(data)
 
                     // set context
-                    //setProject(data.id)
                     const user_obj = {...user}
                     user_obj.selectedProject = data.id
                     setUser(user_obj)
@@ -74,8 +73,11 @@ const ProjectDetailsById = () => {
     }
     //console.log("ProjectObj: ",projectObj)
 
+    if(error){
+      return (<AppWrapper><p>{error}</p></AppWrapper>)
+    }
     if(!projectObj){
-      return <LoadingWrapper />
+      return (<AppWrapper><LoadingWrapper /></AppWrapper>)
     }
 
     const projectStats = [
