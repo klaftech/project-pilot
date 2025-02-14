@@ -9,14 +9,12 @@ from datetime import datetime, timedelta, time, date
 from sqlalchemy import func
 
 # local imports
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+# sets absolute path for deployment
+# import sys
+# import os
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import app, db, api
 from models import db, User, Project, Group, Task, TaskDependency, TaskUpdate, TaskUser
-
-
 
 # the following adds route-specific authorization
 @app.before_request
