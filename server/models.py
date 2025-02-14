@@ -8,7 +8,7 @@ from sqlalchemy.orm import attributes
 
 from sqlalchemy import event, func
 
-from config import db, bcrypt
+from server.config import db, bcrypt
 
 import json
 import ipdb
