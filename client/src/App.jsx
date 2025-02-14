@@ -15,7 +15,7 @@ import Navbar from '@/components/Navbar'
 
 import { taskBuilder } from '@/utils/task.js'
 import UserContext from '@/context/UserContext'
-import ProjectContext from '@/context/ProjectContext'
+import ProjectsContext from '@/context/ProjectsContext'
 
 import ToastDemo from "@/dev/_ToastDemo";
 import TaskInnerForm from '@/dev/_TaskInnerForm'
@@ -27,10 +27,10 @@ function App() {
     // ********************* START USER AUTHORIZATION *********************
     // ********************************************************************
     const {user, setUser} = useContext(UserContext);
-    const {project, setProject} = useContext(ProjectContext);
+    const {projects, setsProject} = useContext(ProjectsContext);
     const navigate = useNavigate()
     let location = useLocation()
-    //console.log("AppRoutes ContextProject: ",project)
+    //console.log("AppRoutes ContextsProject: ",projects)
     //console.log("AppRoutes ContextUser: ",user)
     //console.log(location)
 
@@ -130,7 +130,7 @@ function App() {
 
     return (
         <>
-        <Navbar /> {/* since adding to App instead of individual pages, navigation pane doesn't auto-close on selection, moved to save on projects reload */}
+        {/* since adding to App instead of individual pages, navigation pane doesn't auto-close on selection, moved to save on projects reload */}
         <Routes>
             <Route index element={<TasksContainer tasks={tasks} pushUpdateTask={handleUpdateTask} reloadTasks={handleReloadTasks} />} />
             <Route path="project/:projectId" element={<ProjectDetailsById />} />

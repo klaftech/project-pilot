@@ -34,6 +34,7 @@ class User(db.Model, SerializerMixin):
 
     completed_tasks = db.relationship('Task', back_populates="complete_user")
     serialize_rules = (
+        '-_password_hash',
         '-completed_tasks.complete_user',
         '-completed_tasks.project',
         '-completed_tasks.group',
@@ -57,7 +58,7 @@ class Project(db.Model, SerializerMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
-    start = db.Column(db.DateTime, nullable=True, default=datetime.strptime("2025-01-01", "%Y-%m-%d"))
+    start = db.Column(db.DateTime, nullable=True, default=datetime.strptime("2025-01-05", "%Y-%m-%d"))
     end = db.Column(db.DateTime, nullable=True, default=datetime.strptime("2025-01-01", "%Y-%m-%d"))
     project_type = db.Column(db.String, default="house")
     description = db.Column(db.String, nullable=True)

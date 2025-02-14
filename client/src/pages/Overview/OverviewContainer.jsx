@@ -1,5 +1,5 @@
 import { formatDatePretty, isDate } from '@/utils/date.js'
-import Navbar from '@/components/Navbar.jsx'
+import AppWrapper from '@/components/AppWrapper.jsx'
 import OverviewTable from './OverviewTable.jsx'
 
 import OverviewSimpleTable from './_OverviewSimpleTable.jsx'
@@ -34,8 +34,7 @@ const OverviewContainer = ({ tasks }) => {
   */
 
   return (
-    <>
-      {/* <Navbar /> */}
+    <AppWrapper>
       <OverviewTable />
       {/* 
       <OverviewSimpleTable />
@@ -57,7 +56,7 @@ const OverviewContainer = ({ tasks }) => {
         </div>
       </section>
       */}
-    </>
+    </AppWrapper>
   )
 }
 export default OverviewContainer

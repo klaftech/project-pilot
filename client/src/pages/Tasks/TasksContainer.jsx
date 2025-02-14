@@ -1,4 +1,4 @@
-import Navbar from '@/components/Navbar'
+import AppWrapper from '@/components/AppWrapper'
 import TaskCard from './TaskCard'
 import DialogTaskForm from './DialogTaskForm'
 //import { tasks_data } from './tasks_data.js' 
@@ -14,13 +14,12 @@ import { Badge } from "@/components/ui/badge"
 import { ChevronRight } from "lucide-react";
 
 import UserContext from '@/context/UserContext'
-import ProjectContext from '@/context/ProjectContext'
+import ProjectsContext from '@/context/ProjectsContext'
 
 export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
     
     const navigate = useNavigate();
     const {user, setUser} = useContext(UserContext);
-    //const {userProject, setUserProject} = useContext(ProjectContext);
 
     const [isOpen, setIsOpen] = useState(false)
     const [formScenario, setFormScenario] = useState(false)
@@ -122,9 +121,7 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
     })
     
     return (
-        <>
-            {/* <Navbar/> */}
-
+        <AppWrapper>
             {alert && <ShowAlert message={alert}/>}
             
             <div className="flex items-center px-2 m-1">
@@ -197,7 +194,7 @@ export function TasksContainer({ tasks, pushUpdateTask, reloadTasks }) {
                 </div>
 
             </div>
-        </>
+        </AppWrapper>
     )
 }
 export default TasksContainer

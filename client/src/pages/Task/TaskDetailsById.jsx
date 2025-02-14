@@ -23,7 +23,7 @@ import { useEffect, useState } from 'react'
 
 import DetailsCardDependencies from "./DetailsCardDependencies.jsx"
 import DetailsCardForm from './DetailsCardForm.jsx'
-import Navbar from '@/components/Navbar.jsx'
+import AppWrapper from '@/components/AppWrapper.jsx'
 import LoadingWrapper from "@/components/LoadingWrapper.jsx"
 
 function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
@@ -79,8 +79,7 @@ function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
     }
 
     return (
-        <>  
-            {/* <Navbar /> */}
+        <AppWrapper>
             <div className="flex justify-center items-center">
                 <Tabs defaultValue="details" className="w-[400px]">
                 <TabsList className="grid w-full grid-cols-2">
@@ -125,8 +124,7 @@ function TaskDetailsById({tasks, pushUpdateTask, reloadTasks}) {
 
                 </Tabs>
             </div>
-        </>
-        
+        </AppWrapper>
     )
 }
 export default TaskDetailsById

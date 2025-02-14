@@ -106,8 +106,9 @@ export function LoginForm({
       </Card>
       <div
         className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary  ">
-        By clicking continue, you agree to our <Link to="#">Terms of Service</Link>{" "}
-        and <Link to="#">Privacy Policy</Link>.
+        {/* By clicking continue, you agree to our <Link to="#">Terms of Service</Link>{" "}
+        and <Link to="#">Privacy Policy</Link>. */}
+        Developed by <Link to="https://klaftech.com">KlafTech Data Systems</Link>
       </div>
     </div>)
   );
