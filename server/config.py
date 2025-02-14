@@ -15,7 +15,8 @@ load_dotenv()
 # backend only deployment
 # app = Flask(__name__) 
 
-# full-stack deployment
+# full-stack deployment 
+# instance_path required for vercel deployment because the rest of the instance is read-only
 app = Flask(
     __name__,
     instance_path="/tmp/flask-instance",
