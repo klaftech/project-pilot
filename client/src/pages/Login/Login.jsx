@@ -39,13 +39,8 @@ export default function LoginPage() {
             
             const data = await response.json()
             console.log('Successfully Logged In. Navigating to /')
-            console.log(data)
-
-            const defaultSelectedProject = 1
-            const user_obj = {...data}
-            user_obj.selectedProject = defaultSelectedProject
-            setUser(user_obj)
-            
+            //console.log(data)
+            setUser(data)
             navigate('/');
         } catch (error) {
             setServerErrors(error)
