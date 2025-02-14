@@ -5,3 +5,4 @@ server/archive
 server/instance
 server/migrations
 client/dev
+.vercel
