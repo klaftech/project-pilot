@@ -9,8 +9,12 @@ from datetime import datetime, timedelta, time, date
 from sqlalchemy import func
 
 # local imports
-from server.config import app, db, api
-from server.models import db, User, Project, Group, Task, TaskDependency, TaskUpdate, TaskUser
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from config import app, db, api
+from models import db, User, Project, Group, Task, TaskDependency, TaskUpdate, TaskUser
 
 
 
