@@ -4,7 +4,7 @@ import { stringToDate, formatDatePretty, formatDatePrettyMMDD } from '@/utils/da
 import { getTaskStatus, getReadableTaskStatus } from '@/utils/task.js'
 
 import UserContext from '@/context/UserContext.jsx'
-import Navbar from '@/components/Navbar.jsx'
+import AppWrapper from '@/components/AppWrapper.jsx'
 import ProgressBar from './ProgressBar.jsx'
 
 import { Separator } from "@/components/ui/separator";
@@ -141,9 +141,7 @@ const ProjectDetailsById = () => {
     ];
 
     return (
-        <>
-          {/* <Navbar /> */}
-
+        <AppWrapper>
           {/* <div className="container mx-auto p-6"> */}
           <section className="py-32">
             <div className="container px-0 md:px-8">
@@ -253,7 +251,7 @@ const ProjectDetailsById = () => {
               </div>
             </div>
           </section>
-        </>
+        </AppWrapper>
     )
 }
 export default ProjectDetailsById

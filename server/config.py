@@ -27,7 +27,8 @@ def not_found(e):
     return render_template("index.html")
 
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI') #'sqlite:///app.db' 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+#app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False                                  
 app.secret_key = os.getenv('SECRET_KEY')

@@ -58,7 +58,10 @@ class UserLogin(Resource):
         user = User.query.filter(User.email == data['email']).first()
         if user and user.authenticate(data['password']):
             session['user_id'] = user.id
-            return make_response(user.to_dict(only=('id','name','email')), 200)
+
+            user_obj = user.to_dict(only=('id','name','email'))
+            user_obj['selectedProject'] = Project.query.first().id
+            return make_response(user_obj, 200)
         return make_response({"errors": ["Login Error"]}, 403)
 
 class UserLogout(Resource):
@@ -73,10 +76,13 @@ class UserAuthorize(Resource):
     def get(self):
         try:
             user = User.query.filter_by(id=session["user_id"]).first()
-            response = make_response(user.to_dict(), 200)
+            user_obj = user.to_dict(only=('id','name','email'))
+            user_obj['selectedProject'] = Project.query.first().id
+
+            response = make_response(user_obj, 200)
             return response
         except:
-            abort(401, "Unauthorized") #should be 401
+            abort(401, "Unauthorized")
             #raise Unauthorized
 
 

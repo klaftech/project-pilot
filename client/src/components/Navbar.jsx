@@ -26,8 +26,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { useEffect, useState, useContext } from 'react'
-import UserContext from '@/context/UserContext'
+import { useEffect, useContext } from 'react'
+import ProjectsContext from '@/context/ProjectsContext'
 import Logo from '/logo_transparent.png'
 
 const AppNavbar = ({
@@ -160,20 +160,14 @@ const AppNavbar = ({
   // ********************************************************************
   // ********************* BEGIN PROJECTS LOADING ***********************
   // ********************************************************************
-  const {user, setUser} = useContext(UserContext);
-  const [userState, setUserState] = useState(user)
-  //const {project, setProject} = useContext(ProjectContext);
-  //console.log("InNav: ",project)
-  
-  const [projects, setProjects] = useState([])
+  const {projects, setProjects} = useContext(ProjectsContext);
 
   useEffect(() => {
     if(projects.length <= 0){
       fetchProjects()
-      console.log("projects fetch")
+      //console.log("projects fetch")
     }
   }, [])
-  //trigger reload on user context change (login or full reload)
 
   const fetchProjects = () => (
     fetch('/api/projects')
@@ -182,23 +176,7 @@ const AppNavbar = ({
               res.json()
               .then(data => {
                   setProjects(data)
-                  //console.log("projects loaded into Navbar")
-
-                  // let defaultSelectedProject = 0
-                  // if(data.length < 1){
-                  //   //no results
-                  //   defaultSelectedProject = 0
-                  // } else if(data.length == 1){
-                  //   //single result
-                  //   defaultSelectedProject = data.id
-                  // } else {
-                  //   //multiple results
-                  //   defaultSelectedProject = data[0].id
-                  // }
-                  // const user_obj = {...user}
-                  // user_obj.selectedProject = defaultSelectedProject
-                  // setUser(user_obj)
-                  // console.log(user_obj)
+                  console.log("projects loaded into Navbar")
               })
           } else {
               console.log('failed to fetch projects')

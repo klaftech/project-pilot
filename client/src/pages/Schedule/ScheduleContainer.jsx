@@ -1,5 +1,5 @@
 import GanttChart from './gantt-chart/GanttChart'
-import Navbar from '@/components/Navbar'
+import AppWrapper from '@/components/AppWrapper'
 
 function ScheduleContainer({ tasks }) {
     
@@ -102,13 +102,12 @@ function ScheduleContainer({ tasks }) {
     }
 
     return (
-        <>
-            {/* <Navbar /> */}
+        <AppWrapper>
             <div className="container mx-auto p-6">
                 {sortedTasks && sortedTasks.length > 0 && <GanttChart tasks={sortedTasks} setTasks={handleSetTasks} />}
                 {!sortedTasks || sortedTasks.length <= 0 && <p>No tasks found for this project.</p>}
             </div>
-        </>
+        </AppWrapper>
     )
 }
 
