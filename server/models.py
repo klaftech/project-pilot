@@ -13,6 +13,7 @@ from config import db, bcrypt
 import json
 import ipdb
 from datetime import datetime, timedelta, time, date
+from collections import defaultdict, deque
 
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
@@ -32,15 +33,12 @@ class User(db.Model, SerializerMixin):
     def authenticate(self, password):
         return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
 
-    completed_tasks = db.relationship('Task', back_populates="complete_user")
+    completed_tasks = db.relationship('UnitTask', back_populates="complete_user")
     serialize_rules = (
         '-_password_hash',
         '-completed_tasks.complete_user',
-        '-completed_tasks.project',
-        '-completed_tasks.group',
-        '-completed_tasks.dependencies',
-        '-completed_tasks.parent_tasks',
-        '-completed_tasks.children_tasks'
+        '-completed_tasks.unit',
+        '-completed_tasks.tasks'
     )
 
     @validates('email')
@@ -64,13 +62,16 @@ class Project(db.Model, SerializerMixin):
     description = db.Column(db.String, nullable=True)
 
     groups = db.relationship('Group', back_populates="project")
+    units = db.relationship('Unit', back_populates="project")
     tasks = db.relationship('Task', back_populates="project")
+
     serialize_rules = (
         'stats',
         'schedule',
         '-groups.project',
         '-groups.tasks',
-        '-tasks.complete_user',
+        '-units.project',
+        '-units.tasks',
         '-tasks.project',
         '-tasks.group',
         '-tasks.dependencies',
@@ -80,25 +81,27 @@ class Project(db.Model, SerializerMixin):
 
     @property
     def schedule(self):
-        dataset = self.tasks
+        return "COMING SOON"
+    #     #dataset = self.tasks
+    #     dataset = [unit_task for unit_task in UnitTask.query.join(Task, Task.id == UnitTask.task_id).filter(Task.project_id == self.id).all()]
         
-        if len(dataset) < 1:
-            return {
-                "project_start": self.start,
-                "project_end": self.end,
-                "project_days": 0 
-            }
+    #     if len(dataset) < 1:
+    #         return {
+    #             "project_start": self.start,
+    #             "project_end": self.end,
+    #             "project_days": 0 
+    #         }
         
-        project_start = min(task.sched_start for task in dataset)
-        project_end = max(task.sched_end for task in dataset)
-        time_diff = project_end - project_start
-        data = {
-            "project_start": project_start,
-            "project_end": project_end,
-            "project_days": int(time_diff.total_seconds()/3600/24)
-        }
-        #response = f"Project Scheduele: {data['project_start']} - {data['project_end']} ({data['project_days']} days)"
-        return data
+    #     project_start = min(task.sched_start for task in dataset)
+    #     project_end = max(task.sched_end for task in dataset)
+    #     time_diff = project_end - project_start
+    #     data = {
+    #         "project_start": project_start,
+    #         "project_end": project_end,
+    #         "project_days": int(time_diff.total_seconds()/3600/24)
+    #     }
+    #     #response = f"Project Scheduele: {data['project_start']} - {data['project_end']} ({data['project_days']} days)"
+    #     return data
 
     @property
     def stats(self):
@@ -113,19 +116,19 @@ class Project(db.Model, SerializerMixin):
         #print(next_monday)
         #print(previous_monday)
 
-        project_tasks_query = db.session.query(func.count(Task.id)).filter(Task.project_id == self.id)
-        get_completed = project_tasks_query.filter(Task.complete_status == True)
-        get_upcoming = project_tasks_query.filter(Task.complete_status == False).filter(Task.sched_start < today).filter(Task.sched_start > today-timedelta(days=7))
-        get_overdue = project_tasks_query.filter(Task.complete_status == False).filter(Task.sched_end < today)
+        project_tasks_query = db.session.query(func.count(UnitTask.id)).join(Task, Task.id == UnitTask.task_id).filter(Task.project_id == self.id)
+        get_completed = project_tasks_query.filter(UnitTask.complete_status == True)
+        get_upcoming = project_tasks_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_start < today).filter(UnitTask.sched_start > today-timedelta(days=7))
+        get_overdue = project_tasks_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today)
 
         count_project_total = project_tasks_query.first()[0]
         count_project_completed = get_completed.first()[0]
         count_project_overdue = get_overdue.first()[0]
         count_project_upcoming = get_upcoming.first()[0]
         
-        count_week_scheduled = project_tasks_query.filter(Task.sched_start > previous_monday).filter(Task.sched_start < next_monday).first()[0]
-        count_week_scheduled_completed = get_completed.filter(Task.sched_start > previous_monday).filter(Task.sched_start < next_monday).first()[0]
-        count_week_completed = get_completed.filter(Task.complete_date > previous_monday).filter(Task.complete_date < next_monday).first()[0]
+        count_week_scheduled = project_tasks_query.filter(UnitTask.sched_start > previous_monday).filter(UnitTask.sched_start < next_monday).first()[0]
+        count_week_scheduled_completed = get_completed.filter(UnitTask.sched_start > previous_monday).filter(UnitTask.sched_start < next_monday).first()[0]
+        count_week_completed = get_completed.filter(UnitTask.complete_date > previous_monday).filter(UnitTask.complete_date < next_monday).first()[0]
 
         # calculate project completion percentage
         if count_project_completed == 0 or count_project_total == 0:
@@ -139,10 +142,10 @@ class Project(db.Model, SerializerMixin):
             project_status = "planning"
         elif count_project_completed == count_project_total:
             project_status = "completed"
-        elif project_tasks_query.filter(Task.complete_status == False).filter(Task.sched_end < today).first()[0] > 0:
+        elif project_tasks_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today).first()[0] > 0:
             # if there are any tasks that completed=False and sched_end is smaller than today = should have been completed already
             project_status = "delayed" 
-        elif project_tasks_query.filter(Task.complete_status == False).filter(Task.sched_end < today).first()[0] <= 0:
+        elif project_tasks_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today).first()[0] <= 0:
             project_status = "on_schedule"
         else:
             project_status = "in_progress" # default catch-all
@@ -181,8 +184,8 @@ class Group(db.Model, SerializerMixin):
     tasks = db.relationship('Task', back_populates="group")
     serialize_rules = (
         '-project.groups',
+        '-project.units',
         '-project.tasks',
-        '-tasks.complete_user',
         '-tasks.project',
         '-tasks.group',
         '-tasks.dependencies',
@@ -221,46 +224,28 @@ class Task(db.Model, SerializerMixin):
     name = db.Column(db.String, nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False)
-    plan_start = db.Column(db.DateTime, default=None, nullable=True)
-    plan_end = db.Column(db.DateTime, default=None, nullable=True)
+    days_length = db.Column(db.Integer, nullable=False)
     pin_start = db.Column(db.DateTime, default=None, nullable=True)
     pin_end = db.Column(db.DateTime, default=None, nullable=True)
-    pin_honored = db.Column(db.Boolean, default=False)
-    sched_start = db.Column(db.DateTime, default=None, nullable=True)
-    sched_end = db.Column(db.DateTime, default=None, nullable=True)
-    days_length = db.Column(db.Integer, nullable=False)
-    progress = db.Column(db.Integer, nullable=False, default=0)
-    complete_status = db.Column(db.Boolean, default=False)
-    complete_date = db.Column(db.DateTime, default=None, nullable=True)
-    complete_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    complete_comment = db.Column(db.String)
+    
+    
+    # pin_honored = db.Column(db.Boolean, default=False)
+    # plan_start = db.Column(db.DateTime, default=None, nullable=True)
+    # plan_end = db.Column(db.DateTime, default=None, nullable=True)    
+    # sched_start = db.Column(db.DateTime, default=None, nullable=True)
+    # sched_end = db.Column(db.DateTime, default=None, nullable=True)
+    # progress = db.Column(db.Integer, nullable=False, default=0)
+    # complete_status = db.Column(db.Boolean, default=False)
+    # complete_date = db.Column(db.DateTime, default=None, nullable=True)
+    #complete_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    #complete_comment = db.Column(db.String)
+    #complete_user = db.relationship('User', back_populates="completed_tasks")
 
     project = db.relationship('Project', back_populates="tasks")
     group = db.relationship('Group', back_populates="tasks")
-    complete_user = db.relationship('User', back_populates="completed_tasks")
+    unit_tasks = db.relationship('UnitTask', back_populates="master_task")
     updates = db.relationship('TaskUpdate', back_populates="task")
 
-    @validates('days_length')
-    def validate_days_length(self, key, value):
-        if not isinstance(value, int):
-            try:
-                return int(value)
-            except ValueError:
-                raise ValueError('Days length must be an integer')
-        return value
-    
-    # # run validation when any task schedule change happens
-    @validates('plan_start','plan_end','pin_start','pin_end','sched_start','sched_end','complete_date')
-    def validate_dates(self, attr, value):
-        if not isinstance(value, datetime):
-            for format in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
-                try:
-                    return datetime.strptime(value, format)
-                except ValueError:
-                    pass
-            raise ValueError(f'{attr} must be a valid date.')
-        return value
-    
     serialize_rules = (
         'dependencies', #default does not serializer association proxy
         '-parent_tasks.owner_task', #avoid recursion
@@ -271,20 +256,44 @@ class Task(db.Model, SerializerMixin):
         '-dependencies.children_tasks',
         '-dependencies.parent_task',
         '-dependencies.parent_tasks',
+        '-dependencies.dependencies',
+        '-unit_tasks.unit',
+        '-unit_tasks.master_task',
+        '-unit_tasks.complete_user',
         #'-project', #block all
         #'-group', #block all
-        #'-complete_user', #block all
-        '-updates.task',
         '-project.tasks',
+        '-project.units',
         '-project.groups',
         '-project.stats',
         '-project.schedule',
         '-group.tasks',
         '-group.project',
-        '-complete_user.completed_tasks',
-        '-complete_user._password'
+        '-updates.task'
     )
 
+    @validates('days_length')
+    def validate_days_length(self, key, value):
+        if not isinstance(value, int):
+            try:
+                return int(value)
+            except ValueError:
+                raise ValueError('Days length must be an integer')
+        return value
+    
+    # validates date inputs
+    @validates('pin_start','pin_end')
+    def validate_dates(self, attr, value):
+        if not isinstance(value, datetime):
+            for format in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
+                try:
+                    return datetime.strptime(value, format)
+                except ValueError:
+                    pass
+            raise ValueError(f'{attr} must be a valid date.')
+        return value
+    
+    
     # in a DAG relationship, from every task's perspective: 
     # it itself is the vertex/node, 
     # tasks dependent on it are edges, 
@@ -352,7 +361,367 @@ class Task(db.Model, SerializerMixin):
         all_tasks = set([task for task in Task.query.filter(Task.id != self.id).filter(Task.project_id == self.project_id).all()])
         available_tasks_set = all_tasks - ancestors - descendents
         return available_tasks_set
+    
 
+    # this function is not used, precursor for UniTask.build_unit_tasklist()
+    # notations may not be accurate
+    @classmethod
+    def topological_sort(cls, project_id):
+        from collections import defaultdict, deque
+        from datetime import datetime, timedelta
+
+        tasks = Task.query.filter(Task.project_id==project_id).all()
+
+        # In a DAG, "in-degree" of a node refers to the number of directed edges that are coming into that node, 
+        # essentially representing how many other nodes are pointing to it; 
+        # it's a measure of how many dependencies a node has within the graph
+        # 
+        # "DAG adjacency" refers to the concept of neighboring nodes (considered "adjacent") within a 
+        # Directed Acyclic Graph (DAG), where a node is considered adjacent to another if there 
+        # is a directed edge connecting them, 
+        # meaning one node "points" to the other in the graph, with no cyclic dependencies between nodes; 
+        # essentially, it describes the relationship between nodes in a DAG based on the direction of 
+        # their connections.
+        # Imagine a DAG representing a workflow with tasks as nodes: 
+        # If task A needs to be completed before task B can start, then A is considered "adjacent" to B, 
+        # meaning there is a directed edge going from A to B.
+
+        in_degree = defaultdict(int) #count amount of dependencies in a task (incoming edges)
+        adjacency_list = defaultdict(list) #list of tasks pointing to a dependency
+
+        # Step 1: Calculate in-degrees and construct the adjacency list
+        for task in tasks:
+            # Initialize in-degree for the current task
+            in_degree[task.id] = in_degree.get(task.id, 0)
+            for dependency in task.dependencies:
+                adjacency_list[dependency.id].append(task) #task.id
+                in_degree[task.id] += 1
+
+        # Step 2: Collect all tasks with in-degree 0 (tasks with no dependencies) for initial adding
+        zero_in_degree = deque([task for task in tasks if in_degree[task.id] == 0])
+
+        # Step 3: Process tasks with in-degree 0
+        top_order = []
+        while zero_in_degree:
+            # 3.1: add tasks that have no dependencies
+            current_task = zero_in_degree.popleft()
+            top_order.append(current_task)
+
+            # Reduce the in-degree of dependent tasks
+            # 3.2: process dependent tasks 
+            # get list of tasks that point to this task
+            for dependent_task in adjacency_list[current_task.id]:
+                
+                # subtract -1 to account for the parent task that points to this
+                in_degree[dependent_task.id] -= 1  # Step 1: Reduce the in-degree of each dependent task
+
+                # this dependent task has no other dependencies
+                if in_degree[dependent_task.id] == 0: # Step 2: Check if this dependent task now has no incoming edges (all depedendencies are resolved)
+                    zero_in_degree.append(dependent_task) # Step 3: Add it to the processing queue (tasks with no incoming edges)
+
+        # Step 4: Check for cycles (if the graph isn't a DAG)
+        if len(top_order) != len(tasks):
+            raise ValueError("The graph contains cycles and is not a valid DAG.")
+        
+        return top_order
+
+
+    def __repr__(self):
+        return f'<Task {self.name}>'
+    
+
+class TaskUpdate(db.Model, SerializerMixin):
+    __tablename__ = "task_updates"
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+    task_status = db.Column(db.String)
+    message = db.Column(db.String)
+    timestamp = db.Column(db.DateTime, server_default=db.func.now())
+
+    task = db.relationship("Task", back_populates="updates")
+    serialize_rules = ('-task',)
+
+    def __repr__(self):
+        return f'<TaskUpdate ID: {self.id}, Task: {self.task_id}, Status: {self.task_status}>'
+    
+
+
+class TaskUser(db.Model, SerializerMixin):
+    __tablename__ = "task_users"
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<TaskUser ID: {self.id}, Task: {self.task_id}, User: {self.user_id}>'
+    
+
+class TaskDependency(db.Model, SerializerMixin):
+    __tablename__ = "task_dependencies"
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False) #child node
+    dependent_task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False) #parent node (that must happen first)
+    
+    __table_args__ = (
+        db.UniqueConstraint('task_id','dependent_task_id'),
+        db.CheckConstraint('task_id != dependent_task_id',name='tasknotmatchdependent')
+    )
+
+    # in a DAG relationship, from every task's perspective: 
+    # it itself is the vertex/node, 
+    # tasks dependent on it are edges, 
+    # tasks it is dependent on are adjacent 
+    #vertex = db.relationship('Task', back_populates="edges")
+    #edge = db.relationship('Task', back_populates="adjacencies")
+    #serialize_rules = ('-vertex.edges', '-edge.adjacencies')
+    #vertex_link = db.relationship('Task', foreign_keys='TaskDependency.task_id', back_populates="edge_links")
+    #vertex_link = db.relationship('Task', back_populates="edge_links")
+
+    # Relationship to the child task (owner of this record)
+    owner_task = db.relationship(
+        "Task",
+        foreign_keys=[task_id],
+        back_populates="parent_tasks"
+    )
+
+    # Relationship to the parent task
+    parent_task = db.relationship(              
+        "Task",
+        foreign_keys=[dependent_task_id],
+        back_populates="children_tasks"
+    )
+
+    serialize_rules = ('-owner_task.parent_tasks','-parent_tasks.children_tasks')
+
+    # validate dependency link before insertion to prevent recursion errors and DAG invalidation
+    @validates('dependent_task_id')
+    def validate_dependency(self, attr, value):
+        task_model = Task.query.filter_by(id=self.task_id).first()
+        if value not in [task.id for task in task_model.get_available()]:
+            raise ValueError(f"Invalid Depedency Link. ID: {value} not in the available list.")
+        return value
+    
+    def __repr__(self):
+        return f'<TaskDependency ID: {self.id}, Task: {self.task_id}, DependentTask: {self.dependent_task_id}>'
+
+
+class Unit(db.Model, SerializerMixin):
+    __tablename__ = "units"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    start = db.Column(db.DateTime, default=None, nullable=True)
+    end = db.Column(db.DateTime, default=None, nullable=True)
+    status = db.Column(db.String)
+
+    project = db.relationship('Project', back_populates="units")
+    tasks = db.relationship('UnitTask', back_populates="unit")
+
+    serialize_rules = (
+        '-project.groups',
+        '-project.units',
+        '-project.tasks',
+        '-unit_tasks.unit',
+        '-unit_tasks.master_task',
+        '-unit_task.complete_user'
+    )
+
+    def __repr__(self):
+        return f'<Unit ID: {self.id}, Project: {self.project_id}, Name: {self.name}>'
+
+
+    def build_tasklist(self):
+        
+        # ensure that there are not other unit_tasks associated with this unit yet.
+        if self.tasks:
+            raise ValueError(f'Could not build tasklist, tasks already exist for this Unit.')
+        
+        def create_unit_task(master_task, start_date):
+            unit_task = UnitTask(unit_id=self.id,task_id=master_task.id)
+            unit_task.sched_start = start_date
+            unit_task.sched_end = unit_task.sched_start + timedelta(days = master_task.days_length)
+            db.session.add(unit_task)
+                
+            unit_tasks.append(unit_task)
+            processed_tasks.append(master_task)
+            processed_list[master_task.id] = unit_task
+            return unit_task
+        
+        # In a DAG, "in-degree" of a node refers to the number of directed edges that are coming into that node, 
+        # essentially representing how many other nodes are pointing to it; 
+        # it's a measure of how many dependencies a node has within the graph
+        # 
+        # "DAG adjacency" refers to the concept of neighboring nodes (considered "adjacent") within a 
+        # Directed Acyclic Graph (DAG), where a node is considered adjacent to another if there 
+        # is a directed edge connecting them, 
+        # meaning one node "points" to the other in the graph, with no cyclic dependencies between nodes; 
+        # essentially, it describes the relationship between nodes in a DAG based on the direction of 
+        # their connections.
+        # Imagine a DAG representing a workflow with tasks as nodes: 
+        # If task A needs to be completed before task B can start, then A is considered "adjacent" to B, 
+        # meaning there is a directed edge going from A to B.
+
+        # Initialize dicts and lists
+        in_degree = defaultdict(int) #count amount of dependencies in a task (incoming edges)
+        parent_list = defaultdict(list) #dict with list of parent tasks (in-degrees)
+        processed_list = defaultdict(list) #dict of UnitTasks using key of MasterTask
+        unit_tasks = [] #list to final UnitTasks
+        processed_tasks = [] #list of Tasks that have been processed off tasks_to_process
+        
+        # Step 1: Get all master tasks for indicated project
+        tasks = Task.query.filter(Task.project_id==self.project_id).all()
+
+        # Step 2: Calculate in-degrees and construct the parent (in-degree) list
+        for task in tasks:
+            # Initialize in-degree for the current task
+            in_degree[task.id] = in_degree.get(task.id, 0)
+            for parent_link in task.parent_tasks:
+                parent_list[task.id].append(parent_link.parent_task)
+                in_degree[task.id] += 1
+
+        # Step 3: Collect all tasks putting those with in-degree=0 (tasks with no dependencies) first
+        tasks_to_process = deque(sorted(tasks, key=lambda task: in_degree[task.id] == 0, reverse=True))
+        
+        # run through tasks_to_process
+        # current_task.popleft, 
+        # check if parent tasks have scheds yet, 
+        # if yes, run max compare, and add to processed_list
+        # if not, append and continue the merry-go-round
+        
+        # Step 4: Process tasks
+        while tasks_to_process:
+            current_task = tasks_to_process.popleft()
+            
+            # Step 4.1: add tasks that have no incoming edges (parents)
+            if in_degree[current_task.id] == 0:
+                #print(f"========> pushing because HEADLESS {current_task}")
+                start_date = datetime.combine(datetime.now(), time.min) # use today as start
+                unit_task = create_unit_task(current_task, start_date)
+
+            else:
+                # Step 4.2: Process tasks that have parents 
+                
+                #unify both, use all to determine the merrygoround
+                #commit at end
+                #NoneType def master_task.name
+
+                # if all parents of this task have already been processed (first headless with single parent)
+                parents = parent_list[current_task.id]
+                parents_set = set(parents)
+                if all(parent_task in processed_tasks for parent_task in parents_set):
+                    #print(f"========> pushing because all parents are procesed {current_task}")
+                    default_start = datetime.combine(datetime.now(), time.min) # use today as start
+                    earliest_start = default_start
+                    processed_parents = [processed_parent for processed_parent in parents if processed_parent in parents]
+                    for parent_task in processed_parents:
+                        parent_unit_task = processed_list[parent_task.id]
+                        earliest_start = max(
+                            earliest_start,
+                            parent_unit_task.sched_end + timedelta(days=1)  # child task to start day after completion of parent task
+                        )
+                        
+                        unit_task = create_unit_task(current_task, earliest_start)
+                else:
+                    # some of parents are not yet procceed, simply pop back on to the merry-go-round
+                    # push it back onto the stack to continue the merry-go-round
+                    
+                    default_start = datetime.combine(datetime.now(), time.min) # use today as start
+                    earliest_start = default_start
+                    processed_parents = [processed_parent for processed_parent in parents if processed_parent in parents]
+                    for parent_task in processed_parents:
+                        #ipdb.set_trace()
+                        parent_unit_task = processed_list[parent_task.id]
+                        earliest_start = max(
+                            earliest_start,
+                            parent_unit_task.sched_end + timedelta(days=1)  # child task to start day after completion of parent task
+                        )
+
+                        unit_task = create_unit_task(current_task, earliest_start)
+                        
+                    tasks_to_process.append(current_task)
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            raise Exception(e)
+        
+        #ipdb.set_trace()
+        return unit_tasks
+
+
+
+class UnitTask(db.Model, SerializerMixin):
+    def __repr__(self):
+        if self.master_task:
+            task_name = self.master_task.name
+            sched_start = datetime.strftime(self.sched_start, "%Y-%m-%d")
+            sched_end = datetime.strftime(self.sched_end, "%Y-%m-%d")
+            master_task = f'TaskName: {task_name}, SchedStart: {sched_start} SchedEnd: {sched_end}'
+        else:
+            master_task = "N/A"
+        return f'<TaskUnit ID: {self.id} MasterTask: {master_task}>'
+
+    __tablename__ = "unit_tasks"
+    id = db.Column(db.Integer, primary_key=True)
+    unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+    sched_start = db.Column(db.DateTime, default=None, nullable=True)
+    sched_end = db.Column(db.DateTime, default=None, nullable=True)
+    pin_start = db.Column(db.DateTime, default=None, nullable=True)
+    pin_end = db.Column(db.DateTime, default=None, nullable=True)
+    pin_honored = db.Column(db.Boolean, default=False)
+    progress = db.Column(db.Integer, nullable=False, default=0)
+    complete_status = db.Column(db.Boolean, default=False)
+    complete_date = db.Column(db.DateTime, default=None, nullable=True)
+    complete_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    complete_comment = db.Column(db.String)
+    
+    unit = db.relationship('Unit', back_populates="tasks")
+    master_task = db.relationship('Task', back_populates="unit_tasks")
+    complete_user = db.relationship('User', back_populates="completed_tasks")
+
+    @property
+    def master(self):
+        return {
+            "id": self.master_task.id,
+            "name": self.master_task.name,
+            "days_length": self.master_task.days_length,
+            "pin_start": self.master_task.pin_start,
+            "pin_end": self.master_task.pin_end,
+            "group_id": self.master_task.group_id,
+            "project_id": self.master_task.project_id
+        }
+    
+    @master.setter
+    def master(self):
+        raise AttributeError('UnitTask data is read-only')
+
+
+
+    serialize_rules = (
+        'master',
+        '-unit.project',
+        '-unit.tasks',
+        '-master_task',
+        '-complete_user.completed_tasks',
+        '-complete_user._password'
+    )
+
+
+    # validate date inputs
+    @validates('pin_start','pin_end','sched_start','sched_end','complete_date')
+    def validate_dates(self, attr, value):
+        if not isinstance(value, datetime):
+            for format in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
+                try:
+                    return datetime.strptime(value, format)
+                except ValueError:
+                    pass
+            raise ValueError(f'{attr} must be a valid date.')
+        return value
+    
+    
+    
     # validate before/after, returns Boolean
     # use: (start, end): returns True if valid timeframe, False if not
     # use: (sched_start, pin_start): returns True if planned start is before (allow pin to set start later)
@@ -412,7 +781,7 @@ class Task(db.Model, SerializerMixin):
                 # we only need to validate_before_after for task with parents
                 # check that pin_start is later than sched_start
                 #if pin is earlier than earliest possible start (from parent/pointing tasks), simply ignore pin start
-                if not self.parent_tasks and not self.validate_before_after(self.sched_start, self.pin_start):
+                if not self.master_task.parent_tasks and not self.validate_before_after(self.sched_start, self.pin_start):
                     allow_move = False
                     logger.append(f'Pin Start Ignored. Pin start is earlier than earliest possible start from parent tasks.')
                     
@@ -441,7 +810,7 @@ class Task(db.Model, SerializerMixin):
                 # we only need to validate_before_after for task with parents
                 # check that pin_end is later than sched_end
                 # if pin end is before scheduled end (calculated from parent/pointing task or pinned start, ignore pin end, because that date is shorter task_length beginning after earliest pointing task's finish
-                if not self.parent_tasks and not self.validate_before_after(self.sched_end, self.pin_end):
+                if not self.master_task.parent_tasks and not self.validate_before_after(self.sched_end, self.pin_end):
                     allow_move = False
                     logger.append(f'Pin End Ignored. Pin End is earlier than earliest possible end time from parent tasks.')
                 
@@ -465,27 +834,35 @@ class Task(db.Model, SerializerMixin):
                         
         
         logger = []
-        logger.append(f'Task: #{self.id} {self.name}')
+        logger.append(f'UnitTask: #{self.id}')
+
+        # ensure that master task is found
+        if not self.master_task:
+            logger.append('No Master Task Found')
+            return logger
+        
+        logger.append(f'Task: #{self.master_task.id} {self.master_task.name}')
 
         # default task start is project.start, otherwise use today's date
-        if not self.project:
+        if not self.master_task.project:
             # if we're running before initial commit, project serialization not set create, so get project data manually
-            project = Project.query.filter(Project.id == self.project_id).first()
+            project = Project.query.filter(Project.id == self.master_task.project_id).first()
             if not project:
                 # if for any reason project start is not yet defined, use today's date for the task
                 default_start = datetime.combine(datetime.now(), time.min) # use today as start
             else:
                 default_start = project.start
         else:
-            default_start = self.project.start
+            default_start = self.master_task.project.start
         logger.append(f'Default Start from Project: {default_start}')
 
+
         # Task: headless task
-        if not self.parent_tasks:
+        if not self.master_task.parent_tasks:
             logger.append('Task: Headless Task')
 
             self.sched_start = default_start
-            self.sched_end = self.sched_start + timedelta(days = self.days_length)
+            self.sched_end = self.sched_start + timedelta(days = self.master_task.days_length)
 
             # if task has a pinned start or end
             if self.pin_start:
@@ -506,18 +883,28 @@ class Task(db.Model, SerializerMixin):
             logger.append('Task: Has dependents')
             earliest_start = default_start
 
-            for parent in self.parent_tasks:
-                # ensure that we can get parent's schedule end date
-                if not parent.parent_task.sched_end:
-                    raise Exception(f'Parent Task with TaskDependency ID: {parent.id} missing schedule end date. {parent.parent_task.name} {parent.parent_task.id}')
+            for parent in self.master_task.parent_tasks:
+                # using the master_tasks's parent_task, get the corresponding UnitTask's (for this unit) sched_end
+                parent_unit_task = UnitTask.query.filter(UnitTask.task_id == parent.parent_task.id).first()
                 
-                logger.append(f'    Parent Task: {parent.parent_task.id} {parent.parent_task.name}')
-                logger.append(f'    Parent End: {parent.parent_task.sched_end + timedelta(days=1)}')
+                # ensure that a UnitTask is found for master task's parent_task
+                #if not self.unit_id in parent.parent_task.unit_tasks:
+                if not parent_unit_task:
+                    raise Exception(f'Task is dependent on another task not found in Unit Task List.')
+                
+                # ensure that we can get parent's schedule end date
+                #if not parent.parent_task.sched_end:
+                #    raise Exception(f'Parent Task with TaskDependency ID: {parent.id} missing schedule end date. {parent.parent_task.name} {parent.parent_task.id}')
+                if not parent_unit_task.sched_end:
+                    raise Exception(f"Parent Task with TaskDependency ID: {parent.id}'s UnitTask missing schedule end date. {parent_unit_task.master_task.name} {parent_unit_task.master_task.id}")
+                
+                logger.append(f'    Parent Task: {parent_unit_task.master_task.id} {parent_unit_task.master_task.name}')
+                logger.append(f'    Parent End: {parent_unit_task.sched_end + timedelta(days=1)}')
                 logger.append(f'    ----------------------------------------------')
                 # Calculate the earliest start time for the child task, which is the latest of all parents
                 earliest_start = max(
                     earliest_start,
-                    parent.parent_task.sched_end + timedelta(days=1)  # child task to start day after completion of parent task
+                    parent_unit_task.sched_end + timedelta(days=1)  # child task to start day after completion of parent task
                 )
 
             # earliest possible start date, based on all parent task completions
@@ -528,7 +915,7 @@ class Task(db.Model, SerializerMixin):
             logger.append(f'Earliest Start From Parents: {earliest_start}')
 
             # once we have determined correct start date, recalculate end_date
-            self.sched_end = self.sched_start + timedelta(days=self.days_length)
+            self.sched_end = self.sched_start + timedelta(days=self.master_task.days_length)
             logger.append(f'End Date Using Parents: {self.sched_end}')
 
             # factor in task pinned start/end
@@ -541,97 +928,19 @@ class Task(db.Model, SerializerMixin):
         #print(self.sched_start)
         print(*logger, sep='\n')
         return logger
-
-    
-    def __repr__(self):
-        return f'<Task {self.name}>'
     
 
-class TaskUpdate(db.Model, SerializerMixin):
-    __tablename__ = "task_updates"
-    id = db.Column(db.Integer, primary_key=True)
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
-    task_status = db.Column(db.String)
-    message = db.Column(db.String)
-    timestamp = db.Column(db.DateTime, server_default=db.func.now())
+def update_schedule_insert(mapper, connection, target):
+    # target.calculate_schedule(allow_null)
+    pass
+    # we insert with calculate predone.
 
-    task = db.relationship("Task", back_populates="updates")
-    serialize_rules = ('-task',)
-
-    def __repr__(self):
-        return f'<TaskUpdate ID: {self.id}, Task: {self.task_id}, Status: {self.task_status}>'
-    
-
-
-class TaskUser(db.Model, SerializerMixin):
-    __tablename__ = "task_users"
-    id = db.Column(db.Integer, primary_key=True)
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
-    def __repr__(self):
-        return f'<TaskUser ID: {self.id}, Task: {self.task_id}, User: {self.user_id}>'
-    
-
-class TaskDependency(db.Model, SerializerMixin):
-    __tablename__ = "task_dependencies"
-    id = db.Column(db.Integer, primary_key=True)
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False) #child node
-    dependent_task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False) #parent node (that must happen first)
-    allow_complete_exception = db.Column(db.Boolean, default=False)
-
-    __table_args__ = (
-        db.UniqueConstraint('task_id','dependent_task_id'),
-        db.CheckConstraint('task_id != dependent_task_id',name='tasknotmatchdependent')
-    )
-
-    # in a DAG relationship, from every task's perspective: 
-    # it itself is the vertex/node, 
-    # tasks dependent on it are edges, 
-    # tasks it is dependent on are adjacent 
-    #vertex = db.relationship('Task', back_populates="edges")
-    #edge = db.relationship('Task', back_populates="adjacencies")
-    #serialize_rules = ('-vertex.edges', '-edge.adjacencies')
-    #vertex_link = db.relationship('Task', foreign_keys='TaskDependency.task_id', back_populates="edge_links")
-    #vertex_link = db.relationship('Task', back_populates="edge_links")
-
-    # Relationship to the child task (owner of this record)
-    owner_task = db.relationship(
-        "Task",
-        foreign_keys=[task_id],
-        back_populates="parent_tasks"
-    )
-
-    # Relationship to the parent task
-    parent_task = db.relationship(              
-        "Task",
-        foreign_keys=[dependent_task_id],
-        back_populates="children_tasks"
-    )
-
-    serialize_rules = ('-owner_task.parent_tasks','-parent_tasks.children_tasks')
-
-    # validate dependency link before insertion to prevent recursion errors and DAG invalidation
-    @validates('dependent_task_id')
-    def validate_dependency(self, attr, value):
-        task_model = Task.query.filter_by(id=self.task_id).first()
-        if value not in [task.id for task in task_model.get_available()]:
-            raise ValueError(f"Invalid Depedency Link. ID: {value} not in the available list.")
-        return value
-    
-    def __repr__(self):
-        return f'<TaskDependency ID: {self.id}, Task: {self.task_id}, DependentTask: {self.dependent_task_id}>'
-
-
-
-
-
-def update_schedule(mapper, connection, target):
+def update_schedule_update(mapper, connection, target):
     # TODO: only run if there are changes to scheduling values
     target.calculate_schedule()
 
-event.listen(Task, 'before_insert', update_schedule) #dependencies do not yet exist
-event.listen(Task, 'before_update', update_schedule)
+event.listen(UnitTask, 'before_insert', update_schedule_insert)
+event.listen(UnitTask, 'before_update', update_schedule_update)
 
 # FINAL NOTE: working. however, moved in favor of null on default and calculate simplisticly
 # # FINAL: validate DAG as validates.
