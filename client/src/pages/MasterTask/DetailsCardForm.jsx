@@ -9,8 +9,8 @@ import {
   } from "@/components/ui/card"
 
 import { useState, useEffect } from 'react'
-import FormWrapper from '@/components/form/FormWrapper'
-import FormFields from '@/components/form/FormFields'
+import FormWrapper from '@/components/form/master_task/FormWrapper'
+import FormFields from '@/components/form/master_task/FormFields'
 import ShowAlert from "@/components/ShowAlert"
 
 const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
@@ -36,7 +36,7 @@ const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Edit Task</CardTitle>
+                <CardTitle>Edit Master Task</CardTitle>
                 <CardDescription>
                     Make change to your task here. Click save when your done.
                     {show && <ShowAlert message="Changes saved" />}

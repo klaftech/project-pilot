@@ -11,16 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
 
-import FormFields from '@/components/form/FormFields'
-import FormWrapper from '@/components/form/FormWrapper'
-
-function DialogTaskForm({ isOpen, setIsOpen, formScenario, taskEditObject, pushUpdateTask }) {  
-
-    const handleSubmitHook = (data) => {
-        // close the dialog box
-        setIsOpen(!isOpen)
-    }
-
+function DialogPopupForm({ isOpen, setIsOpen, title, description, children }) {
     return (
         <Dialog open={isOpen} onOpenChange={()=>{
             setIsOpen(!isOpen)
@@ -40,21 +31,18 @@ function DialogTaskForm({ isOpen, setIsOpen, formScenario, taskEditObject, pushU
                         <X className="h-4 w-4" />
                         <span className="sr-only">Close</span>
                     </DialogClose>
-                    <DialogTitle>Create Task</DialogTitle>
+                    <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
-                        Make changes to your task here. Click save when you're done.
+                        {description}
                     </DialogDescription>
                 </DialogHeader>
-
-                <FormWrapper formScenario={formScenario} taskEditObj={taskEditObject} pushUpdateTask={pushUpdateTask} submitHook={handleSubmitHook} >
-                    <FormFields form="" />
-                    <DialogFooter>
-                        <Button type="submit">Save changes</Button>    
-                    </DialogFooter>
-                </FormWrapper>
-
+                {children}
             </DialogContent>
         </Dialog>
     )
 }
-export default DialogTaskForm
+
+export {
+    DialogPopupForm,
+    DialogFooter
+  }

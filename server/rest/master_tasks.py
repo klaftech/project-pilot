@@ -2,31 +2,101 @@
 from flask import request, abort, make_response, session
 from flask_restful import Resource
 
-from config import db
-from models import User, Task, TaskDependency
-from app_helpers import validate_date_input, master_task_recursively_update_children
+from config import db, app
+from models import User, MasterTask, MasterTaskDependency, Project
+from app_helpers import find_task_model_by_id, validate_date_input, master_task_recursively_update_children
 from datetime import datetime, time
 
 
-class Tasks(Resource):
-    def get(self):
-        # user_id = session.get('user_id')
-        # if not user_id:
-        #     return make_response({"error": "User not logged in"}, 401)
-        
-        tasks_query = Task.query.order_by(Task.sched_start.desc())  
+@app.route('/api/mastertasks/<task_id>/dependencies', methods=['GET'])
+def get_dependencies_current(task_id):
+    task_model = find_task_model_by_id(task_id)
+    if not task_model:
+        return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+    
+    tasks = [task.to_dict(rules=('-project','-unit_tasks','-children_tasks','-parent_tasks','-dependencies')) for task in MasterTaskDependency.query.filter(TaskDependency.task_id == task_model.id).all()]
+    return make_response(tasks, 200)
 
-        project_filter = request.args.get("project_id")
-        if project_filter != None:
-            tasks_query = tasks_query.filter(Task.project_id == project_filter)
-          
-        tasks = [task.to_dict(rules=('-children_tasks','-parent_tasks')) for task in tasks_query.all()]
+
+@app.route('/api/mastertasks/<task_id>/descendents', methods=['GET'])
+def get_dependencies_descendents(task_id):
+    task_model = find_task_model_by_id(task_id)
+    if not task_model:
+        return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+    
+    tasks = [task.to_dict(rules=('-project','-unit_tasks','-children_tasks','-parent_tasks','-dependencies')) for task in set(task_model.get_descendents())]
+    return make_response(tasks, 200)
+
+
+@app.route('/api/mastertasks/<task_id>/ancestors', methods=['GET'])
+def get_dependencies_ancestors(task_id):
+    task_model = find_task_model_by_id(task_id)
+    if not task_model:
+        return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+    
+    tasks = [task.to_dict(rules=('-project','-unit_tasks','-children_tasks','-parent_tasks','-dependencies')) for task in set(task_model.get_ancestors())]
+    return make_response(tasks, 200)
+
+
+@app.route('/api/mastertasks/<task_id>/available', methods=['GET'])
+def get_dependencies_available(task_id):
+    task_model = find_task_model_by_id(task_id)
+    if not task_model:
+        return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+    
+    tasks = [task.to_dict(rules=('-project','-unit_tasks','-children_tasks','-parent_tasks','-dependencies')) for task in task_model.get_available()]
+    return make_response(tasks, 200)
+
+
+class MasterTasks(Resource):
+    def get(self):
+        #tasks_query = Task.query.order_by(Task.sched_start.desc())  
+        tasks_query = MasterTask.query  
+
+        project_id = request.args.get("project_id")
+        if project_id != None:
+            model = Project.query.filter_by(id=project_id).first()
+            if not model:
+                return make_response({"error": f"Project ID: {project_id} not found"}, 404)
+            else:
+                tasks_query = tasks_query.filter(MasterTask.project_id == project_id)
+        else:
+            return make_response({"error": "Project must be specified"}, 422)
+        
+        # Master tasklist for project, ordered by topolic sort
+        if request.args.get("todo_list"):
+            # created nested dict with ordered results
+            tasklist = [{i: master_task.to_dict(only=('id',
+                                                    'name',
+                                                    'pin_start',
+                                                    'pin_end',
+                                                    'days_length',
+                                                    'group.id',
+                                                    'group.name'
+                ))} for i,master_task in enumerate(MasterTask.topological_sort(model.id))]
+            return make_response(tasklist, 200)
+
+        response_fields = (
+            'id',
+            'name',
+            'days_length',
+            'pin_start',
+            'pin_end',
+            'group',
+            'project',
+            #'unit_tasks',
+            #'dependencies',
+            #'children_tasks',
+            #'parent_tasks',
+            )
+        #rules=('-children_tasks','-parent_tasks')
+        tasks = [task.to_dict(only=response_fields) for task in tasks_query.all()]
         return make_response(tasks, 200)
     
     def post(self):
         data = request.get_json()
         try:
-            new_record = Task(
+            new_record = MasterTask(
                 name = data['name'],
                 project_id = data['project_id'],
                 group_id = data['group_id'],
@@ -44,15 +114,28 @@ class Tasks(Resource):
         db.session.add(new_record)
         db.session.commit()
 
-        return make_response(new_record.to_dict(), 201)
+        response_fields = (
+            'id',
+            'name',
+            'days_length',
+            'pin_start',
+            'pin_end',
+            'group',
+            'project',
+            #'unit_tasks',
+            #'dependencies',
+            #'children_tasks',
+            #'parent_tasks',
+            )
+        return make_response(new_record.to_dict(only=response_fields), 201)
     
 
 
-class TaskByID(Resource):
+class MasterTaskByID(Resource):
     @classmethod
     def find_model_by_id(cls, id):
         #return RoutineItem.query.get_or_404(id)
-        model = Task.query.filter_by(id=id).first()
+        model = MasterTask.query.filter_by(id=id).first()
         if model:
             return model
         else:
@@ -62,7 +145,21 @@ class TaskByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
-        return make_response(model.to_dict(), 200)
+        
+        response_fields = (
+            'id',
+            'name',
+            'days_length',
+            'pin_start',
+            'pin_end',
+            'group',
+            'project',
+            #'unit_tasks',
+            #'dependencies',
+            #'children_tasks',
+            #'parent_tasks',
+            )
+        return make_response(model.to_dict(only=response_fields), 200)
            
     def patch(self, id):
         model = self.__class__.find_model_by_id(id)
@@ -98,7 +195,20 @@ class TaskByID(Resource):
         #recursively process dependencies
         master_task_recursively_update_children(model)
         
-        return make_response(model.to_dict(), 202)
+        response_fields = (
+            'id',
+            'name',
+            'days_length',
+            'pin_start',
+            'pin_end',
+            'group',
+            'project',
+            #'unit_tasks',
+            #'dependencies',
+            #'children_tasks',
+            #'parent_tasks',
+            )
+        return make_response(model.to_dict(only=response_fields), 202)
     
     def delete(self, id):
         model = self.__class__.find_model_by_id(id)
@@ -126,13 +236,11 @@ class TaskByID(Resource):
 
 
 
-
-
 class Dependencies(Resource):
     @classmethod
     def find_task_model_by_id(cls, id):
         #return RoutineItem.query.get_or_404(id)
-        model = Task.query.filter_by(id=id).first()
+        model = MasterTask.query.filter_by(id=id).first()
         if model:
             return model
         else:
@@ -153,13 +261,13 @@ class Dependencies(Resource):
 
             task_model = self.__class__.find_task_model_by_id(task_id)
             if not task_model:
-                return make_response({"error": f"Task Model ID: {task_id} not found"}, 404)
+                return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
 
             dependent_task_model = self.__class__.find_task_model_by_id(parent_task_id)
             if not dependent_task_model:
-                return make_response({"error": f"Task Model ID: {parent_task_id} not found"}, 404)
+                return make_response({"error": f"MasterTask Model ID: {parent_task_id} not found"}, 404)
 
-            new_record = TaskDependency(
+            new_record = MasterTaskDependency(
                 task_id = task_model.id,
                 dependent_task_id = dependent_task_model.id
             )
@@ -186,7 +294,7 @@ class DependencyByID(Resource):
     @classmethod
     def find_model_by_id(cls, id):
         #return RoutineItem.query.get_or_404(id)
-        model = TaskDependency.query.filter_by(id=id).first()
+        model = MasterTaskDependency.query.filter_by(id=id).first()
         if model:
             return model
         else:
@@ -203,12 +311,12 @@ class DependencyByID(Resource):
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
         
-        task_model = Task.query.filter_by(id=model.task_id).first()
+        task_model = MasterTask.query.filter_by(id=model.task_id).first()
 
         db.session.delete(model)
         db.session.commit()
         
-        # upon deletion of a TaskDependency, recalculate owner_task schedule
+        # upon deletion of a MasterTaskDependency, recalculate owner_task schedule
         task_model.calculate_schedule()
         db.session.commit()
 

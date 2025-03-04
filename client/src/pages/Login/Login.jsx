@@ -23,7 +23,7 @@ export default function LoginPage() {
     const handleLogin = async (form_data) => {
         try {
             const response = await fetch(
-                "api/login",
+                "/api/login",
                 {
                     method: "POST",
                     body: JSON.stringify({ email: form_data['email'], password: form_data['password'] }),
