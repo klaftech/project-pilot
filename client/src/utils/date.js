@@ -53,3 +53,23 @@ export const getDiffToday = (date) => {
     
     return (date.getTime() - getToday().getTime())/1000/60/60/24
 }
+
+export function getNextMonday() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
+    const daysUntilMonday = (7 - dayOfWeek) % 7;
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + daysUntilMonday);
+    return nextMonday;
+}
+
+export function getPreviousMonday() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
+    const daysToSubtract = dayOfWeek === 0 ? 7 : dayOfWeek;
+    
+    const previousMonday = new Date(today);
+    previousMonday.setDate(today.getDate() - daysToSubtract);
+
+    return previousMonday;
+}

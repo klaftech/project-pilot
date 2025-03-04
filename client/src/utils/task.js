@@ -22,6 +22,8 @@ export const getReadableTaskStatus = (status) => {
         read = "Delayed"
     } else if(status == "in_progress"){
         read = "In Progress"
+    } else if(status == "on_schedule"){
+        read = "On Schedule"
     } else if(status == "scheduled"){
         read = "Scheduled"
     }
@@ -29,21 +31,28 @@ export const getReadableTaskStatus = (status) => {
 }
 
 export const taskBuilder = (task) => {
+    //console.log(task)
+    const isUnit = task.unit ? true : false
+    const isMasterTask = task.master_task ? true : false
     return {
         "id": task.id,
-        "name": task.name,
+        "name": isMasterTask ? task.master_task.name : null,
         "start": stringToDate(task.sched_start),
         "end": stringToDate(task.sched_end),
         "pin_start": stringToDate(task.pin_start),
         "pin_end": stringToDate(task.pin_end),
-        "days_length": task.days_length,
+        "days_length": isMasterTask ? task.master_task.days_length : null,
         "progress": task.progress,
         "complete_status": task.complete_status, 
         //"dependencies": task.dependencies.map(task => taskBuilder(task)) //as of now we dont need full recursive dependencies.
         "dependencies": task.dependencies ? task.dependencies.map(task => task.id) : [], //sending array of IDs. if changing this, ensure that updated in GanttChart.jsx as well 
         "group": {
-            "id": task.group ? task.group.id : null,
-            "name": task.group ? task.group.name : null,
+            "id": isMasterTask && task.master_task.group ? task.master_task.group.id : null,
+            "name": isMasterTask && task.master_task.group ? task.master_task.group.name : null,
+        },
+        "unit": {
+            "id": isUnit && task.unit ? task.unit.id : null,
+            "name": isUnit && task.unit ? task.unit.name : null,
         },
     }
 }

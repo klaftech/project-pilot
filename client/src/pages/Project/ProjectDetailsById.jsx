@@ -1,12 +1,16 @@
 import { useParams } from "react-router"
+import { useNavigate } from "react-router";
 import { useEffect, useState, useContext } from 'react'
 import { stringToDate, formatDatePretty, formatDatePrettyMMDD } from '@/utils/date.js'
 import { getTaskStatus, getReadableTaskStatus } from '@/utils/task.js'
 
 import UserContext from '@/context/UserContext.jsx'
+import ActiveProjectContext from '@/context/ActiveProjectContext.jsx'
 import AppWrapper from '@/components/AppWrapper.jsx'
 import ProgressBar from './ProgressBar.jsx'
+import { useUpdateUser } from '@/hooks/useUpdateUser.jsx'
 
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator";
 import {
   ThumbsUp,
@@ -24,21 +28,44 @@ import {
 // https://react-data-table-component.netlify.app/?path=/docs/api-custom-conditional-formatting--docs
 import DataTable from 'react-data-table-component';
 import LoadingWrapper from "@/components/LoadingWrapper.jsx"
+import { map } from "zod"
 
 const ProjectDetailsById = () => {
 
+    const updateUser = useUpdateUser()
+    const navigate = useNavigate()
+
     let params = useParams()
-    //params.projectId
-    //console.log(params)
     const projectId = params.projectId
 
     const {user, setUser} = useContext(UserContext);
     const [projectObj, setProjectObj] = useState()
+    const [projectMasterTasklist, setProjectMasterTasklist] = useState([])
     const [error, setError] = useState(null)
 
     useEffect(() => {
         fetchProject()
+        fetchProjectMasterTasklist()
     }, [projectId])
+
+    // const loadProject = () => {
+    //   //user.selectedProject
+    //   const filterResults = projects.filter(project => project.id == projectId)
+    //   if (filterResults.length > 0){
+        
+    //     const project = filterResults[0]
+        
+    //     // set local state
+    //     setProjectObj(project)
+
+    //     // save change to user profile in context
+    //     // updateUser({selectedProject: project.id})
+    //     setError(null)
+
+    //   } else {
+    //     setError("No project found")
+    //   }
+    // }
 
     const fetchProject = () => {
         //console.log("fetching project from backend")
@@ -49,20 +76,18 @@ const ProjectDetailsById = () => {
                 res.json()
                 .then(data => {
                     //manually convert top-level date strings to JS Date objects
-                    data.start = stringToDate(data.start)
-                    data.end = stringToDate(data.end)
+                    //data.start = stringToDate(data.start)
+                    //data.end = stringToDate(data.end)
 
                     //convert week stats
-                    data.stats.week.range_start = stringToDate(data.stats.week.range_start)
-                    data.stats.week.range_end = stringToDate(data.stats.week.range_end)
+                    //data.stats.week.range_start = stringToDate(data.stats.week.range_start)
+                    //data.stats.week.range_end = stringToDate(data.stats.week.range_end)
 
                     // set local state
                     setProjectObj(data)
 
-                    // set context
-                    const user_obj = {...user}
-                    user_obj.selectedProject = data.id
-                    setUser(user_obj)
+                    // save change to user profile in context
+                    updateUser({selectedProject: data.id})
                 })
             } else {
                 //console.log("project not found")
@@ -73,6 +98,28 @@ const ProjectDetailsById = () => {
     }
     //console.log("ProjectObj: ",projectObj)
 
+    const fetchProjectMasterTasklist = () => {
+      //console.log("fetching project master tasklist from backend")
+      fetch('/api/mastertasks?project_id='+projectId+'&todo_list=true')
+      .then(res => {
+          if(res.ok){
+              res.json()
+              .then(data => {
+                //console.log(data)
+                const ordered_data = data.map((element, index) => {
+                  const task = {...element[index]}
+                  task.order=index+1
+                  return task
+                })
+                setProjectMasterTasklist(ordered_data)
+              })
+          } else {
+              setError("Unable to load the project master tasklist specified.")
+          }
+      })
+    }
+    //console.log("ProjectMasterTasklist: ",projectMasterTasklist)
+    
     if(error){
       return (<AppWrapper><p>{error}</p></AppWrapper>)
     }
@@ -81,9 +128,9 @@ const ProjectDetailsById = () => {
     }
 
     const projectStats = [
-      {group: "project", label: "Completed", color: "green", total: projectObj.stats.project.count_completed},
+      {group: "project", label: "Completed", color: "green", total: projectObj.stats.counts.count_completed},
       {group: "project", label: "In Progress", color: "yellow", total: "N/A"},
-      {group: "project", label: "Overdue", color: "red", total: projectObj.stats.project.count_overdue},
+      {group: "project", label: "Overdue", color: "red", total: projectObj.stats.counts.count_overdue},
       {group: "week", label: "Scheduled", color: "#3a82a1", total: projectObj.stats.week.count_scheduled},
       {group: "week", label: "Scheduled & Completed", color: "#3a82a1", total: projectObj.stats.week.count_scheduled_completed},
       {group: "week", label: "Total Tasks Completed", color: "#3a82a1", total: projectObj.stats.week.count_completed}
@@ -91,7 +138,7 @@ const ProjectDetailsById = () => {
 
     const projectStatsGroups = [
       {name: "project", label: "Progress"},
-      {name: "week", label: "Week Stats ("+formatDatePrettyMMDD(projectObj.stats.week.range_start)+"-"+formatDatePrettyMMDD(projectObj.stats.week.range_end)+")"}
+      {name: "week", label: "Week Stats ("+formatDatePrettyMMDD(stringToDate(projectObj.stats.week.range_start))+"-"+formatDatePrettyMMDD(stringToDate(projectObj.stats.week.range_end))+")"}
     ]
 
     const progressStatus = {
@@ -122,24 +169,31 @@ const ProjectDetailsById = () => {
         name: 'Task',
         selector: row => row.name,
       },
+      {
+        name: 'Group',
+        selector: row => row.group.name,
+      },
+      {
+        name: 'Order',
+        selector: row => row.order,
+      },
+      {
+        name: '',
+        selector: row => <Button variant="light" onClick={()=>navigate('/mastertask/'+row.id)}>View</Button>,
+      },
       // {
-      //   name: 'Group',
-      //   //selector: row => projectObj.groups.length > 0 ? projectObj.groups.filter(group => group.id == row.group_id)[0].name : "",
-      //   selector: row => row.group_id,
+      //   name: 'Pinned Start',
+      //   selector: row => formatDatePretty(stringToDate(row.pin_start)),
       // },
-      {
-        name: 'Scheduled Start',
-        selector: row => formatDatePretty(stringToDate(row.sched_start)),
-      },
-      {
-        name: 'Scheduled End',
-        selector: row => formatDatePretty(stringToDate(row.sched_end)),
-        //className: (row) => ({ backgroundColor: row.complete_status ? 'pink' : '' })
-      },
-      {
-        name: 'Status',
-        selector: row => getReadableTaskStatus(getTaskStatus(row)),
-      },
+      // {
+      //   name: 'Pinned End',
+      //   selector: row => formatDatePretty(stringToDate(row.pin_end)),
+      //   //className: (row) => ({ backgroundColor: row.complete_status ? 'pink' : '' })
+      // },
+      // {
+      //   name: 'Status',
+      //   selector: row => getReadableTaskStatus(getTaskStatus(row)),
+      // },
     ];
 
     return (
@@ -163,10 +217,10 @@ const ProjectDetailsById = () => {
                   <div className="order-2 flex items-center gap-2 md:order-none">
                     <span className="flex h-14 w-16 shrink-0 items-center justify-center rounded-md bg-muted">
                       {/* <ThumbsUp /> */}
-                      {progressStatus[projectObj.stats.project.status]['icon'] ?? <Wrench className="size-5 shrink-0" />}
+                      {progressStatus[projectObj.stats.status]['icon'] ?? <Wrench className="size-5 shrink-0" />}
                     </span>
                     <div className="flex flex-col gap-1">
-                      <h3 className="font-semibold">{progressStatus[projectObj.stats.project.status]['label']}</h3>
+                      <h3 className="font-semibold">{progressStatus[projectObj.stats.status]['label']}</h3>
                     </div>
                   </div>
                 </div>
@@ -197,7 +251,7 @@ const ProjectDetailsById = () => {
                   
                   <div className="md:flex md:grid-cols-3">
                       <div className="flex flex-col gap-1">
-                        <ProgressBar progress={projectObj.stats.project.completion_percent} />
+                        <ProgressBar progress={projectObj.stats.completion_percent} />
                       </div>
 
 
@@ -245,7 +299,7 @@ const ProjectDetailsById = () => {
                   
                 <DataTable
                   columns={columns}
-                  data={projectObj.tasks}
+                  data={projectMasterTasklist}
                 />
 
                 <Separator />
