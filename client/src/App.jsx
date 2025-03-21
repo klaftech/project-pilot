@@ -2,6 +2,8 @@ import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useEffect, useContext } from 'react'
 
 import ProjectDetailsById from '@/pages/Project/ProjectDetailsById'
+import UnitDetailsById from '@/pages/Unit/UnitDetailsById'
+import UnitCreateWrapper from '@/pages/Unit/UnitCreateWrapper'
 import MasterTaskDetailsById from '@/pages/MasterTask/MasterTaskDetailsById'
 import TaskDetailsById from '@/pages/Task/TaskDetailsById'
 import TasksContainer from '@/pages/Tasks/TasksContainer';
@@ -69,6 +71,8 @@ function App() {
         <Routes>
             <Route index element={<TasksHomeContainer />} />
             <Route path="project/:projectId" element={<ProjectDetailsById />} />
+            <Route path="unit/create" element={<UnitCreateWrapper />} />
+            <Route path="unit/:unitId" element={<UnitDetailsById />} />
             <Route path="task/:taskId" element={<TaskDetailsById />} />
             <Route path="mastertask/:taskId" element={<MasterTaskDetailsById />} />
             <Route path="tasks" element={<TasksContainer />} />
