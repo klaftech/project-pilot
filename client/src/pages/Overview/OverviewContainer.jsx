@@ -2,12 +2,12 @@ import { formatDatePretty, isDate } from '@/utils/date.js'
 import AppWrapper from '@/components/AppWrapper.jsx'
 import OverviewTable from './OverviewTable.jsx'
 
-import OverviewSimpleTable from './_OverviewSimpleTable.jsx'
+//import OverviewSimpleTable from './_OverviewSimpleTable.jsx'
 import DataTable from 'react-data-table-component';
 import StatusBadge from '@/components/StatusBadge.jsx'
 
 // TODO: option to toggle (or timer that toggle every 20s..) between project & weekly stats 
-const OverviewContainer = ({ tasks }) => {
+const OverviewContainer = () => {
   /*
   const columns = [
     {
