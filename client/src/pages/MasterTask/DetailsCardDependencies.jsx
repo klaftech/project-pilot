@@ -38,7 +38,7 @@ import { useForm } from 'react-hook-form'
 import DetailsCardAncestors from './DetailsCardAncestors'
 import LoadingWrapper from "@/components/LoadingWrapper"
 
-function DetailsCardDependencies({ taskObj, tasks, pushUpdateTask, reloadTasks }) {
+function DetailsCardDependencies({ taskObj, reloadTasks }) {
     /* 
     this is a form that allows adding parents/dependents to a task
     i'm envisioning it as bubble that can be X'd to remove
@@ -72,8 +72,8 @@ function DetailsCardDependencies({ taskObj, tasks, pushUpdateTask, reloadTasks }
 
     useEffect(() => {
         //console.log('useEffect triggered to reload data')
-        fetchHelper("/api/tasks/"+task.id+"/ancestors",setAncestors)
-        fetchHelper("/api/tasks/"+task.id+"/available",setAvailableTasks)
+        fetchHelper("/api/mastertasks/"+task.id+"/ancestors",setAncestors)
+        fetchHelper("/api/mastertasks/"+task.id+"/available",setAvailableTasks)
     },[triggerUseEffect])
 
     const defaultDependencyFormValues = {
@@ -128,7 +128,7 @@ function DetailsCardDependencies({ taskObj, tasks, pushUpdateTask, reloadTasks }
             // 1. reload dependencies&available lists 
             // 2. trigger reload of tasklist
             setTriggerUseEffect(!triggerUseEffect) //trigger useEffect to reload data
-            reloadTasks() //reload app tasklist
+            reloadTasks()
 
         } catch (error) {
             console.log(error)

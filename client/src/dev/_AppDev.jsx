@@ -1,7 +1,9 @@
 import ChartCard from './_ChartCard'
 import Navbar from '@/components/Navbar'
+import { useManageTasks } from '@/hooks/useManageTasks'
 
-function App({tasks}) {
+function App() {
+  const { tasks, isLoaded, updateTask, reloadTasks } = useManageTasks()
   return (
     <>
       <Navbar />

@@ -1,8 +1,11 @@
 import GanttChart from './gantt-chart/GanttChart'
 import AppWrapper from '@/components/AppWrapper'
+import LoadingWrapper from "@/components/LoadingWrapper"
+import { useManageTasks } from '@/hooks/useManageTasks'
 
-function ScheduleContainer({ tasks }) {
-    
+function ScheduleContainer() {
+    const { tasks, isLoaded, updateTask, reloadTasks } = useManageTasks()
+
     // 1. structure tasks as required for gantt chart
     const scheduledTasks = tasks.map((task) => ({
         id: task.id,
@@ -103,8 +106,9 @@ function ScheduleContainer({ tasks }) {
     return (
         <AppWrapper>
             <div className="container mx-auto p-6">
-                {sortedTasks && sortedTasks.length > 0 && <GanttChart tasks={sortedTasks} setTasks={handleSetTasks} />}
-                {!sortedTasks || sortedTasks.length <= 0 && <p>No tasks found for this project.</p>}
+                {!isLoaded && <LoadingWrapper />}
+                {isLoaded && sortedTasks && sortedTasks.length > 0 && <GanttChart tasks={sortedTasks} setTasks={handleSetTasks} />}
+                {isLoaded && (!sortedTasks || sortedTasks.length <= 0) && <p>No tasks found for this project.</p>}
             </div>
         </AppWrapper>
     )

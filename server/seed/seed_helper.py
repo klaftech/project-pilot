@@ -1,4 +1,4 @@
-from models import db, User, Project, Group, Task, TaskDependency, TaskUser
+from models import db, User, Project, Group, MasterTask, MasterTaskDependency, TaskUser, Unit, UnitTask, StatusUpdate
 
 def add_users(): 
     print('Creating Users...')
@@ -49,14 +49,24 @@ def recursively_update_children(task_model):
 
 
 def drop_tables():
+    
+    print('Deleting existing StatusUpdates...')
+    StatusUpdate.query.delete()
+
+    print('Deleting existing UnitTasks...')
+    UnitTask.query.delete()
+
+    print('Deleting existing Units...')
+    Unit.query.delete()
+    
     print('Deleting existing TaskUsers...')
     TaskUser.query.delete()
 
-    print('Deleting existing TaskDependencies...')
-    TaskDependency.query.delete()
+    print('Deleting existing MasterTaskDependencies...')
+    MasterTaskDependency.query.delete()
 
-    print('Deleting existing Tasks...')
-    Task.query.delete()
+    print('Deleting existing MasterTasks...')
+    MasterTask.query.delete()
 
     print('Deleting existing Groups...')
     Group.query.delete()
