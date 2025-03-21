@@ -5,6 +5,7 @@ from flask_restful import Resource
 from config import db
 from models import Project, Unit
 from app_helpers import validate_date_input, recursively_update_dependencies
+from datetime import datetime
 
 
 class Units(Resource):
@@ -27,6 +28,12 @@ class Units(Resource):
                 name = data['name'],
                 project_id = data['project_id']
             )
+
+            if 'start' in data and validate_date_input(data['start'], "%Y-%m-%d"):
+                new_record.start = datetime.strptime(data['start'], "%Y-%m-%d")
+            if 'end' in data and validate_date_input(data['end'], "%Y-%m-%d"):
+                new_record.end = datetime.strptime(data['end'], "%Y-%m-%d")
+
         except ValueError as e:
             abort(422, e.args[0])
         

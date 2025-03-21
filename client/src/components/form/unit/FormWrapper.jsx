@@ -16,11 +16,10 @@ import {
 //if formScenario=create, modelObj must contain object containing task_id
 const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
     
-
     const [serverErrors, setServerErrors] = useState()
 
     const defaultFetchParams = {
-        url: "/api/updates", 
+        url: "/api/units", 
         request_method: "POST"
     }
     const [fetchParams, setFetchParams] = useState(defaultFetchParams)
@@ -31,8 +30,8 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
     const onFormSubmit = async (form_data) => {
 
         // ensure we have task_id to link status to
-        if(!modelObj.task_id){
-            throw Exception("Task ID missing")
+        if(!modelObj.project_id){
+            throw Exception("Project ID missing")
         }
 
         const url = fetchParams.url
@@ -45,7 +44,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
         if(request_method == "POST"){
             form_data = {
                 ...form_data, 
-                task_id: modelObj.task_id,
+                project_id: modelObj.project_id,
             }
         }
 
@@ -72,7 +71,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
             console.log("onFormSubmit() response: ",data)
             
             // push change to state
-            //pushUpdateTask(data)
+            //pushUpdateUnit(data)
             
             // run custom submit hook
             onSubmitHook(data)
@@ -89,20 +88,24 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
     }
 
     const defaultFormValues = {
-        task_id: '',
-        message: undefined,
-        task_status: '',
+        //project_id: '',
+        name: '',
+        start: undefined,
+        //end: undefined,
     }
 
     const taskSchema = z.object({
         //task_id: z.coerce.number({ required_error: "Task must be specified.", }).int().positive(),
         // task_status: z.string({ required_error: "Status is required.", })
         //     .min(2, { message: "Status must be at least 2 characters.", }),
-        task_status: z.coerce
-             .number({ required_error: "Status must be selected.", })
-             .int({ message: "Status must be selected.", })
-             .positive({ message: "Status must be selected.", }),
-        message: z.string().optional(),
+        // task_status: z.coerce
+        //      .number({ required_error: "Status must be selected.", })
+        //      .int({ message: "Status must be selected.", })
+        //      .positive({ message: "Status must be selected.", }),
+        name: z.string({ required_error: "Unit name is required.", })
+            .min(2, { message: "Unit name must be at least 2 characters.", }),
+        start: z.date().optional(),
+        end: z.date().optional(),
     })
 
     const form = useForm({
@@ -120,18 +123,18 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
             const data = modelObj
             
             setFetchParams({
-                url: "/api/updates/"+data.id, 
+                url: "/api/units/"+data.id, 
                 request_method: "PATCH"
             })
             
-            // let pin_start = undefined
-            // if(data.pin_start){
-            //     //pin_start = new Date(data.pin_start).setHours(0, 0, 0, 0); //set to midnight //accepting string
-            //     pin_start = data.pin_start
-            // }
+            let start = undefined
+            if(data.start){
+                //pin_start = new Date(data.pin_start).setHours(0, 0, 0, 0); //set to midnight //accepting string
+                start = data.start
+            }
 
-            form.setValue('task_status', data.task_status);
-            form.setValue('message', data.message);
+            form.setValue('name', data.name);
+            form.setValue('start', start);
         } else {
             console.log('useEffect. form reset to default values')
             setFetchParams(defaultFetchParams)

@@ -21,7 +21,7 @@ class UserSignup(Resource):
             db.session.commit()
 
             session['user_id'] = user.id
-            return make_response(user.to_dict(only=('id','name','email','defaultProject','defaultUnit')), 201)
+            return make_response(user.to_dict(only=('id','name','email','selectedProject','selectedUnit')), 201)
         
         except Exception as e:
             return make_response({"errors": e.args}, 422)
