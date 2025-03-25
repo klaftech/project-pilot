@@ -26,9 +26,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { useEffect, useContext } from 'react'
+import { useEffect, useState, useContext } from 'react'
+import UserContext from '@/context/UserContext'
+import ActiveProjectContext from '@/context/ActiveProjectContext'
 import ProjectsContext from '@/context/ProjectsContext'
+import UnitsContext from '@/context/UnitsContext'
 import Logo from '/logo_transparent.png'
+import { useUpdateUser } from '@/hooks/useUpdateUser'
 
 const AppNavbar = ({
   logo = {
@@ -156,11 +160,27 @@ const AppNavbar = ({
   },
 }) => {
   
+  const updateUser = useUpdateUser()
 
   // ********************************************************************
-  // ********************* BEGIN PROJECTS LOADING ***********************
+  // ***************** BEGIN PROJECTS & UNITS LOADING *******************
   // ********************************************************************
+  const {user, setUser} = useContext(UserContext);
+  const {activeProject, setActiveProject} = useContext(ActiveProjectContext);
   const {projects, setProjects} = useContext(ProjectsContext);
+  const {units, setUnits} = useContext(UnitsContext);
+
+  //update unit dropdown list on project change
+  useEffect(() => {
+    let new_units = []
+    const project = projects.filter(project => project.id == activeProject.id)
+    if (project.length > 0){
+      new_units = project[0].units
+    } else {
+      new_units = []
+    }
+    setUnits(new_units)
+  }, [activeProject])
 
   useEffect(() => {
     if(projects.length <= 0){
@@ -169,25 +189,75 @@ const AppNavbar = ({
     }
   }, [])
 
+  useEffect(() => {
+    updateActiveProject()
+  }, [projects])
+
+  const updateActiveProject = (project_id=user.selectedProject) => {
+    const filterResults = projects.filter(project => project.id == project_id)
+    if (filterResults.length > 0){
+      
+      const project = filterResults[0]
+      
+      // update context
+      setActiveProject(project)
+
+      // save change to user profile in context
+      updateUser({selectedProject: project.id})
+    }
+  }
+
   const fetchProjects = () => (
-    fetch('/api/projects')
+    fetch('/api/projects/minimal')
       .then(res => {
-          if(res.ok){
-              res.json()
-              .then(data => {
-                  setProjects(data)
-                  console.log("projects loaded into Navbar")
-              })
-          } else {
-              console.log('failed to fetch projects')
-          }
+        if(res.ok){
+            res.json()
+            .then(data => {
+                setProjects(data)
+                console.log("projects loaded into Navbar")
+            })
+        } else {
+            console.log('failed to fetch projects')
+        }
       })
   )
+
+  // console.log(user)
+  // console.log(projects)
+  // console.log(units)
   // ********************************************************************
-  // *********************** ENG PROJECTS LOADING ***********************
+  // ***************** ENG PROJECTS & UNIT LOADING **********************
   // ********************************************************************
 
-  
+  const handleProjectClick = (e, project_id) => {
+    //console.log("project clicked "+project_id)
+    
+    updateActiveProject(project_id)
+    // const filterResults = projects.filter(project => project.id == project_id)
+    // if (filterResults.length > 0){
+      
+    //   const project = filterResults[0]
+      
+    //   // update context
+    //   setActiveProject(project)
+
+    //   // save change to user profile in context
+    //   updateUser({selectedProject: project.id})
+    // } else {
+    //   console.log("Fatal Error. Project selected not found in menu")
+    //   //e.preventDefault()
+    // }
+  }
+
+  const handleUnitClick = (e, unit_id) => {
+    e.preventDefault()
+    //console.log("updating selectedUnit in profile to: "+unit_id)
+
+    // save change to user profile in context
+    updateUser({selectedUnit: unit_id})
+  }
+
+
   const projectTypeIcons = {
     house: <House className="size-5 shrink-0" />,
     commercial: <Building className="size-5 shrink-0" />,
@@ -202,6 +272,18 @@ const AppNavbar = ({
       description: project.description,
       icon: projectTypeIcons[project.project_type] ?? <SquareCheck className="size-5 shrink-0" />,
       url: "/project/"+project.id,
+      onClick: handleProjectClick,
+    }
+  }
+
+  const renderUnitMenuItems = (unit) => {
+    return {
+      key: unit.id,
+      title: unit.name,
+      description: '',
+      icon: <SquareCheck className="size-5 shrink-0" />,
+      url: "/unit/"+unit.id,
+      onClick: handleUnitClick,
     }
   }
 
@@ -219,6 +301,11 @@ const AppNavbar = ({
         //     url: "/",
         //   },
         // ],
+    },
+    {
+        title: "Units",
+        url: "/",
+        items: units.map(unit => renderUnitMenuItems(unit)),
     },
     {
         title: "Tasks",
@@ -318,6 +405,8 @@ const AppNavbar = ({
   return (
     <section className="py-4 pr-4 pl-4">
       <div className="container">
+
+        {/* Desktop Menu */}
         <nav className="hidden justify-between lg:flex">
           <div className="flex items-center gap-6">
             <NavLink to={logo.url} className="flex items-center gap-2">
@@ -346,6 +435,8 @@ const AppNavbar = ({
             </NavLink>
           </div>
         </nav>
+
+        {/* Mobile Menu */}
         <div className="block lg:hidden">
           <div className="flex items-center justify-between">
             <NavLink to={logo.url} className="flex items-center gap-2">
@@ -407,6 +498,7 @@ const AppNavbar = ({
             </Sheet>
           </div>
         </div>
+
       </div>
     </section>
   );
@@ -419,12 +511,13 @@ const renderMenuItem = (item) => {
         <NavigationMenuTrigger>{item.title}</NavigationMenuTrigger>
         <NavigationMenuContent>
           <ul className="w-80 p-3">
-            <NavigationMenuLink>
-              {item.items.map((subItem) => (
-                <li key={subItem.title}>
-                  <NavLink
+            {item.items.map((subItem) => (
+              <li key={subItem.title}>
+                <NavigationMenuLink asChild>
+                  <Link
                     className="flex select-none gap-4 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-muted hover:text-accent-foreground"
                     to={subItem.url}
+                    onClick={subItem.onClick ? e => subItem.onClick(e, subItem.key) : null}
                   >
                     {subItem.icon}
                     <div>
@@ -437,10 +530,10 @@ const renderMenuItem = (item) => {
                         </p>
                       )}
                     </div>
-                  </NavLink>
-                </li>
-              ))}
-            </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuLink>
+              </li>
+            ))}
           </ul>
         </NavigationMenuContent>
       </NavigationMenuItem>
@@ -470,7 +563,8 @@ const renderMobileMenuItem = (item) => {
             <NavLink
               key={subItem.title}
               className="flex select-none gap-4 rounded-md p-3 leading-none outline-none transition-colors hover:bg-muted hover:text-accent-foreground"
-              to={subItem.url}
+              to={subItem.url} 
+              onClick={subItem.onClick ? e => subItem.onClick(e, subItem.key) : null}
             >
               {subItem.icon}
               <div>

@@ -8,13 +8,16 @@ import {
     CardTitle,
   } from "@/components/ui/card"
 
-import { useState, useEffect } from 'react'
-import FormWrapper from '@/components/form/FormWrapper'
-import FormFields from '@/components/form/FormFields'
+import { useState, useEffect, useContext } from 'react'
+import FormWrapper from '@/components/form/unit/FormWrapper'
+import FormFields from '@/components/form/unit/FormFields'
 import ShowAlert from "@/components/ShowAlert"
+import UserContext from "@/context/UserContext"
 
-const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
+const UnitCreateCardForm = () => {
     
+    const {user} = useContext(UserContext)
+
     const [show, setShow] = useState(false)
     
     useEffect(() => {
@@ -28,27 +31,37 @@ const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
         }
     }, [show]);
 
+    // const submitHook = (data) => {
+    //     reloadTaskObj()
+    //     setShow(true)
+    // }
+
     const submitHook = (data) => {
-        reloadTaskObj()
         setShow(true)
+        console.log("submitHook: form submitted")
+        console.log(data)
+    }
+
+    const pushUpdateUnit = () => {
+        console.log("pushUpdateUnit: form submitted")
     }
     
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Edit Task</CardTitle>
+                <CardTitle>Create New Unit</CardTitle>
                 <CardDescription>
-                    Make change to your task here. Click save when your done.
+                    Enter Unit details below. Task list will be built using all Project's tasks.
                     {show && <ShowAlert message="Changes saved" />}
                 </CardDescription>
             </CardHeader>
             
-            <FormWrapper formScenario="update" taskEditObj={taskObj} pushUpdateTask={pushUpdateTask} submitHook={submitHook}>
+            <FormWrapper formScenario="create" unitEditObj={{project_id: user.selectedProject}} pushUpdateUnit={pushUpdateUnit} submitHook={submitHook}>
                 <CardContent className="space-y-2">
                     <FormFields form={()=>true}/>
                 </CardContent>
                 <CardFooter>
-                    <Button type="submit">Save changes</Button>
+                    <Button type="submit">Save</Button>
                 </CardFooter>
             </FormWrapper>
                     
@@ -65,4 +78,4 @@ const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
         </Card>
     )
 }
-export default DetailsCardForm
+export default UnitCreateCardForm

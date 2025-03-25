@@ -10,12 +10,12 @@ import { Toaster } from "@/components/ui/toaster";
 const root = document.getElementById("root");
 
 ReactDOM.createRoot(root).render(
-  <StrictMode>
+  // <StrictMode>
       <BrowserRouter>
         <ContextProviderWrapper>
           <App />
           <Toaster />
         </ContextProviderWrapper>
       </BrowserRouter>
-  </StrictMode>
+  // </StrictMode>
 );
