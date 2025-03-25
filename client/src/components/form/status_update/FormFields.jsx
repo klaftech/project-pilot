@@ -157,7 +157,7 @@ const FormFields = ({ form }) => {
                             <CommandList>
                             <CommandEmpty>No status found.</CommandEmpty>
                             <CommandGroup>
-                                {status_options.filter((status) => status.update_visiblity == true).map((status) => (
+                                {status_options.filter((status) => status.update_visibility == true).map((status) => (
                                 <CommandItem
                                     value={status.title}
                                     key={status.code}
