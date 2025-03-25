@@ -4,6 +4,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
   } from "@/components/ui/tooltip"
+import { Progress } from "@/components/ui/progress"
 import { CircleCheckBig, Trash, Eye, Pencil , TrendingUp, CircleCheck, Calendar, ArrowUpDown, Workflow } from "lucide-react";
 import { useState } from 'react'
 import { formatDatePretty, isDateToday } from '@/utils/date.js'
@@ -13,7 +14,9 @@ export function TaskCard({
     task, 
     displayOptions = {
         displayUnit: false,
-        displayStatus: true,
+        displayStatus: false,
+        displaySchedule: false,
+        displayProgress: true,
         clickEdit: false,
         clickView: true,
         clickDelete: false,
@@ -32,23 +35,30 @@ export function TaskCard({
     const [isHoveringDelete, setIsHoveringDelete] = useState(false);
     const [isHoveringComplete, setIsHoveringComplete] = useState(false);
     const [isHoveringStatusUpdate, setIsHoveringStatusUpdate] = useState(false);
-    
+
     return (
         <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col">
-            {/* <div className="flex p-1">
-                <Progress value={50} className="w-[60%]" />
-            </div> */}
             <p className="font-medium">{task.name}</p>
             {displayOptions.displayUnit && task.unit && <p className="text-muted-foreground">Unit: {task.unit.name}</p>}
-            {displayOptions.displayStatus && 
-            <div>
-                <StatusBadge task={task} />
+            
+            {displayOptions.displayProgress && 
+            <div className="flex p-1">
+                <Progress value={task.progress} /*className="w-[%60]"}*/ />
             </div>
             }
 
-            <p className="py-3 text-sm text-muted-foreground">
-            {isDateToday(task.start) ? "Today" : formatDatePretty(task.start)} - {isDateToday(task.end) ? "Today" : formatDatePretty(task.end)}
-            </p>
+            {displayOptions.displayStatus && 
+                <div>
+                    <StatusBadge task={task} />
+                </div>
+            }
+
+            {displayOptions.displaySchedule && 
+                <p className="py-3 text-sm text-muted-foreground">
+                    {isDateToday(task.start) ? "Today" : formatDatePretty(task.start)} - {isDateToday(task.end) ? "Today" : formatDatePretty(task.end)}
+                </p>
+            }
+            
             <div className="mt-2 flex gap-4">
                 
                 {displayOptions.clickEdit && 

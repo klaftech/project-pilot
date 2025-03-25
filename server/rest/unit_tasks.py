@@ -26,7 +26,7 @@ def get_project_pending_update(project_id):
         .subquery()
     )
     #print(latest_timestamp_subquery)
-
+    
     base_query = (UnitTask.query
                   .join(Unit, Unit.id == UnitTask.unit_id)
                   .filter(Unit.project_id == model.id)
@@ -61,6 +61,7 @@ def get_project_pending_update(project_id):
         'pin_honored',
         'sched_start',
         'sched_end',
+        'progress',
         'unit.id',
         'unit.name',
         'master_task.id',

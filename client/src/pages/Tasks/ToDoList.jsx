@@ -8,7 +8,9 @@ export const ToDoList = ({ tasks, isLoaded, handleClickEdit, handleClickView, ha
 
     const displayOptions = {
         displayUnit: true,
-        displayStatus: true,
+        displayStatus: false,
+        displaySchedule: false,
+        displayProgress: true,
         clickEdit: false,
         clickView: false,
         clickDelete: false,
