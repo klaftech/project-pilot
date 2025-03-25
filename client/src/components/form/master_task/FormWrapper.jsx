@@ -20,7 +20,7 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
     const [serverErrors, setServerErrors] = useState()
 
     const defaultFetchParams = {
-        url: "/api/tasks", 
+        url: "/api/mastertasks", 
         request_method: "POST"
     }
     const [fetchParams, setFetchParams] = useState(defaultFetchParams)
@@ -143,7 +143,7 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
             const data = taskEditObj
             
             setFetchParams({
-                url: "/api/tasks/"+data.id, 
+                url: "/api/mastertasks/"+data.id, 
                 request_method: "PATCH"
             })
             
@@ -161,7 +161,7 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
 
             form.setValue('name', data.name);
             form.setValue('project_id', data.project_id);
-            form.setValue('group_id', data.group_id);
+            form.setValue('group_id', data.group.id);
             form.setValue('days_length', data.days_length);
             form.setValue('pin_start', pin_start);
             form.setValue('pin_end', pin_end);

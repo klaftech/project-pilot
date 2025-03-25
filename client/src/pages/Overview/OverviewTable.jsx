@@ -1,18 +1,24 @@
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { Badge } from "@/components/ui/badge"
-import { useState, useEffect } from 'react'
-import { taskBuilder, getTaskStatus } from '@/utils/task.js';
+import { TriangleAlert } from 'lucide-react';
+import { useState, useEffect, useContext } from 'react'
+import { taskBuilder, getTaskStatus, getReadableTaskStatus } from '@/utils/task.js';
+import { getReadableUpdateStatus } from '@/utils/status_update.js'
+import { stringToDate, getPreviousMonday, getPreviousPreviousMonday } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
+import UserContext from '@/context/UserContext.jsx'
 
 function OverviewTable() {
-    const [projects, setProjects] = useState([])
+    const [project, setProject] = useState(null)
+    const [error, setError] = useState(null)
+    const {user, setUser} = useContext(UserContext);
 
     useEffect(() => {
-        fetchProjects()
+        fetchProjectReport()
     }, [])
 
-    const fetchProjects = () => {
-        fetch('/api/projects')
+    const fetchProjectReport = () => {
+        fetch('/api/projects/'+user.selectedProject+'/report')
         .then(res => {
             if(res.ok){
                 res.json()
@@ -26,63 +32,79 @@ function OverviewTable() {
                     // data.stats.week.range_end = stringToDate(data.stats.week.range_end)
 
                     // set local state
-                    setProjects(data)
+                    setProject(data)
                 })
             } else {
                 console.log("unable to load projects data")
                 //throw new Error(res.status);
-                //setError("Unable to load projects data.")
+                setError("Unable to load projects data.")
             }
         })
     }
 
-    if(projects.length <= 0){
-        return ( 
-            <LoadingWrapper />
+    if(error){
+        return (
+            {error}
         )
     }
 
-    // get max amount of tasks of all projects for determining amount of columns
-    let max_tasks = 0
-    if(projects.length > 0){
-        max_tasks = projects.reduce((accumulator, currentValue) => {
-            return accumulator > currentValue.tasks.length ? accumulator : currentValue.tasks.length
-        }, 0)
+    if(!project && !error){
+        return (
+            <>
+                Building your report...
+                <LoadingWrapper />
+            </>
+        )
     }
+
+    // get max amount of tasks from all units for determining amount of columns
+    let max_tasks = 0
+    if(project){
+        max_tasks = project.master_tasks.length
+    }
+    // if(project.length > 0 && project.units.length > 0){
+    //     max_tasks = project.units.reduce((accumulator, currentValue) => {
+    //         // alternatively, can get using currentValue.stats.counts.count_tasks
+    //         return accumulator > currentValue.unit_tasks.length ? accumulator : currentValue.unit_tasks.length
+    //     }, 0)
+    // }
 
     return (
         <TableContainer component={Paper}>
             <Table className="min-w-full">
                 <TableHead>
                     <TableRow>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</TableCell>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</TableCell>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</TableCell>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</TableCell>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week Stats</TableCell>
+                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</TableCell>
+                        {/* <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</TableCell> */}
+                        <TableCell colSpan={2} className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion</TableCell>
+                        {/* <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</TableCell> */}
+                        {/* <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week Stats</TableCell> */}
                         <TableCell colSpan={max_tasks} className="px-6 py-3 bg-grey-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Tasks &nbsp;
                             <Badge className="bg-green-200 text-grey-50">Completed</Badge>&nbsp;
-                            <Badge className="bg-red-200 text-grey-50">Delayed</Badge>&nbsp;
                             <Badge className="bg-blue-200 text-grey-50">In Progress</Badge>&nbsp;
+                            <Badge className="bg-red-200 text-grey-50">Stuck</Badge>&nbsp;
                             <Badge className="bg-yellow-200 text-grey-50">Scheduled</Badge>&nbsp;
                         </TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {projects.map((project) => {
-                        const task_count = project.tasks.length
+                    {project && project.units.length <= 0 && (<TableRow><TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">No Units Found</TableCell></TableRow>)}
+                    {project && project.units.length > 0 && project.units.map((unit) => {
+                        const task_count = unit.unit_tasks.length
                         const placeholders_to_add = max_tasks-task_count
                         return (
-                            <TableRow key={project.id}>
-                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.name}</TableCell>
-                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{project.stats.project.status}</TableCell>
-                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.stats.project.completion_percent}%</TableCell>
-                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.stats.project.count_completed}/{project.stats.project.count_tasks}</TableCell>
-                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.stats.week.count_scheduled_completed}/{project.stats.week.count_scheduled}</TableCell>
-                                {project.tasks.map((task) => {
-                                    
-                                    const task_status = getTaskStatus(taskBuilder(task))
+                            <TableRow key={unit.id}>
+                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.name}</TableCell>
+                                {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{getReadableTaskStatus(unit.stats.status)}</TableCell> */}
+                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.completion_percent}%</TableCell>
+                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.counts.count_completed}/{unit.stats.counts.count_tasks}</TableCell>
+                                {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.week.count_scheduled_completed}/{unit.stats.week.count_scheduled}</TableCell> */}
+                                {unit.unit_tasks.map((raw_task) => {
+                                    /*
+                                    // removed all schedule based logic 03/24/2025, instead simply show completed/in-progress/scheduled based on completion and latest_updates
+                                    const task = taskBuilder(raw_task)
+                                    const task_status = getTaskStatus(task)
                                     let status_background = ""
                                     if(task_status == "completed"){
                                         status_background = "bg-green-200"
@@ -93,7 +115,69 @@ function OverviewTable() {
                                     } else if(task_status == "scheduled"){
                                         status_background = "bg-yellow-200"
                                     }
-                                    return <TableCell key={task.id} className={"px-6 py-4 whitespace-nowrap text-sm text-grey-500 "+status_background}>{task.name}</TableCell>
+                                    
+                                    // if most recent StatusUpdate is since previous monday, show on report
+                                    let status_update_badge = ''
+                                    if(raw_task.latest_update != null){
+                                        if(stringToDate(raw_task.latest_update.timestamp) > getPreviousMonday()){
+                                            const latest_update_status = raw_task.latest_update.status
+                                            let update_status_background = ""
+                                            if(latest_update_status == 200){
+                                                update_status_background = "bg-green-500"
+                                            } else if(latest_update_status == 400){
+                                                update_status_background = "bg-red-500"
+                                            } else {
+                                                update_status_background = "bg-blue-500"
+                                            }
+                                            status_update_badge = <>&nbsp;<Badge className={"text-grey-500 "+update_status_background}>{getReadableUpdateStatus(latest_update_status)}</Badge></>
+                                        }
+                                    }
+                                    */
+
+                                    const task = taskBuilder(raw_task)
+                                    let status_background = ""
+                                    let internal_task_status = "500"
+                                    if(task.complete_status == true){
+                                        //completed
+                                        status_background = "bg-green-200"
+                                        internal_task_status = "200"
+                                    } else if((raw_task.latest_update != null) && (raw_task.latest_update.status == 500)){
+                                        //stuck. task is not completed and there is a status update 500
+                                        status_background = "bg-red-200"
+                                        internal_task_status = "500"
+                                    } else if(task.progress != 0){
+                                        //in progress. task is not completed, is not stuck and progress in more than 0
+                                        status_background = "bg-blue-200"
+                                        internal_task_status = "400"
+                                    } else {
+                                        //scheduled. task is not completed and there is no progress
+                                        status_background = "bg-yellow-200"
+                                        internal_task_status = "300"
+                                    }
+
+                                    // if most recent StatusUpdate is since previous monday, show on report
+                                    let status_update_badge = null
+                                    if(raw_task.latest_update != null){
+                                        if(stringToDate(raw_task.latest_update.timestamp) > getPreviousPreviousMonday()){
+                                            const latest_update_status = raw_task.latest_update.status
+                                            let update_status_background = ""
+                                            if(latest_update_status == 200){
+                                                update_status_background = "bg-green-500"
+                                            } else if(latest_update_status == 500){
+                                                update_status_background = "bg-red-500"
+                                            } else {
+                                                update_status_background = "bg-blue-500"
+                                            }
+                                            status_update_badge = <>&nbsp;<Badge className={"text-grey-500 "+update_status_background}>{getReadableUpdateStatus(latest_update_status)}</Badge></>
+                                        }
+                                    }
+
+                                    //check that update was not missed
+                                    if((internal_task_status == 400) && (status_update_badge == null)){
+                                        status_update_badge = <>&nbsp;<Badge className={"text-grey-500 bg-red-500"}><TriangleAlert className="scale-75" /></Badge></>
+                                    }
+                                                                        
+                                    return <TableCell key={task.id} className={"px-6 py-4 whitespace-nowrap text-sm text-grey-500 "+status_background}>{task.name}{status_update_badge}</TableCell>
                                 })}
                                 {placeholders_to_add > 0 ? 
                                     <TableCell colSpan={placeholders_to_add} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"></TableCell>
