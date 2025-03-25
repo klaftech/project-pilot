@@ -1,9 +1,10 @@
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { Badge } from "@/components/ui/badge"
+import { TriangleAlert } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react'
 import { taskBuilder, getTaskStatus, getReadableTaskStatus } from '@/utils/task.js';
 import { getReadableUpdateStatus } from '@/utils/status_update.js'
-import { stringToDate, getPreviousMonday } from '@/utils/date';
+import { stringToDate, getPreviousMonday, getPreviousPreviousMonday } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
 
@@ -74,15 +75,15 @@ function OverviewTable() {
                 <TableHead>
                     <TableRow>
                         <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</TableCell>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</TableCell>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</TableCell>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</TableCell>
-                        <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week Stats</TableCell>
+                        {/* <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</TableCell> */}
+                        <TableCell colSpan={2} className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion</TableCell>
+                        {/* <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</TableCell> */}
+                        {/* <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Week Stats</TableCell> */}
                         <TableCell colSpan={max_tasks} className="px-6 py-3 bg-grey-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Tasks &nbsp;
                             <Badge className="bg-green-200 text-grey-50">Completed</Badge>&nbsp;
-                            <Badge className="bg-red-200 text-grey-50">Delayed</Badge>&nbsp;
                             <Badge className="bg-blue-200 text-grey-50">In Progress</Badge>&nbsp;
+                            <Badge className="bg-red-200 text-grey-50">Stuck</Badge>&nbsp;
                             <Badge className="bg-yellow-200 text-grey-50">Scheduled</Badge>&nbsp;
                         </TableCell>
                     </TableRow>
@@ -95,11 +96,13 @@ function OverviewTable() {
                         return (
                             <TableRow key={unit.id}>
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.name}</TableCell>
-                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{getReadableTaskStatus(unit.stats.status)}</TableCell>
+                                {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{getReadableTaskStatus(unit.stats.status)}</TableCell> */}
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.completion_percent}%</TableCell>
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.counts.count_completed}/{unit.stats.counts.count_tasks}</TableCell>
-                                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.week.count_scheduled_completed}/{unit.stats.week.count_scheduled}</TableCell>
+                                {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.week.count_scheduled_completed}/{unit.stats.week.count_scheduled}</TableCell> */}
                                 {unit.unit_tasks.map((raw_task) => {
+                                    /*
+                                    // removed all schedule based logic 03/24/2025, instead simply show completed/in-progress/scheduled based on completion and latest_updates
                                     const task = taskBuilder(raw_task)
                                     const task_status = getTaskStatus(task)
                                     let status_background = ""
@@ -129,6 +132,51 @@ function OverviewTable() {
                                             status_update_badge = <>&nbsp;<Badge className={"text-grey-500 "+update_status_background}>{getReadableUpdateStatus(latest_update_status)}</Badge></>
                                         }
                                     }
+                                    */
+
+                                    const task = taskBuilder(raw_task)
+                                    let status_background = ""
+                                    let internal_task_status = "500"
+                                    if(task.complete_status == true){
+                                        //completed
+                                        status_background = "bg-green-200"
+                                        internal_task_status = "200"
+                                    } else if((raw_task.latest_update != null) && (raw_task.latest_update.status == 500)){
+                                        //stuck. task is not completed and there is a status update 500
+                                        status_background = "bg-red-200"
+                                        internal_task_status = "500"
+                                    } else if(task.progress != 0){
+                                        //in progress. task is not completed, is not stuck and progress in more than 0
+                                        status_background = "bg-blue-200"
+                                        internal_task_status = "400"
+                                    } else {
+                                        //scheduled. task is not completed and there is no progress
+                                        status_background = "bg-yellow-200"
+                                        internal_task_status = "300"
+                                    }
+
+                                    // if most recent StatusUpdate is since previous monday, show on report
+                                    let status_update_badge = null
+                                    if(raw_task.latest_update != null){
+                                        if(stringToDate(raw_task.latest_update.timestamp) > getPreviousPreviousMonday()){
+                                            const latest_update_status = raw_task.latest_update.status
+                                            let update_status_background = ""
+                                            if(latest_update_status == 200){
+                                                update_status_background = "bg-green-500"
+                                            } else if(latest_update_status == 500){
+                                                update_status_background = "bg-red-500"
+                                            } else {
+                                                update_status_background = "bg-blue-500"
+                                            }
+                                            status_update_badge = <>&nbsp;<Badge className={"text-grey-500 "+update_status_background}>{getReadableUpdateStatus(latest_update_status)}</Badge></>
+                                        }
+                                    }
+
+                                    //check that update was not missed
+                                    if((internal_task_status == 400) && (status_update_badge == null)){
+                                        status_update_badge = <>&nbsp;<Badge className={"text-grey-500 bg-red-500"}><TriangleAlert className="scale-75" /></Badge></>
+                                    }
+                                                                        
                                     return <TableCell key={task.id} className={"px-6 py-4 whitespace-nowrap text-sm text-grey-500 "+status_background}>{task.name}{status_update_badge}</TableCell>
                                 })}
                                 {placeholders_to_add > 0 ? 

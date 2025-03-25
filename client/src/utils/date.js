@@ -73,3 +73,14 @@ export function getPreviousMonday() {
 
     return previousMonday;
 }
+
+export function getPreviousPreviousMonday() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
+    const daysToSubtract = dayOfWeek === 0 ? 14 : dayOfWeek;
+    
+    const previousMonday = new Date(today);
+    previousMonday.setDate(today.getDate() - daysToSubtract);
+
+    return previousMonday;
+}

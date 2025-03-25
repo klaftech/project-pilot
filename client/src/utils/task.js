@@ -1,5 +1,6 @@
 import { stringToDate } from './date.js'
 
+//accepts taskBuilder object, returns string
 export const getTaskStatus = (task) => {
     let status
     if(task.complete_status == true){
@@ -14,6 +15,7 @@ export const getTaskStatus = (task) => {
     return status
 }
 
+//accepts string, returns string
 export const getReadableTaskStatus = (status) => {
     let read = "N/A"
     if(status == "completed"){
@@ -30,6 +32,7 @@ export const getReadableTaskStatus = (status) => {
     return read
 }
 
+//accepts raw api json response, return taskBuilder object
 export const taskBuilder = (task) => {
     //console.log(task)
     const isUnit = task.unit ? true : false
