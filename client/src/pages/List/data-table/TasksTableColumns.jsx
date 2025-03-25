@@ -66,16 +66,16 @@ const columns = [
     }
   ),
 
-  columnHelper.display({
-    id: "status",
-    header: "Status",
-    cell: ({ row }) => {  
-        // return <div className="text-right font-medium">Pending</div>;
-        return <StatusBadge task={row.original} />
-    },
-    enableSorting: false,
-    enableHiding: true,
-  }),
+  // columnHelper.display({
+  //   id: "status",
+  //   header: "Status",
+  //   cell: ({ row }) => {  
+  //       // return <div className="text-right font-medium">Pending</div>;
+  //       return <StatusBadge task={row.original} />
+  //   },
+  //   enableSorting: false,
+  //   enableHiding: true,
+  // }),
 
   columnHelper.accessor(
     "progress", 
@@ -102,35 +102,35 @@ const columns = [
     }
   ),
 
-  columnHelper.accessor("start", {
-    header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Start Date" />
-    ),
-    cell: ({ row }) => {
-        const date = new Date(row.getValue("start"));
-        const formatted = new Intl.DateTimeFormat("en-US", {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).format(date)
-      return <div className="text-left font-medium">{formatted}</div>;
-    },
-  }),
+  // columnHelper.accessor("start", {
+  //   header: ({ column }) => (
+  //       <DataTableColumnHeader column={column} title="Start Date" />
+  //   ),
+  //   cell: ({ row }) => {
+  //       const date = new Date(row.getValue("start"));
+  //       const formatted = new Intl.DateTimeFormat("en-US", {
+  //       year: 'numeric',
+  //       month: '2-digit',
+  //       day: '2-digit'
+  //     }).format(date)
+  //     return <div className="text-left font-medium">{formatted}</div>;
+  //   },
+  // }),
 
-  columnHelper.accessor("end", {
-    header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="End Date" className="text-right" />
-    ),
-    cell: ({ row }) => {
-        const date = new Date(row.getValue("end"));
-        const formatted = new Intl.DateTimeFormat("en-US", {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).format(date)
-      return <div className="text-left font-medium">{formatted}</div>;
-    },
-  }),
+  // columnHelper.accessor("end", {
+  //   header: ({ column }) => (
+  //       <DataTableColumnHeader column={column} title="End Date" className="text-right" />
+  //   ),
+  //   cell: ({ row }) => {
+  //       const date = new Date(row.getValue("end"));
+  //       const formatted = new Intl.DateTimeFormat("en-US", {
+  //       year: 'numeric',
+  //       month: '2-digit',
+  //       day: '2-digit'
+  //     }).format(date)
+  //     return <div className="text-left font-medium">{formatted}</div>;
+  //   },
+  // }),
 
 
   columnHelper.display({

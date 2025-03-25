@@ -15,7 +15,9 @@ export const UnitTaskList = ({ tasks, isLoaded, handleClickEdit, handleClickView
     
     const displayOptions = {
         displayUnit: false,
-        displayStatus: true,
+        displayStatus: false,
+        displaySchedule: false,
+        displayProgress: true,
         clickEdit: false,
         clickView: true,
         clickDelete: false,

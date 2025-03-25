@@ -20,6 +20,14 @@ export const status_options = [
         title: "Completed"
     },
     {
+        code: 300,
+        title: "Scheduled"
+    },
+    {
+        code: 400,
+        title: "In Progress"
+    },
+    {
         code: 500,
         title: "Stuck"
     }
