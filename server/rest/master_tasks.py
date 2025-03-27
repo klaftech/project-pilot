@@ -14,7 +14,7 @@ def get_dependencies_current(task_id):
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
     
-    tasks = [task.to_dict(rules=('-project','-unit_tasks','-children_tasks','-parent_tasks','-dependencies')) for task in MasterTaskDependency.query.filter(TaskDependency.task_id == task_model.id).all()]
+    tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in MasterTaskDependency.query.filter(TaskDependency.task_id == task_model.id).all()]
     return make_response(tasks, 200)
 
 
@@ -24,7 +24,7 @@ def get_dependencies_descendents(task_id):
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
     
-    tasks = [task.to_dict(rules=('-project','-unit_tasks','-children_tasks','-parent_tasks','-dependencies')) for task in set(task_model.get_descendents())]
+    tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in set(task_model.get_descendents())]
     return make_response(tasks, 200)
 
 
@@ -34,7 +34,7 @@ def get_dependencies_ancestors(task_id):
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
     
-    tasks = [task.to_dict(rules=('-project','-unit_tasks','-children_tasks','-parent_tasks','-dependencies')) for task in set(task_model.get_ancestors())]
+    tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in set(task_model.get_ancestors())]
     return make_response(tasks, 200)
 
 
@@ -44,7 +44,7 @@ def get_dependencies_available(task_id):
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
     
-    tasks = [task.to_dict(rules=('-project','-unit_tasks','-children_tasks','-parent_tasks','-dependencies')) for task in task_model.get_available()]
+    tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in task_model.get_available()]
     return make_response(tasks, 200)
 
 
@@ -84,10 +84,11 @@ class MasterTasks(Resource):
             'pin_end',
             'group',
             'project',
-            #'unit_tasks',
-            #'dependencies',
-            #'children_tasks',
-            #'parent_tasks',
+            # 'unit_tasks',
+            # 'parents',
+            # 'children',
+            # 'parent_tasks',
+            # 'children_tasks',
             )
         #rules=('-children_tasks','-parent_tasks')
         tasks = [task.to_dict(only=response_fields) for task in tasks_query.all()]
@@ -122,10 +123,11 @@ class MasterTasks(Resource):
             'pin_end',
             'group',
             'project',
-            #'unit_tasks',
-            #'dependencies',
-            #'children_tasks',
-            #'parent_tasks',
+            # 'unit_tasks',
+            # 'parents',
+            # 'children',
+            # 'parent_tasks',
+            # 'children_tasks',
             )
         return make_response(new_record.to_dict(only=response_fields), 201)
     
@@ -154,10 +156,11 @@ class MasterTaskByID(Resource):
             'pin_end',
             'group',
             'project',
-            #'unit_tasks',
-            #'dependencies',
-            #'children_tasks',
-            #'parent_tasks',
+            # 'unit_tasks',
+            # 'parents',
+            # 'children',
+            # 'parent_tasks',
+            # 'children_tasks',            
             )
         return make_response(model.to_dict(only=response_fields), 200)
            
@@ -203,10 +206,11 @@ class MasterTaskByID(Resource):
             'pin_end',
             'group',
             'project',
-            #'unit_tasks',
-            #'dependencies',
-            #'children_tasks',
-            #'parent_tasks',
+            # 'unit_tasks',
+            # 'parents',
+            # 'children',
+            # 'parent_tasks',
+            # 'children_tasks',
             )
         return make_response(model.to_dict(only=response_fields), 202)
     
@@ -324,4 +328,3 @@ class DependencyByID(Resource):
         master_task_recursively_update_children(task_model)
 
         return make_response("", 204)
-

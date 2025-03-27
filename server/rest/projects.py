@@ -47,11 +47,10 @@ def get_project_report(project_id):
         'units.stats',
         'units.unit_tasks',
         'units.unit_tasks.latest_update',
-        '-units.unit_tasks.dependencies',
+        '-units.unit_tasks.parents',
+        '-units.unit_tasks.children',
         '-units.unit_tasks.updates',
         'units.unit_tasks.master_task',
         '-units.unit_tasks.master_task.group',
         '-units.unit_tasks.master_task.project'
         )), 200)
-
-
