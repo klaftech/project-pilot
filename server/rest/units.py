@@ -4,7 +4,7 @@ from flask_restful import Resource
 
 from config import db
 from models import Project, Unit
-from app_helpers import validate_date_input, recursively_update_dependencies
+from app_helpers import validate_date_input
 from datetime import datetime
 
 
