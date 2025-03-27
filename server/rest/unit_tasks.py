@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 
 from config import db, app
 from models import User, Project, MasterTask, Unit, UnitTask, StatusUpdate
-from app_helpers import recursively_update_dependencies
+from app_helpers import unit_task_recursively_update_children
 from datetime import datetime, time, date, timedelta
 from helpers import get_previous_monday
 
@@ -136,6 +136,8 @@ class UnitTaskByID(Resource):
         return make_response(model.to_dict(rules=('latest_update',)), 200)
            
     def patch(self, id):
+        # if the patch is marking task completed, all other data sent is ignored.
+        
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
@@ -149,17 +151,19 @@ class UnitTaskByID(Resource):
             #         non_affected = True
 
             if ('complete_status' in data) and (data['complete_status']) and not (model.complete_status):
+                mark_children_started = True
                 print('UNIT TASK MARKED COMPLETE')
                 user = User.query.filter_by(id=session["user_id"]).first()
 
-                model.complete_status = data['complete_status']
+                model.complete_status = True
                 model.complete_comment = "marked complete on app"
                 model.complete_date = datetime.combine(datetime.now(), time.min)
                 model.complete_user_id = user.id
                 model.progress = 100
 
-            for attr,value in data.items():
-               setattr(model, attr, value)
+            else:
+                for attr,value in data.items():
+                    setattr(model, attr, value)
 
         except ValueError as e:
             return make_response({"error": e.args}, 422)
@@ -168,7 +172,9 @@ class UnitTaskByID(Resource):
 
         # if non_affected == True:
         #recursively process dependencies
-        recursively_update_dependencies(model)
+        #unit_task_recursively_update_children(model)
         
-        return make_response(model.to_dict(), 202)
+        if mark_children_started == True:
+            model.mark_children_started()
 
+        return make_response(model.to_dict(), 202)

@@ -90,9 +90,8 @@ class Project(db.Model, SerializerMixin):
         '-units.unit_tasks.unit',
         '-master_tasks.project',
         '-master_tasks.group',
-        '-master_tasks.dependencies',
-        '-master_tasks.parent_tasks',
-        '-master_tasks.children_tasks',
+        '-master_tasks.parents',
+        '-master_tasks.children',
         '-master_tasks.unit_tasks'
     )
 
@@ -209,9 +208,8 @@ class Group(db.Model, SerializerMixin):
         '-project.master_tasks',
         '-master_tasks.project',
         '-master_tasks.group',
-        '-master_tasks.dependencies',
-        '-master_tasks.parent_tasks',
-        '-master_tasks.children_tasks'
+        '-master_tasks.parents',
+        '-master_tasks.children'
     )
 
     @validates('name','project_id')
@@ -254,19 +252,37 @@ class MasterTask(db.Model, SerializerMixin):
     unit_tasks = db.relationship('UnitTask', back_populates="master_task")
 
     serialize_rules = (
-        'dependencies', #default does not serializer association proxy
-        '-parent_tasks.owner_task', #avoid recursion
-        '-children_tasks.parent_task', #avoid recursion
-        '-children_tasks.owner_task.children_tasks', #avoid nested recursive data (a tasks child's owner is itself... so don't show it's child all over again)
-        '-children_tasks.owner_task.dependencies', #avoid nested recursive data (a tasks child's owner is itself... so don't show dependencies)
-        '-dependencies.owner_task',
-        '-dependencies.children_tasks',
-        '-dependencies.parent_task',
-        '-dependencies.parent_tasks',
-        '-dependencies.dependencies',
+        '-parent_tasks',
+        '-children_tasks',
+        '-children',
+        # '-children.owner_task', #copied rules from dependencies
+        # '-children.children_tasks', #copied rules from dependencies
+        # '-children.parent_task', #copied rules from dependencies
+        # '-children.parent_tasks', #copied rules from dependencies
+        #'-children.dependencies', #copied rules from dependencies
+        '-parents',
+        # '-parents.owner_task', #copied rules from dependencies
+        # '-parents.children_tasks', #copied rules from dependencies
+        # '-parents.parent_task', #copied rules from dependencies
+        # '-parents.parent_tasks', #copied rules from dependencies
+        #'-parents.dependencies', #copied rules from dependencies
+        #'dependencies', #default does not serializer association proxy
+        #'-parent_tasks.owner_task', #avoid recursion
+        #'-children_tasks.parent_task', #avoid recursion
+        #'-children_tasks.owner_task.children_tasks', #avoid nested recursive data (a tasks child's owner is itself... so don't show it's child all over again)
+        #'-children_tasks.owner_task.dependencies', #avoid nested recursive data (a tasks child's owner is itself... so don't show dependencies)
+        #'-dependencies.owner_task',
+        #'-dependencies.children_tasks',
+        #'-dependencies.parent_task',
+        #'-dependencies.parent_tasks',
+        #'-dependencies.dependencies',
         '-unit_tasks.unit',
         '-unit_tasks.master_task',
         '-unit_tasks.complete_user',
+        '-unit_tasks.updates',
+        #'-unit_tasks.dependencies',
+        '-unit_tasks.parents',
+        '-unit_tasks.children',
         #'-project', #block all
         #'-group', #block all
         '-project.master_tasks',
@@ -322,13 +338,38 @@ class MasterTask(db.Model, SerializerMixin):
         back_populates="parent_task"
     )
 
+    # REPLACED BY PARENTS
     # Association proxy to access dependent tasks directly
     # list of tasks that this task is dependent on (all TaskDependecy where task_id=self.id)
     # essentially just a prettier version of parent_tasks (without the joining table)
-    dependencies = association_proxy(
+    # dependencies = association_proxy(
+    #     "parent_tasks",                                         # connector
+    #     "parent_task",                                          # name of the model we're connecting to
+    #     creator=lambda task: MasterTaskDependency(parent_task=task)   # function accepts object of the other independent class and returns the corresponding object of the 'connecting' class that made the connection possible. 
+    # )
+
+    ################################################################
+    # 03/26/2025 
+    # ideally, we should only use these values across the board, and slowly deprecate:
+    # dependencies
+    # parent_tasks.parent_task
+    # children_tasks.owner_task
+    ################################################################
+
+    # Association proxy to access dependent tasks directly
+    # list of tasks that this task is dependent on (all TaskDependecy where task_id=self.id)
+    # essentially just a prettier version of parent_tasks (without the joining table)
+    # === this was previously called dependencies (prior to 03/26/2025)
+    parents = association_proxy(
         "parent_tasks",                                         # connector
         "parent_task",                                          # name of the model we're connecting to
         creator=lambda task: MasterTaskDependency(parent_task=task)   # function accepts object of the other independent class and returns the corresponding object of the 'connecting' class that made the connection possible. 
+    )
+
+    children = association_proxy(
+        "children_tasks",                                         # connector
+        "owner_task",                                             # name of the model we're connecting to
+        creator=lambda task: MasterTaskDependency(owner_task=task)   # function accepts object of the other independent class and returns the corresponding object of the 'connecting' class that made the connection possible. 
     )
 
     def get_ancestors(self):
@@ -399,7 +440,8 @@ class MasterTask(db.Model, SerializerMixin):
         for task in master_tasks:
             # Initialize in-degree for the current task
             in_degree[task.id] = in_degree.get(task.id, 0)
-            for dependency in task.dependencies:
+            # task.parents are dependecies
+            for dependency in task.parents:
                 adjacency_list[dependency.id].append(task) #task.id
                 in_degree[task.id] += 1
 
@@ -654,6 +696,7 @@ class UnitTask(db.Model, SerializerMixin):
             sched_start = datetime.strftime(self.sched_start, "%Y-%m-%d")
             sched_end = datetime.strftime(self.sched_end, "%Y-%m-%d")
             master_task = f'TaskName: {task_name}, SchedStart: {sched_start} SchedEnd: {sched_end}'
+            master_task = "Loading"
         else:
             master_task = "N/A"
         return f'<TaskUnit ID: {self.id} MasterTask: {master_task}>'
@@ -668,6 +711,8 @@ class UnitTask(db.Model, SerializerMixin):
     pin_end = db.Column(db.DateTime, default=None, nullable=True)
     pin_honored = db.Column(db.Boolean, default=False)
     progress = db.Column(db.Integer, nullable=False, default=0)
+    started_status = db.Column(db.Boolean, default=False)
+    started_date = db.Column(db.DateTime, default=None, nullable=True)
     complete_status = db.Column(db.Boolean, default=False)
     complete_date = db.Column(db.DateTime, default=None, nullable=True)
     complete_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
@@ -691,28 +736,72 @@ class UnitTask(db.Model, SerializerMixin):
     def latest_update(self):
         raise AttributeError('latest update is read-only')
 
+
+    # # TODO: remove
+    # @property
+    # def dependencies(self):
+    #     # Get this unit's UnitTasks corresponding to the MasterTask's dependencies (parent tasks)
+    #     # deps = []
+    #     # for master_dependency in self.master_task.dependencies:
+    #     #     for dependent_ut in master_dependency.unit_tasks:
+    #     #         if dependent_ut.unit_id == self.unit_id:
+    #     #             deps.append(dependent_ut)
+    #     # return deps
+    #     return [dependent_ut for master_dependency in self.master_task.dependencies for dependent_ut in master_dependency.unit_tasks if dependent_ut.unit_id == self.unit_id]
+
+    # #TODO: remove
+    # @dependencies.setter
+    # def dependencies(self):
+    #     raise AttributeError('UnitTask dependencies is read-only')
+    
+
+    # dependencies
     @property
-    def dependencies(self):
-        # Get this unit's UnitTasks corresponding to the MasterTask's dependencies
+    def parents(self):
+        # Get this unit's UnitTasks corresponding to the MasterTask's dependencies (parent tasks)
         # deps = []
         # for master_dependency in self.master_task.dependencies:
         #     for dependent_ut in master_dependency.unit_tasks:
         #         if dependent_ut.unit_id == self.unit_id:
         #             deps.append(dependent_ut)
         # return deps
-        return [dependent_ut for master_dependency in self.master_task.dependencies for dependent_ut in master_dependency.unit_tasks if dependent_ut.unit_id == self.unit_id]
+        return [dependent_ut for master_dependency in self.master_task.parents for dependent_ut in master_dependency.unit_tasks if dependent_ut.unit_id == self.unit_id]
 
-    @dependencies.setter
-    def dependencies(self):
-        raise AttributeError('UnitTask dependencies is read-only')    
+    @parents.setter
+    def parents(self):
+        raise AttributeError('UnitTask parents/dependencies is read-only')
+
+
+    @property
+    def children(self):
+        # Get this unit's UnitTasks corresponding to the MasterTask's children
+        # deps = []
+        # for master_child in self.master_task.children:
+        #     for dependent_ut in master_child.unit_tasks:
+        #         if dependent_ut.unit_id == self.unit_id:
+        #             deps.append(dependent_ut)
+        # return deps
+        return [dependent_ut for master_child in self.master_task.children for dependent_ut in master_child.unit_tasks if dependent_ut.unit_id == self.unit_id]
+
+    @children.setter
+    def children(self):
+        raise AttributeError('UnitTask children is read-only')    
+   
 
     serialize_rules = (
         #'latest_update',
-        'dependencies',
-        '-dependencies.dependencies',
-        '-master_task.children_tasks',
+        #'dependencies', #should be removed one day soon...
+        #'-dependencies.dependencies', #should be removed one day soon...
+        'parents',
+        '-parents.parents',
+        '-parents.children',
+        'children',
+        '-children.parents',
+        '-children.children',
         '-master_task.parent_tasks',
-        '-master_task.dependencies',
+        '-master_task.children_tasks',
+        '-master_task.parents',
+        '-master_task.children',
         '-master_task.unit_tasks',
         '-unit.project',
         '-unit.unit_tasks',
@@ -723,7 +812,7 @@ class UnitTask(db.Model, SerializerMixin):
 
 
     # validate date inputs
-    @validates('pin_start','pin_end','sched_start','sched_end','complete_date')
+    @validates('pin_start','pin_end','sched_start','sched_end','started_date','complete_date')
     def validate_dates(self, attr, value):
         if not isinstance(value, datetime):
             for format in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
@@ -735,7 +824,35 @@ class UnitTask(db.Model, SerializerMixin):
         return value
     
     
+
     
+    # function to be ran after updating task as completed, to set start date of all children tasks to be the following date
+    def mark_children_started(self):
+        # ensure that task is completed
+        if self.complete_status != True or not isinstance(self.complete_date, date):
+            return
+            raise ValueError('Task must be completed before beginning children tasks.')
+        
+        # ensure that children exist
+        if self.children:
+            for child_task in self.children:
+                # if child is not completed yet, set start date of child to be the following day
+                if child_task.complete_status != True and not isinstance(child_task.complete_date, date):
+                    if child_task.started_status != True and not isinstance(child_task.started_date, date):
+                        child_task.started_status = True
+                        child_task.started_date = self.complete_date + timedelta(days=1)
+                        db.session.commit()
+        #             else:
+        #                 raise ValueError(f'Child Task "{child_task.id}" is already started.')
+        #         else:
+        #             raise ValueError(f'Child Task "{child_task.id}" is already completed.')
+        # else:
+        #     raise ValueError("Final task. No children to begin")
+
+
+
+
+
     # validate before/after, returns Boolean
     # use: (start, end): returns True if valid timeframe, False if not
     # use: (sched_start, pin_start): returns True if planned start is before (allow pin to set start later)
@@ -776,7 +893,6 @@ class UnitTask(db.Model, SerializerMixin):
         return True
 
 
-    
 
     # recalculates task schedule dates.
     # factoring in: 
@@ -786,6 +902,9 @@ class UnitTask(db.Model, SerializerMixin):
     # updates: self.sched_start, self.sched_end, self.pin_honored
     # logs action steps to 'logger' list
     def calculate_schedule(self):
+        # function is not to be used, because we are no longer using schedule calculations (03/26/2025)
+        # using simple started_date instead.
+        return
         
         def handle_pin_start():
             if self.pin_start:

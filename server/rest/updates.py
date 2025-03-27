@@ -5,7 +5,7 @@ from datetime import datetime, time
 
 from config import db
 from models import StatusUpdate, UnitTask
-from app_helpers import recursively_update_dependencies
+from app_helpers import unit_task_recursively_update_children
 
 
 class StatusUpdates(Resource):
@@ -48,24 +48,28 @@ class StatusUpdates(Resource):
             status = int(status)
 
         # update UnitTask based on StatusUpdate
-        if status == 200:
+        if status == 100 or status == 200:
             task.progress = 100
             task.complete_status = True
             task.complete_date = datetime.combine(datetime.now(), time.min)
             task.complete_user_id = session.get("user_id")
             task.complete_comment = "marked complete via status update"
             
+            mark_children_started = True
+
             # reschedule dependent tasks to account for completed task
-            recursively_update_dependencies(task)
+            unit_task_recursively_update_children(task)
         elif status == 25:
             task.progress = 25
         elif status == 50:
             task.progress = 50
         elif status == 75:
             task.progress = 75
-        elif status == 100:
-            task.progress = 100
+        elif status == 300:
+            #task scheduled
+            pass
         elif status == 400:
+            #task in-progress
             pass
         elif status == 500:
             #task stuck
@@ -74,6 +78,8 @@ class StatusUpdates(Resource):
             pass
         db.session.commit()
 
+        if mark_children_started == True:
+            task.mark_children_started()
 
         return make_response(new_record.to_dict(), 201)
     
@@ -93,26 +99,26 @@ class StatusUpdateByID(Resource):
             return make_response({"error": f"Model ID: {id} not found"}, 404)
         return make_response(model.to_dict(rules=('-unit_task',)), 200)
            
-    def patch(self, id):
-        model = self.__class__.find_model_by_id(id)
-        if not model:
-            return make_response({"error": f"Model ID: {id} not found"}, 404)
-        data = request.get_json()
-        try:
-            for attr,value in data.items():
-                setattr(model, attr, value) 
-        except ValueError as e:
-            return make_response({"error": e.args}, 422)
+    # def patch(self, id):
+    #     model = self.__class__.find_model_by_id(id)
+    #     if not model:
+    #         return make_response({"error": f"Model ID: {id} not found"}, 404)
+    #     data = request.get_json()
+    #     try:
+    #         for attr,value in data.items():
+    #             setattr(model, attr, value) 
+    #     except ValueError as e:
+    #         return make_response({"error": e.args}, 422)
         
-        db.session.commit()
+    #     db.session.commit()
 
-        return make_response(model.to_dict(), 202)
+    #     return make_response(model.to_dict(), 202)
     
-    def delete(self, id):
-        model = self.__class__.find_model_by_id(id)
-        if not model:
-            return make_response({"error": f"Model ID: {id} not found"}, 404)
+    # def delete(self, id):
+    #     model = self.__class__.find_model_by_id(id)
+    #     if not model:
+    #         return make_response({"error": f"Model ID: {id} not found"}, 404)
         
-        db.session.delete(model)
-        db.session.commit()
-        return make_response("", 204)
+    #     db.session.delete(model)
+    #     db.session.commit()
+    #     return make_response("", 204)
