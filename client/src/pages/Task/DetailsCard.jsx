@@ -45,9 +45,10 @@ const DetailsCard = ({ task }) => {
                 </div>
                 }
                 
-                <div className="space-y-1">
+                {/* <div className="space-y-1">
                     Schedule: {formatDatePretty(task.start)} - {formatDatePretty(task.end)}
-                </div>
+                </div> */}
+
                 <div className="space-y-1">
                     Progress: {task.progress}%
                 </div>

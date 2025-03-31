@@ -21,7 +21,7 @@ import FormWrapper from '@/components/form/master_task/FormWrapper'
 
 export function TasksContainer() {
     
-    const { tasks, isLoaded, updateTask, reloadTasks } = useManageTasks();
+    const { tasks, isLoaded, removeTask, updateTask, reloadTasks } = useManageTasks();
 
     const navigate = useNavigate();
     const {user, setUser} = useContext(UserContext);
@@ -65,7 +65,9 @@ export function TasksContainer() {
             console.log("onClickComplete(): task updated")
             console.log("onClickComplete() response: ",data)
             
-            updateTask(data)
+            // TODO: updateTask(data) instead
+            removeTask(data)
+            reloadTasks()
         } catch (error) {
             console.log(error)
         }
@@ -92,6 +94,7 @@ export function TasksContainer() {
             
             console.log("onClickDelete(): task deleted")
             
+            removeTask(task)
             reloadTasks()
         } catch (error) {
             console.log(error.message)

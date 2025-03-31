@@ -47,6 +47,13 @@ export const isDateToday = (date) => {
     }
 }
 
+//returns difference in days count (integer) between 2 days
+export const getDaysDiff = (date1, date2) => {
+    const timeDifference = date2.getTime() - date1.getTime();
+    const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+    return daysDifference;
+}
+
 export const getDiffToday = (date) => {
     //set to midnight
     date.setHours(0, 0, 0, 0)

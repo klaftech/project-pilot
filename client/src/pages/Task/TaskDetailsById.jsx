@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 
 import { taskBuilder } from "@/utils/task.js"
 import DetailsCard from "./DetailsCard.jsx"
+import DetailsCardUpdatesWrapper from "./DetailsCardUpdatesWrapper.jsx"
 import AppWrapper from '@/components/AppWrapper.jsx'
 import LoadingWrapper from "@/components/LoadingWrapper.jsx"
 import { useManageTasks } from "@/hooks/useManageTasks.jsx"
@@ -79,8 +80,7 @@ function TaskDetailsById() {
                     {!error && taskObj && <DetailsCard task={taskObj} />}
                 </TabsContent>
                 <TabsContent value="updates">
-                    Coming Soon
-                    {/* {!error && taskObj && <DetailsCardDependencies tasks={tasks} taskObj={taskObj} pushUpdateTask={pushUpdateTask} reloadTasks={reloadTasks} />} */}
+                    {!error && taskObj && <DetailsCardUpdatesWrapper taskId={taskObj.id} />}
                 </TabsContent>
 
                 </Tabs>

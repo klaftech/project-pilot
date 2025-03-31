@@ -307,12 +307,12 @@ const AppNavbar = ({
         url: "/",
         items: units.map(unit => renderUnitMenuItems(unit)),
     },
-    {
-        title: "Tasks",
-        description: "View Task Cards",
-        icon: <Book className="size-5 shrink-0" />,
-        url: "/tasks",
-    },
+    // {
+    //     title: "Tasks",
+    //     description: "View Task Cards",
+    //     icon: <Book className="size-5 shrink-0" />,
+    //     url: "/tasks",
+    // },
     {
         title: "List",
         description: "View List of Tasks",

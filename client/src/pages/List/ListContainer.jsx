@@ -4,7 +4,7 @@ import LoadingWrapper from "@/components/LoadingWrapper"
 import { useManageTasks } from '@/hooks/useManageTasks'
 
 function ListContainer() {
-    const { tasks, isLoaded, updateTask, reloadTasks } = useManageTasks();
+    const { tasks, isLoaded, removeTask, updateTask, reloadTasks } = useManageTasks();
     return (
         <AppWrapper>
             <div className="container mx-auto p-6">

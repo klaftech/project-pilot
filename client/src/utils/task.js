@@ -46,9 +46,12 @@ export const taskBuilder = (task) => {
         "pin_end": stringToDate(task.pin_end),
         "days_length": isMasterTask ? task.master_task.days_length : null,
         "progress": task.progress,
-        "complete_status": task.complete_status, 
+        "started_status": task.started_status,
+        "started_date": stringToDate(task.started_date),
+        "complete_status": task.complete_status,
+        "complete_date": stringToDate(task.complete_date),
         //"dependencies": task.dependencies.map(task => taskBuilder(task)) //as of now we dont need full recursive dependencies.
-        "dependencies": task.dependencies ? task.dependencies.map(task => task.id) : [], //sending array of IDs. if changing this, ensure that updated in GanttChart.jsx as well 
+        "dependencies": task.parents ? task.parents.map(task => task.id) : [], //sending array of IDs. if changing this, ensure that updated in GanttChart.jsx as well 
         "group": {
             "id": isMasterTask && task.master_task.group ? task.master_task.group.id : null,
             "name": isMasterTask && task.master_task.group ? task.master_task.group.name : null,
@@ -69,5 +72,7 @@ export const taskDefault = {
     "pin_end": null,
     "days_length": null,
     "progress": null,
+    "started_status": null,
+    "started_date": null,
     "complete_status": null
 }
