@@ -23,7 +23,7 @@ from models import db, User, Project, Group, MasterTask, MasterTaskDependency, T
 from rest.auth import UserSignup, UserLogin, UserLogout, UserAuthorize, UserProfile
 from rest.groups import Groups, GroupByID
 from rest.updates import StatusUpdates, StatusUpdateByID
-from rest.master_tasks import MasterTasks, MasterTaskByID, Dependencies, DependencyByID, get_dependencies_ancestors, get_dependencies_descendents, get_dependencies_current, get_dependencies_available
+from rest.master_tasks import MasterTasks, MasterTaskByID, Dependencies, DependencyByID, get_dependencies_ancestors, get_dependencies_descendents, get_dependencies_available
 from rest.units import Units, UnitByID
 from rest.unit_tasks import UnitTasks, UnitTaskByID, get_project_pending_update
 from rest.projects import get_projects, get_project_details, get_projects_minimal, get_project_report

@@ -30,8 +30,9 @@ def get_project_pending_update(project_id):
     base_query = (UnitTask.query
                   .join(Unit, Unit.id == UnitTask.unit_id)
                   .filter(Unit.project_id == model.id)
+                  .filter(UnitTask.started_status == True)
                   .filter(UnitTask.complete_status == False)
-                  .filter(UnitTask.sched_start < (today + timedelta(days=7)))
+                  #.filter(UnitTask.sched_start < (today + timedelta(days=7)))
     )
     
     # inner join that only gets tasks with most recent update
@@ -93,7 +94,7 @@ class UnitTasks(Resource):
         if not project_filter and not unit_filter:
             return make_response({"error": f"Result set must be filtered"}, 422)
 
-        tasks = [task.to_dict(rules=('-complete_user','-unit')) for task in tasks_query.all()]
+        tasks = [task.to_dict(rules=('children','-complete_user','-unit')) for task in tasks_query.all()]
         return make_response(tasks, 200)
     
     # no reason to ever create new UnitTask, they are directly linked to MasterTasks
@@ -137,7 +138,8 @@ class UnitTaskByID(Resource):
            
     def patch(self, id):
         # if the patch is marking task completed, all other data sent is ignored.
-        
+        mark_children_started = False
+
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)

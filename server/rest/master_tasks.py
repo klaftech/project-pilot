@@ -8,14 +8,17 @@ from app_helpers import find_task_model_by_id, validate_date_input, master_task_
 from datetime import datetime, time
 
 
-@app.route('/api/mastertasks/<task_id>/dependencies', methods=['GET'])
-def get_dependencies_current(task_id):
-    task_model = find_task_model_by_id(task_id)
-    if not task_model:
-        return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+# do we need this?? it should be called /parents
+# deprecated 03/27/2025, we'll see what break... (must add to import in app.py to reactivate)
+# @app.route('/api/mastertasks/<task_id>/dependencies', methods=['GET'])
+# def get_dependencies_parents(task_id):
+#     task_model = find_task_model_by_id(task_id)
+#     if not task_model:
+#         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
     
-    tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in MasterTaskDependency.query.filter(TaskDependency.task_id == task_model.id).all()]
-    return make_response(tasks, 200)
+#     tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in set(task_model.parents)]
+#     #tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in MasterTaskDependency.query.filter(MasterTaskDependency.task_id == task_model.id).all()]
+#     return make_response(tasks, 200)
 
 
 @app.route('/api/mastertasks/<task_id>/descendents', methods=['GET'])
