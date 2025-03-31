@@ -37,11 +37,14 @@ class User(db.Model, SerializerMixin):
         return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
 
     completed_tasks = db.relationship('UnitTask', back_populates="complete_user")
+    updates = db.relationship('StatusUpdate', back_populates="user")
+    
     serialize_rules = (
         '-_password_hash',
         '-completed_tasks.complete_user',
         '-completed_tasks.unit',
-        '-completed_tasks.unit_tasks'
+        '-completed_tasks.unit_tasks',
+        '-updates'
     )
 
     @validates('email')
@@ -575,10 +578,14 @@ class Unit(db.Model, SerializerMixin):
         if self.unit_tasks:
             raise ValueError(f'Could not build tasklist, tasks already exist for this Unit.')
         
-        def create_unit_task(master_task, start_date):
+        def create_unit_task(master_task, start_date,headless=False):
             unit_task = UnitTask(unit_id=self.id,task_id=master_task.id)
             unit_task.sched_start = start_date
             unit_task.sched_end = unit_task.sched_start + timedelta(days = master_task.days_length)
+            # for headless task, mark task as started
+            if headless == True:
+                unit_task.started_status = True
+                unit_task.started_date = start_date
             db.session.add(unit_task)
                 
             unit_tasks.append(unit_task)
@@ -635,7 +642,7 @@ class Unit(db.Model, SerializerMixin):
             if in_degree[current_task.id] == 0:
                 #print(f"========> pushing because HEADLESS {current_task}")
                 start_date = datetime.combine(datetime.now(), time.min) # use today as start
-                unit_task = create_unit_task(current_task, start_date)
+                unit_task = create_unit_task(current_task, start_date, True)
 
             else:
                 # Step 4.2: Process tasks that have parents 
@@ -825,13 +832,13 @@ class UnitTask(db.Model, SerializerMixin):
     
     
 
-    
     # function to be ran after updating task as completed, to set start date of all children tasks to be the following date
     def mark_children_started(self):
         # ensure that task is completed
         if self.complete_status != True or not isinstance(self.complete_date, date):
+            print("Task must be completed before beginning children tasks.")
             return
-            raise ValueError('Task must be completed before beginning children tasks.')
+            # raise ValueError('Task must be completed before beginning children tasks.')
         
         # ensure that children exist
         if self.children:
@@ -842,12 +849,16 @@ class UnitTask(db.Model, SerializerMixin):
                         child_task.started_status = True
                         child_task.started_date = self.complete_date + timedelta(days=1)
                         db.session.commit()
-        #             else:
-        #                 raise ValueError(f'Child Task "{child_task.id}" is already started.')
-        #         else:
-        #             raise ValueError(f'Child Task "{child_task.id}" is already completed.')
-        # else:
-        #     raise ValueError("Final task. No children to begin")
+                        print(f'Child task "{child_task.id}" marked as started')
+                    else:
+                        print(f'Child Task "{child_task.id}" is already started.')
+                        # raise ValueError(f'Child Task "{child_task.id}" is already started.')
+                else:
+                    print(f'Child Task "{child_task.id}" is already completed.')
+                    # raise ValueError(f'Child Task "{child_task.id}" is already completed.')
+        else:
+            print("Final task. No children to begin")
+            # raise ValueError("Final task. No children to begin")
 
 
 
@@ -1099,10 +1110,16 @@ class StatusUpdate(db.Model, SerializerMixin):
     task_id = db.Column(db.Integer, db.ForeignKey('unit_tasks.id'), nullable=False)
     task_status = db.Column(db.Integer, nullable=False)
     message = db.Column(db.String)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     timestamp = db.Column(db.DateTime, server_default=db.func.now())
 
+    user = db.relationship("User", back_populates="updates")
     unit_task = db.relationship("UnitTask", back_populates="updates")
-    serialize_rules = ('-unit_task',)
+    
+    serialize_rules = (
+        '-unit_task',
+        '-user'
+    )
 
     @validates('task_id')
     def validate_task(self, key, value):
@@ -1115,7 +1132,7 @@ class StatusUpdate(db.Model, SerializerMixin):
         if not value or not isinstance(value, int):
             raise ValueError('Status must be an integer')
         return value
-
+    
     def __repr__(self):
         return f'<StatusUpdate ID: {self.id}, Task: {self.task_id}, Status: {self.task_status}>'
 

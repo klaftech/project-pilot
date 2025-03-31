@@ -32,25 +32,31 @@ def get_project_report(project_id):
     if not model:
         return make_response({"error": f"Project ID: {project_id} not found"}, 404)
     
-    return make_response(model.to_dict(rules=(
+    return make_response(model.to_dict(only=(
         'id',
         'name',
         'project_type',
         'description',
-        'start',
-        'end',
-        'schedule',
-        'stats',
-        'groups',
-        'master_tasks',
-        'units',
+        #'start',
+        #'end',
+        #'schedule',
+        #'stats',
+        #'groups',
+        'master_tasks', #used soley to determine columns
+        'units.id',
+        'units.name',
+        'units.start',
+        'units.end',
         'units.stats',
-        'units.unit_tasks',
+        'units.unit_tasks.id',
+        'units.unit_tasks.sched_start',
+        'units.unit_tasks.sched_end',
+        'units.unit_tasks.progress',
+        'units.unit_tasks.started_status',
+        'units.unit_tasks.started_date',
+        'units.unit_tasks.complete_status',
+        'units.unit_tasks.complete_date',
         'units.unit_tasks.latest_update',
-        '-units.unit_tasks.parents',
-        '-units.unit_tasks.children',
-        '-units.unit_tasks.updates',
-        'units.unit_tasks.master_task',
-        '-units.unit_tasks.master_task.group',
-        '-units.unit_tasks.master_task.project'
+        'units.unit_tasks.master_task.name',
+        'units.unit_tasks.master_task.days_length',
         )), 200)
