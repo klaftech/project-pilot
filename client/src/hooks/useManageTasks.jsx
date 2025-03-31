@@ -45,6 +45,10 @@ export function useManageTasks() {
         console.log('ManageTasksHook: tasklist reloaded')
     }
 
+    const removeTask = (data) => {
+        setTasks(tasks.filter(task => task.id !== data.id))
+    }
+
     // TODO: must diffrentiate between mastertasks and unittasks
     const updateTask = (data) => {
         // ideally, we can just filter and replace the object in the tasklist state,
@@ -71,5 +75,5 @@ export function useManageTasks() {
         reloadTasks()
     }
 
-    return { tasks, isLoaded, updateTask, reloadTasks }
+    return { tasks, isLoaded, removeTask, updateTask, reloadTasks }
 }

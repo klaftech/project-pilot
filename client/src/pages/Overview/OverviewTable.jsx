@@ -4,7 +4,7 @@ import { TriangleAlert } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react'
 import { taskBuilder, getTaskStatus, getReadableTaskStatus } from '@/utils/task.js';
 import { getReadableUpdateStatus } from '@/utils/status_update.js'
-import { stringToDate, getPreviousMonday, getPreviousPreviousMonday } from '@/utils/date';
+import { stringToDate, getPreviousMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
 
@@ -134,27 +134,35 @@ function OverviewTable() {
                                     }
                                     */
 
+                                    // version 2 - set background color based on current task status
                                     const task = taskBuilder(raw_task)
+                                    
+                                    //get background color for task cell
                                     let status_background = ""
                                     let internal_task_status = "500"
-                                    if(task.complete_status == true){
+                                    if(task.complete_status == true || isDate(task.complete_date)){
                                         //completed
                                         status_background = "bg-green-200"
                                         internal_task_status = "200"
-                                    } else if((raw_task.latest_update != null) && (raw_task.latest_update.status == 500)){
-                                        //stuck. task is not completed and there is a status update 500
-                                        status_background = "bg-red-200"
-                                        internal_task_status = "500"
-                                    } else if(task.progress != 0){
+                                    // } else if((raw_task.latest_update != null) && (raw_task.latest_update.status == 500)){
+                                    //     //stuck. task is not completed and there is a status update 500
+                                    //     status_background = "bg-red-200"
+                                    //     internal_task_status = "500"
+                                    } else if(task.progress === 0 && (task.started_status === true || isDate(task.started_date))){
+                                        //pending. previous task is completed, but task not yet begun
+                                        status_background = "bg-yellow-200"
+                                        internal_task_status = "310"
+                                    } else if(task.progress != 0 || task.started_status){
                                         //in progress. task is not completed, is not stuck and progress in more than 0
                                         status_background = "bg-blue-200"
-                                        internal_task_status = "400"
+                                        internal_task_status = "311"
                                     } else {
                                         //scheduled. task is not completed and there is no progress
-                                        status_background = "bg-yellow-200"
+                                        status_background = "" //"bg-yellow-200"
                                         internal_task_status = "300"
                                     }
 
+                                    //show badge with latest status update
                                     // if most recent StatusUpdate is since previous monday, show on report
                                     let status_update_badge = null
                                     if(raw_task.latest_update != null){
@@ -172,12 +180,33 @@ function OverviewTable() {
                                         }
                                     }
 
-                                    //check that update was not missed
+                                    //show warning badge if missing status update
+                                    //check that update was not missed. task is in progress and there is not recent update.
                                     if((internal_task_status == 400) && (status_update_badge == null)){
                                         status_update_badge = <>&nbsp;<Badge className={"text-grey-500 bg-red-500"}><TriangleAlert className="scale-75" /></Badge></>
                                     }
-                                                                        
-                                    return <TableCell key={task.id} className={"px-6 py-4 whitespace-nowrap text-sm text-grey-500 "+status_background}>{task.name}{status_update_badge}</TableCell>
+
+                                    //show badge displaying difference between started-completed dates
+                                    let diff_badge = <>&nbsp;</>
+                                    if(task.started_status == true && isDate(task.started_date) && task.complete_status == true && isDate(task.complete_date)){
+                                        const days_diff = getDaysDiff(task.started_date, task.complete_date)
+                                        if(days_diff <= raw_task.master_task.days_length){
+                                            diff_badge = <>&nbsp;<Badge className={"text-grey-500 bg-green-500"}>{days_diff} days</Badge></>
+                                        } else {
+                                            diff_badge = <>&nbsp;<Badge className={"text-grey-500 bg-red-500"}>{days_diff} days</Badge></>
+                                        }
+
+                                    }
+                                    
+                                    //display started, completed and badge
+                                    let dates_report = ""
+                                    dates_report = <div className="flex flex-col">
+                                        <span className="text-black">{task.started_status == true && isDate(task.started_date) ? formatDatePretty(task.started_date) : <>&nbsp;</>}</span>
+                                        <span className="text-black">{task.complete_status == true && isDate(task.complete_date) ? formatDatePretty(task.complete_date) : <>&nbsp;</>}</span>
+                                        <span className="text-black">{diff_badge}</span>
+                                    </div>
+
+                                    return <TableCell key={task.id} className={"px-6 py-4 whitespace-nowrap text-sm text-grey-500 "+status_background}>{task.name}{status_update_badge}{dates_report}</TableCell>
                                 })}
                                 {placeholders_to_add > 0 ? 
                                     <TableCell colSpan={placeholders_to_add} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"></TableCell>

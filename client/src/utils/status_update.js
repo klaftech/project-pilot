@@ -30,7 +30,12 @@ export const status_options = [
         update_visibility: false,
     },
     {
-        code: 400,
+        code: 310,
+        title: "Pending",
+        update_visibility: false,
+    },
+    {
+        code: 311,
         title: "In Progress",
         update_visibility: false,
     },
