@@ -33,6 +33,17 @@ const DetailsCard = ({ task }) => {
                 <div className="space-y-1">
                     Task Length: {task.days_length} days
                 </div>
+                
+                {task.started_date &&
+                <div className="space-y-1">
+                    Started: {formatDatePretty(task.started_date)}
+                </div>
+                }
+                {task.complete_date &&
+                <div className="space-y-1">
+                    Completed: {formatDatePretty(task.complete_date)}
+                </div>
+                }
 
                 {task.pin_start &&
                 <div className="space-y-1">

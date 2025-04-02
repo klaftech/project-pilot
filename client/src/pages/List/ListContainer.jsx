@@ -2,6 +2,7 @@ import AppWrapper from '@/components/AppWrapper'
 import TasksTable from './data-table/TasksTable'
 import LoadingWrapper from "@/components/LoadingWrapper"
 import { useManageTasks } from '@/hooks/useManageTasks'
+import UnitFilter from '@/components/UnitFilter'
 
 function ListContainer() {
     const { tasks, isLoaded, removeTask, updateTask, reloadTasks } = useManageTasks();
@@ -11,7 +12,10 @@ function ListContainer() {
                 <div className="mx-auto">
                 {/* <div className="mx-auto max-w-md overflow-hidden rounded-xl bg-white shadow-md md:max-w-2xl"> */}
                     {!isLoaded && <LoadingWrapper />}
-                    {isLoaded && <TasksTable tasks={tasks} />}
+                    {isLoaded && <>
+                        <UnitFilter />
+                        <TasksTable tasks={tasks} />
+                    </>}
                 </div>
             </div>
         </AppWrapper>

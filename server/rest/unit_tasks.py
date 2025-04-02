@@ -57,11 +57,11 @@ def get_project_pending_update(project_id):
     response_fields = (
         'id',
         #'latest_update',
-        'pin_start',
-        'pin_end',
-        'pin_honored',
-        'sched_start',
-        'sched_end',
+        #'pin_start',
+        #'pin_end',
+        #'pin_honored',
+        #'sched_start',
+        #'sched_end',
         'progress',
         'unit.id',
         'unit.name',
@@ -80,6 +80,30 @@ def get_project_pending_update(project_id):
 
 
 class UnitTasks(Resource):
+    response_fields = (
+        'id',
+        #'latest_update',
+        'pin_start',
+        'pin_end',
+        'pin_honored',
+        'sched_start',
+        'sched_end',
+        'started_status',
+        'started_date',
+        'complete_status',
+        'complete_date',
+        'progress',
+        'unit.id',
+        'unit.name',
+        'master_task.id',
+        'master_task.name',
+        'master_task.days_length',
+        'master_task.pin_start',
+        'master_task.pin_end',
+        'master_task.group.id',
+        'master_task.group.name'
+    )
+    
     def get(self):
         tasks_query = UnitTask.query.order_by(UnitTask.sched_start.desc())  
 
@@ -94,7 +118,7 @@ class UnitTasks(Resource):
         if not project_filter and not unit_filter:
             return make_response({"error": f"Result set must be filtered"}, 422)
 
-        tasks = [task.to_dict(rules=('children','-complete_user','-unit')) for task in tasks_query.all()]
+        tasks = [task.to_dict(only=self.__class__.response_fields) for task in tasks_query.all()]
         return make_response(tasks, 200)
     
     # no reason to ever create new UnitTask, they are directly linked to MasterTasks
@@ -122,6 +146,30 @@ class UnitTasks(Resource):
 
 
 class UnitTaskByID(Resource):
+    response_fields = (
+        'id',
+        #'latest_update',
+        'pin_start',
+        'pin_end',
+        'pin_honored',
+        'sched_start',
+        'sched_end',
+        'started_status',
+        'started_date',
+        'complete_status',
+        'complete_date',
+        'progress',
+        'unit.id',
+        'unit.name',
+        'master_task.id',
+        'master_task.name',
+        'master_task.days_length',
+        'master_task.pin_start',
+        'master_task.pin_end',
+        'master_task.group.id',
+        'master_task.group.name'
+    )
+    
     @classmethod
     def find_model_by_id(cls, id):
         model = UnitTask.query.filter_by(id=id).first()
@@ -134,7 +182,7 @@ class UnitTaskByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
-        return make_response(model.to_dict(rules=('latest_update',)), 200)
+        return make_response(model.to_dict(only=self.__class__.response_fields,rules=('latest_update',)), 200)
            
     def patch(self, id):
         # if the patch is marking task completed, all other data sent is ignored.
@@ -179,4 +227,4 @@ class UnitTaskByID(Resource):
         if mark_children_started == True:
             model.mark_children_started()
 
-        return make_response(model.to_dict(), 202)
+        return make_response(model.to_dict(only=self.__class__.response_fields), 202)

@@ -302,11 +302,11 @@ const AppNavbar = ({
         //   },
         // ],
     },
-    {
-        title: "Units",
-        url: "/",
-        items: units.map(unit => renderUnitMenuItems(unit)),
-    },
+    // {
+    //     title: "Units",
+    //     url: "/",
+    //     items: units.map(unit => renderUnitMenuItems(unit)),
+    // },
     // {
     //     title: "Tasks",
     //     description: "View Task Cards",
@@ -314,7 +314,7 @@ const AppNavbar = ({
     //     url: "/tasks",
     // },
     {
-        title: "List",
+        title: "Tasks by Unit",
         description: "View List of Tasks",
         icon: <Book className="size-5 shrink-0" />,
         url: "/list",
