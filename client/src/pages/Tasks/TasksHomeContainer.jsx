@@ -129,7 +129,7 @@ export function TasksHomeContainer() {
     return (
         <AppWrapper>
             <div className="flex items-center px-2 m-1">
-                {user && user.selectedProject && <Badge>Project {user.selectedProject}</Badge>}
+                {user && user.selectedProject && <Badge>Project ID: {user.selectedProject}</Badge>}
             </div>
 
             <DialogPopupForm isOpen={isOpen} setIsOpen={setIsOpen} title="Save Update" description="Enter Weekly Task Status Update" >

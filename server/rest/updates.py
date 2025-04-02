@@ -9,6 +9,64 @@ from app_helpers import unit_task_recursively_update_children
 
 
 class StatusUpdates(Resource):
+    response_fields = (
+        'id',
+        'message',
+        'task_id',
+        'task_status',
+        'timestamp',
+        'user_id',
+        'user.name'
+    )
+
+    @staticmethod
+    def validate_status_change(old: int, new: int):
+        """
+        Check if the status change follows the allowed progression rules.
+        
+        :param old: The previous status.
+        :param new: The new status.
+        :return: True if the status change is valid, otherwise False.
+        
+        25  %
+        50  %
+        75  %
+        100 %
+        200 completed
+        300 scheduled
+        310 pending
+        311 in progress
+        500 Stuck        
+        """
+        valid_statuses = [25, 50, 75, 100, 200, 300, 310, 311, 400, 500]
+        
+        if old == new:
+            return False, "No change in status."
+
+        # ensure new status is valid
+        if old not in valid_statuses or new not in valid_statuses:
+            return False, "Invalid status value."
+        
+        # Once status is 200, don't allow change
+        if old == 200:
+            return False, "Completed task cannot be changed."
+        
+        # 1-100 can only be changed to 1-100 or 200 or 500
+        if old in [25, 50, 75, 100] and new not in [25, 50, 75, 100, 200, 500]:
+            return False, "Task in progress can only be changed to completed or stuck."
+        
+        # 300, 310 can only be changed to 1-100 or 100, 311 or 500
+        if old in [300, 310] and new not in [25, 50, 75, 100, 200, 311, 500]:
+            return False, "Scheduled cannot be changed to Pending and vice versa."
+        
+        # if changing completion percentage, can only be greater value
+        if old in [25, 50, 75, 100] and new in [25, 50, 75, 100] and valid_statuses.index(old) > valid_statuses.index(new):
+            return False, "Completion can only move forward"
+
+        # using array index, ensure new value is larger than old value
+        #return valid_statuses.index(old) < valid_statuses.index(new)
+        return True, "Success"
+    
     def get(self):
         
         updates_query = StatusUpdate.query
@@ -29,18 +87,8 @@ class StatusUpdates(Resource):
         #    updates_query = updates_query.join(UnitTask, UnitTask.id == StatusUpdate.task_id).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == project_filter)
         # else:
         #     return make_response({"error": "Task or Unit filter required."}, 422)
-        
-        response_fields = (
-            'id',
-            'message',
-            'task_id',
-            'task_status',
-            'timestamp',
-            'user_id',
-            'user.name'
-        )
 
-        updates = [update.to_dict(only=response_fields) for update in updates_query.all()]
+        updates = [update.to_dict(only=self.__class__.response_fields) for update in updates_query.all()]
         return make_response(updates, 200)
     
     def post(self):
@@ -52,6 +100,12 @@ class StatusUpdates(Resource):
         if task == None:
             return make_response({"error": "UnitTask associated with this StatusUpdate not found."}, 422)
         
+        if task.latest_update != None:
+            is_valid, message = self.validate_status_change(task.latest_update['status'], data['task_status'])
+            if not is_valid:
+                #raise ValueError(message)
+                abort(422, message)
+            
         try:
             new_record = StatusUpdate(
                 task_id = data['task_id'],
@@ -64,6 +118,14 @@ class StatusUpdates(Resource):
         db.session.add(new_record)
         db.session.commit()
 
+        ### ensure task is started ###
+        if task.started_status != True or not isinstance(task.started_status, datetime):
+           task.started_status = True
+           task.started_date = datetime.combine(datetime.now(), time.min) # use today as start
+           db.session.commit()
+
+
+        ### update task progress ###
         # cast to int if is string
         status = new_record.task_status
         if isinstance(status, str):
@@ -102,21 +164,20 @@ class StatusUpdates(Resource):
 
         if mark_children_started == True:
             task.mark_children_started()
-
-        response_fields = (
-            'id',
-            'message',
-            'task_id',
-            'task_status',
-            'timestamp',
-            'user_id',
-            'user.name'
-        )
-
-        return make_response(new_record.to_dict(only=response_fields), 201)
+        
+        return make_response(new_record.to_dict(only=self.__class__.response_fields), 201)
     
-
 class StatusUpdateByID(Resource):
+    response_fields = (
+        'id',
+        'message',
+        'task_id',
+        'task_status',
+        'timestamp',
+        'user_id',
+        'user.name'
+    )
+    
     @classmethod
     def find_model_by_id(cls, id):
         model = StatusUpdate.query.filter_by(id=id).first()
@@ -129,18 +190,7 @@ class StatusUpdateByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
-        
-        response_fields = (
-            'id',
-            'message',
-            'task_id',
-            'task_status',
-            'timestamp',
-            'user_id',
-            'user.name'
-        )
-
-        return make_response(model.to_dict(only=response_fields), 200)
+        return make_response(model.to_dict(only=self.__class__.response_fields), 200)
            
     # def patch(self, id):
     #     model = self.__class__.find_model_by_id(id)

@@ -9,56 +9,57 @@ import { useParams } from "react-router"
 import { useEffect, useState } from 'react'
 
 import { taskBuilder } from "@/utils/task.js"
-import DetailsCard from "./DetailsCard.jsx"
-import DetailsCardUpdatesWrapper from "./DetailsCardUpdatesWrapper.jsx"
+import { useManageTasks } from "@/hooks/useManageTasks.jsx"
 import AppWrapper from '@/components/AppWrapper.jsx'
 import LoadingWrapper from "@/components/LoadingWrapper.jsx"
-import { useManageTasks } from "@/hooks/useManageTasks.jsx"
+import DetailsCard from "./DetailsCard.jsx"
+import UpdatesCardWrapper from "./UpdatesCardWrapper.jsx"
 
 function TaskDetailsById() {
     let params = useParams()
     const taskId = params.taskId
 
-    const [error, setError] = useState(false)
-    let taskObj = {}
-
-    // useManageTasks hook and filter by id instead of new fetch
-    const { tasks, isLoaded } = useManageTasks();
-    const results = tasks.filter(task => task.id==taskId)
-    if (results.length > 0){
-        taskObj = results[0]
-    } else {
-        if(error != true){
-            setError(true)
-        }
-    }
-
-    // const [taskObj, setTaskObj] = useState()
-    // const [error, setError] = useState(null)
-
-    // useEffect(() => {
-    //     fetchTask()
-    // }, [])
-
-    // const fetchTask = () => {
-    //     console.log("fetching individual task from backend")
-
-    //     fetch('/api/unittasks/'+taskId)
-    //     .then(res => {
-    //         if(res.ok){
-    //             res.json()
-    //             .then(data => {
-    //                 const new_task = {...taskBuilder(data)}
-    //                 setTaskObj(new_task)
-    //             })
-    //         } else {
-    //             //console.log("task not found")
-    //             //throw new Error(res.status);
-    //             setError("Unable to load the task specified.")
-    //         }
-    //     })
+    // // useManageTasks hook and filter by id instead of new fetch
+    // const [error, setError] = useState(false)
+    // let taskObj = {}
+    // const { tasks, isLoaded } = useManageTasks();
+    // const results = tasks.filter(task => task.id==taskId)
+    // if (results.length > 0){
+    //     taskObj = results[0]
+    // } else {
+    //     if(error != true){
+    //         setError(true)
+    //     }
     // }
-    // console.log("TaskObj: ",taskObj)
+
+    const [taskObj, setTaskObj] = useState()
+    const [error, setError] = useState(null)
+    const [isLoaded, setIsLoaded] = useState(false)
+
+    useEffect(() => {
+        fetchTask()
+    }, [])
+
+    const fetchTask = () => {
+        console.log("fetching individual task from backend")
+
+        fetch('/api/unittasks/'+taskId)
+        .then(res => {
+            if(res.ok){
+                res.json()
+                .then(data => {
+                    const tasks = {...taskBuilder(data)}
+                    setTaskObj(tasks)
+                    setIsLoaded(true)
+                })
+            } else {
+                //console.log("task not found")
+                //throw new Error(res.status);
+                setError("Unable to load the task specified.")
+            }
+        })
+    }
+    console.log("TaskObj: ",taskObj)
 
     if(!isLoaded){
         return ( 
@@ -80,7 +81,7 @@ function TaskDetailsById() {
                     {!error && taskObj && <DetailsCard task={taskObj} />}
                 </TabsContent>
                 <TabsContent value="updates">
-                    {!error && taskObj && <DetailsCardUpdatesWrapper taskId={taskObj.id} />}
+                    {!error && taskObj && <UpdatesCardWrapper taskId={taskObj.id} />}
                 </TabsContent>
 
                 </Tabs>
