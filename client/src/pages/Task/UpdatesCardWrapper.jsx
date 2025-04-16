@@ -15,7 +15,7 @@ import UpdatesCardBubbles from "./UpdatesCardBubbles"
 import FormFields from '@/components/form/status_update/FormFields'
 import FormWrapper from '@/components/form/status_update/FormWrapper'
 
-function UpdatesCardWrapper({ taskId }) {    
+function UpdatesCardWrapper({ taskObj }) {
     const [errors, setErrors] = useState(null)
     const [updates, setUpdates] = useState([])
 
@@ -35,12 +35,12 @@ function UpdatesCardWrapper({ taskId }) {
 
     useEffect(() => {
         //console.log('useEffect triggered to reload data')
-        fetchHelper("/api/updates?task_id="+taskId, setUpdates)
-    },[taskId])
+        fetchHelper("/api/updates?task_id="+taskObj.id, setUpdates)
+    },[taskObj.id])
 
     const formScenario = "create"
-    const modelObj = {task_id: taskId}
-
+    const modelObj = {task_id: taskObj.id, taskObj: {...taskObj}}
+    
     const handleSubmitHook = (data) => {
         setUpdates([...updates,data])
     }
@@ -48,19 +48,21 @@ function UpdatesCardWrapper({ taskId }) {
     return (
         <>
             <Card>
+                {taskObj.complete_status == false &&             
+                <>
                 <CardHeader>
                     <CardTitle></CardTitle>
                     <CardDescription></CardDescription>
                 </CardHeader>
-            
                 <FormWrapper formScenario={formScenario} modelObj={modelObj} onSubmitHook={handleSubmitHook} >
                     <CardContent>
-                        <FormFields form="" />
+                        <FormFields form="" taskObj={taskObj} />
                     </CardContent>
                     <CardFooter>
                         <Button type="submit">Save</Button>    
                     </CardFooter>
                 </FormWrapper>
+                </>}
 
                 <UpdatesCardBubbles updates={updates} />
             </Card>

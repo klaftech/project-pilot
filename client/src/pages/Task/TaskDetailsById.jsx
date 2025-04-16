@@ -32,7 +32,7 @@ function TaskDetailsById() {
     //     }
     // }
 
-    const [taskObj, setTaskObj] = useState()
+    const [taskObj, setTaskObj] = useState({})
     const [error, setError] = useState(null)
     const [isLoaded, setIsLoaded] = useState(false)
 
@@ -48,8 +48,8 @@ function TaskDetailsById() {
             if(res.ok){
                 res.json()
                 .then(data => {
-                    const tasks = {...taskBuilder(data)}
-                    setTaskObj(tasks)
+                    const task = {...taskBuilder(data)}
+                    setTaskObj(task)
                     setIsLoaded(true)
                 })
             } else {
@@ -81,7 +81,7 @@ function TaskDetailsById() {
                     {!error && taskObj && <DetailsCard task={taskObj} />}
                 </TabsContent>
                 <TabsContent value="updates">
-                    {!error && taskObj && <UpdatesCardWrapper taskId={taskObj.id} />}
+                    {!error && taskObj && <UpdatesCardWrapper taskObj={taskObj} />}
                 </TabsContent>
 
                 </Tabs>

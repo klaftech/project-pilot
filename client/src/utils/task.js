@@ -1,4 +1,4 @@
-import { stringToDate } from './date.js'
+import { stringToDate, isDate } from './date.js'
 
 //accepts taskBuilder object, returns string
 export const getTaskStatus = (task) => {
@@ -13,6 +13,26 @@ export const getTaskStatus = (task) => {
         status = "scheduled"
     }
     return status
+}
+
+//accepts taskBuilder object, returns integer
+export const getTaskStatusCode = (task) => {
+    // if((raw_task.latest_update != null) && (raw_task.latest_update.status == 500)){
+    //     //stuck. task is not completed and there is a status update 500
+    //     return 500
+    if(task.complete_status == true || isDate(task.complete_date)){
+        //completed
+        return 200
+    } else if(task.progress === 0 && (task.started_status === true || isDate(task.started_date))){
+        //pending. previous task is completed, but task not yet begun
+        return 310
+    } else if(task.progress != 0 || task.started_status){
+        //in progress. task is not completed, is not stuck and progress in more than 0
+        return 311
+    } else {
+        //scheduled. task is not completed and there is no progress yet
+        return 300
+    }
 }
 
 //accepts string, returns string
