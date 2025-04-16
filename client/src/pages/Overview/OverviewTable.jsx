@@ -2,8 +2,8 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { Badge } from "@/components/ui/badge"
 import { TriangleAlert } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react'
-import { taskBuilder, getTaskStatus, getReadableTaskStatus } from '@/utils/task.js';
-import { getReadableUpdateStatus } from '@/utils/status_update.js'
+import { taskBuilder, getTaskStatusCode, getTaskStatus, getReadableTaskStatus } from '@/utils/task.js';
+import { getReadableUpdateStatus} from '@/utils/status_update.js'
 import { stringToDate, getPreviousMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
@@ -140,7 +140,8 @@ function OverviewTable() {
                                     //get background color for task cell
                                     let status_background = ""
                                     let internal_task_status = "500"
-                                    if(task.complete_status == true || isDate(task.complete_date)){
+                                    const taskStatusCode = getTaskStatusCode(task)
+                                    if(taskStatusCode === 200){
                                         //completed
                                         status_background = "bg-green-200"
                                         internal_task_status = "200"
@@ -148,11 +149,11 @@ function OverviewTable() {
                                     //     //stuck. task is not completed and there is a status update 500
                                     //     status_background = "bg-red-200"
                                     //     internal_task_status = "500"
-                                    } else if(task.progress === 0 && (task.started_status === true || isDate(task.started_date))){
+                                    } else if(taskStatusCode === 310){
                                         //pending. previous task is completed, but task not yet begun
                                         status_background = "bg-yellow-200"
                                         internal_task_status = "310"
-                                    } else if(task.progress != 0 || task.started_status){
+                                    } else if(taskStatusCode === 311){
                                         //in progress. task is not completed, is not stuck and progress in more than 0
                                         status_background = "bg-blue-200"
                                         internal_task_status = "311"

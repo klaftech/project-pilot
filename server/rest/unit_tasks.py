@@ -69,9 +69,12 @@ def get_project_pending_update(project_id):
         #'pin_start',
         #'pin_end',
         #'pin_honored',
-        #'sched_start',
-        #'sched_end',
-        'started_date',
+        'sched_start', # needed for front-end taskObj
+        'sched_end', # needed for front-end taskObj
+        'started_status', # needed for front-end taskObj
+        'started_date', # needed for front-end taskObj
+        'complete_status', # needed for front-end taskObj
+        'complete_date', # needed for front-end taskObj
         'progress',
         'unit.id',
         'unit.name',

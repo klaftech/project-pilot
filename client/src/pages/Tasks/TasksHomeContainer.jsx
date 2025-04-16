@@ -53,7 +53,7 @@ export function TasksHomeContainer() {
         setIsLoaded(true)
         console.log('TasksHomeContainer: ToDo List loaded')
     }
-    //console.log(tasks)
+    console.log(tasks)
     // ********************************************************************
     // ******************** END MANAGE TASKS DATA *************************
     // ********************************************************************
@@ -62,7 +62,7 @@ export function TasksHomeContainer() {
     const [isOpen, setIsOpen] = useState(false)
     const [formScenario, setFormScenario] = useState(false)
     const [modelObj, setModelObj] = useState(null)
-
+    const [taskObj, setTaskObj] = useState(null)
 
     const handleClickEdit = (task) => {
         console.log("No action")
@@ -109,7 +109,8 @@ export function TasksHomeContainer() {
 
     const handleClickStatusUpdate = (task) => {
         setModelObj({task_id: task.id})
-        setFormScenario("add")
+        setTaskObj(task)
+        setFormScenario("create")
         setIsOpen(!isOpen)
     }
 
@@ -124,6 +125,8 @@ export function TasksHomeContainer() {
         //filter out this task using task_id
         const newTasks = tasks.filter(task => task.id !== data.task_id)
         setTasks(newTasks)
+
+        setTaskObj(null)
     }
 
     return (
@@ -134,7 +137,7 @@ export function TasksHomeContainer() {
 
             <DialogPopupForm isOpen={isOpen} setIsOpen={setIsOpen} title="Save Update" description="Enter Weekly Task Status Update" >
                 <FormWrapper formScenario={formScenario} modelObj={modelObj} onSubmitHook={handleSubmitHook} >
-                    <FormFields form="" />
+                    <FormFields form="" taskObj={taskObj} />
                     <DialogFooter>
                         <Button type="submit">Save</Button>    
                     </DialogFooter>
