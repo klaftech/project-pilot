@@ -2,6 +2,7 @@
 from flask import request, abort, make_response, session
 from flask_restful import Resource
 from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload
 
 from config import db, app
 from models import User, Project, MasterTask, Unit, UnitTask, StatusUpdate
@@ -29,10 +30,14 @@ def get_project_pending_update(project_id):
     
     base_query = (UnitTask.query
                   .join(Unit, Unit.id == UnitTask.unit_id)
-                  .filter(Unit.project_id == model.id)
-                  .filter(UnitTask.started_status == True)
-                  .filter(UnitTask.complete_status == False)
+                  .join(MasterTask, MasterTask.id == UnitTask.task_id)
+                  .filter(
+                    Unit.project_id == model.id,
+                    UnitTask.started_status == True,
+                    UnitTask.complete_status == False
+                  )
                   #.filter(UnitTask.sched_start < (today + timedelta(days=7)))
+                  .order_by(UnitTask.sched_start, MasterTask.name, Unit.name)
     )
     
     # inner join that only gets tasks with most recent update
@@ -49,6 +54,10 @@ def get_project_pending_update(project_id):
             (latest_timestamp_subquery.c.latest_timestamp.is_(None)) |  # No status updates exist
             (latest_timestamp_subquery.c.latest_timestamp < previous_monday)  # Last update is > previous monday
         )
+        .options(
+            joinedload(UnitTask.master_task),  # Preload the related master_task
+            joinedload(UnitTask.unit)  # Preload the related unit
+        )
     )
 
     # print SQL query
@@ -62,6 +71,7 @@ def get_project_pending_update(project_id):
         #'pin_honored',
         #'sched_start',
         #'sched_end',
+        'started_date',
         'progress',
         'unit.id',
         'unit.name',
@@ -73,9 +83,9 @@ def get_project_pending_update(project_id):
         'master_task.group.id',
         'master_task.group.name'
     )
-    
+
     dataset = [unit_task.to_dict(only=response_fields) for unit_task in check_updates.all()]
-    
+
     return make_response(dataset, 200)
 
 

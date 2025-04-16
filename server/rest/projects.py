@@ -2,8 +2,12 @@
 from flask import request, abort, make_response, session
 from flask_restful import Resource
 
+# joinedload tells SQLAlchemy to fetch related data using a SQL JOIN, all in one query, instead of doing separate queries later (lazy loading)
+from sqlalchemy.orm import joinedload
+from datetime import datetime
+
 from config import db, app
-from models import Project
+from models import Project, Unit, UnitTask
 
 
 @app.route('/api/projects', methods=['GET'])
@@ -28,10 +32,25 @@ def get_projects_minimal():
 # used for project overview report
 @app.route('/api/projects/<project_id>/report', methods=['GET'])
 def get_project_report(project_id):
-    model = Project.query.filter_by(id=project_id).first()
+    # model = Project.query.filter_by(id=project_id).first()
+    model = Project.query.options(
+        joinedload(Project.units)
+        .joinedload(Unit.unit_tasks)
+        .joinedload(UnitTask.master_task)
+    ).get(project_id)
+
     if not model:
         return make_response({"error": f"Project ID: {project_id} not found"}, 404)
     
+    # Sort unit_tasks within each unit
+    for unit in model.units:
+        unit.unit_tasks.sort(
+            key=lambda ut: (
+                ut.sched_start or datetime.min,
+                ut.master_task.name.lower() if ut.master_task and ut.master_task.name else ''
+            )
+        )
+
     return make_response(model.to_dict(only=(
         'id',
         'name',
