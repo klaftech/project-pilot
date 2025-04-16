@@ -118,7 +118,8 @@ class UnitTasks(Resource):
     )
     
     def get(self):
-        tasks_query = UnitTask.query.order_by(UnitTask.sched_start.desc())  
+        # sort scheduled start, earliest first
+        tasks_query = UnitTask.query.order_by(UnitTask.sched_start.asc())
 
         project_filter = request.args.get("project_id")
         if project_filter != None:        
