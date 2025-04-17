@@ -2,8 +2,8 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { Badge } from "@/components/ui/badge"
 import { TriangleAlert } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react'
-import { taskBuilder, getTaskStatusCode, getTaskStatus, getReadableTaskStatus } from '@/utils/task.js';
-import { getReadableUpdateStatus} from '@/utils/status_update.js'
+import { taskBuilder, getTaskStatus } from '@/utils/task.js';
+import { getReadableStatus} from '@/utils/status_codes.js'
 import { stringToDate, getPreviousMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
@@ -96,7 +96,7 @@ function OverviewTable() {
                         return (
                             <TableRow key={unit.id}>
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.name}</TableCell>
-                                {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{getReadableTaskStatus(unit.stats.status)}</TableCell> */}
+                                {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{unit.stats.status}</TableCell> */}
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.completion_percent}%</TableCell>
                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.counts.count_completed}/{unit.stats.counts.count_tasks}</TableCell>
                                 {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.week.count_scheduled_completed}/{unit.stats.week.count_scheduled}</TableCell> */}
@@ -129,7 +129,7 @@ function OverviewTable() {
                                             } else {
                                                 update_status_background = "bg-blue-500"
                                             }
-                                            status_update_badge = <>&nbsp;<Badge className={"text-grey-500 "+update_status_background}>{getReadableUpdateStatus(latest_update_status)}</Badge></>
+                                            status_update_badge = <>&nbsp;<Badge className={"text-grey-500 "+update_status_background}>{getReadableStatus(latest_update_status)}</Badge></>
                                         }
                                     }
                                     */
@@ -140,7 +140,7 @@ function OverviewTable() {
                                     //get background color for task cell
                                     let status_background = ""
                                     let internal_task_status = "500"
-                                    const taskStatusCode = getTaskStatusCode(task)
+                                    const taskStatusCode = task.status_code
                                     if(taskStatusCode === 200){
                                         //completed
                                         status_background = "bg-green-200"
@@ -177,7 +177,7 @@ function OverviewTable() {
                                             } else {
                                                 update_status_background = "bg-blue-500"
                                             }
-                                            status_update_badge = <>&nbsp;<Badge className={"text-grey-500 "+update_status_background}>{getReadableUpdateStatus(latest_update_status)}</Badge></>
+                                            status_update_badge = <>&nbsp;<Badge className={"text-grey-500 "+update_status_background}>{getReadableStatus(latest_update_status)}</Badge></>
                                         }
                                     }
 

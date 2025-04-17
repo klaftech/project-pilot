@@ -28,13 +28,11 @@ import {
     FormMessage,
   } from "@/components/ui/form"
 import UserContext from '@/context/UserContext'
-import { status_options, getFilteredStatusOptions } from '@/utils/status_update'
-import { getTaskStatusCode } from '@/utils/task'
+import { status_options, getFilteredStatusOptions } from '@/utils/status_codes'
 
 const FormFields = ({ form, taskObj }) => {
     
-    const get_status = getTaskStatusCode(taskObj)
-    if (get_status == 200){
+    if (taskObj.status_code == 200){
         return (<>Task is already completed</>)
     }
 

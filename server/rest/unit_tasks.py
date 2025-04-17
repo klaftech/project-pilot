@@ -76,6 +76,7 @@ def get_project_pending_update(project_id):
         'complete_status', # needed for front-end taskObj
         'complete_date', # needed for front-end taskObj
         'progress',
+        'status_code',
         'unit.id',
         'unit.name',
         'master_task.id',
@@ -106,6 +107,7 @@ class UnitTasks(Resource):
         'complete_status',
         'complete_date',
         'progress',
+        'status_code',
         'unit.id',
         'unit.name',
         'master_task.id',
@@ -173,6 +175,7 @@ class UnitTaskByID(Resource):
         'complete_status',
         'complete_date',
         'progress',
+        'status_code',
         'unit.id',
         'unit.name',
         'master_task.id',

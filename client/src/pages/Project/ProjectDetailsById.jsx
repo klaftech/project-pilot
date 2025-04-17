@@ -2,7 +2,7 @@ import { useParams } from "react-router"
 import { useNavigate } from "react-router";
 import { useEffect, useState, useContext } from 'react'
 import { stringToDate, formatDatePretty, formatDatePrettyMMDD } from '@/utils/date.js'
-import { getTaskStatus, getReadableTaskStatus } from '@/utils/task.js'
+import { getTaskStatus } from '@/utils/task.js'
 
 import UserContext from '@/context/UserContext.jsx'
 import ActiveProjectContext from '@/context/ActiveProjectContext.jsx'
@@ -192,7 +192,7 @@ const ProjectDetailsById = () => {
       // },
       // {
       //   name: 'Status',
-      //   selector: row => getReadableTaskStatus(getTaskStatus(row)),
+      //   selector: row => getTaskStatus(row),
       // },
     ];
 
