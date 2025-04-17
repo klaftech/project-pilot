@@ -38,7 +38,7 @@ const FormFields = ({ form, taskObj }) => {
 
     return (
         <>
-            <FormField
+            {/* <FormField
                 control={form.control}
                 name="message"
                 render={({ field }) => (
@@ -55,7 +55,7 @@ const FormFields = ({ form, taskObj }) => {
                     <FormMessage />
                     </FormItem>
                 )}
-            />
+            /> */}
 
             {/* 
             <FormField
@@ -154,10 +154,10 @@ const FormFields = ({ form, taskObj }) => {
                         </PopoverTrigger>
                         <PopoverContent className="w-[200px] p-0">
                         <Command>
-                            <CommandInput
+                            {/* <CommandInput
                             placeholder="Search status..."
                             className="h-9"
-                            />
+                            /> */}
                             <CommandList>
                             <CommandEmpty>No status found.</CommandEmpty>
                             <CommandGroup>
