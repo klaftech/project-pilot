@@ -13,13 +13,23 @@ from helpers import get_next_monday, get_previous_monday
 
 import json
 import ipdb
+import re
 from datetime import datetime, timedelta, time, date
 from collections import defaultdict, deque
+
+# Signup domain limitations and email address exceptions
+import os
+from dotenv import load_dotenv
+# load environment variables from the .env file (if present)
+load_dotenv()
+signup_allowed_domain = os.getenv('SIGNUP_ALLOWED_DOMAIN')
+signup_allowed_email_exceptions = os.getenv('SIGNUP_ALLOWED_EMAIL_EXCEPTIONS').split(",")
 
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
+    first_name = db.Column(db.String, nullable=False)
+    last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
     _password_hash = db.Column(db.String)
     selectedProject = db.Column(db.Integer, nullable=True)
@@ -49,8 +59,30 @@ class User(db.Model, SerializerMixin):
 
     @validates('email')
     def validate_email(self, key, value):
-        if not value or User.query.filter(User.email == value).first() != None:
+        # Check if value is not empty
+        if not value:
+            raise ValueError('Email cannot be empty')
+        
+        # Validate email format using regex
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", value):
+            raise ValueError('Invalid email format')
+        
+        # Check if email is unique in the database
+        if User.query.filter(User.email == value).first() is not None:
             raise ValueError('Email must be unique')
+        
+        # Check if email is from the allowed domain (if set) or in the list of exceptions
+        if signup_allowed_domain:
+            if not value.endswith(f'@{signup_allowed_domain}') and value not in signup_allowed_email_exceptions:
+                raise ValueError('Email must be part of the allowed domain.')
+        else:
+            if signup_allowed_email_exceptions and value not in signup_allowed_email_exceptions:
+                raise ValueError('Email is not allowed.')
+            
+        # # Check if email belongs to the allowed domain or is on list of exceptions
+        # if '@' + signup_allowed_domain not in value and value not in signup_allowed_email_exceptions:
+        #     raise ValueError(f'Email is must be part of the allowed domain.')
+        
         return value
     
 
