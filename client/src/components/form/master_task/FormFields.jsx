@@ -31,6 +31,9 @@ import UserContext from '@/context/UserContext'
 
 const FormFields = ({ form }) => {
     
+    //set fields as readonly because we're not ready to handle logic yet
+    const isReadOnly = true
+
     // ********************************************************************
     // ******************** GET PROJECTS & GROUPS *************************
     // ********************************************************************
@@ -230,7 +233,7 @@ const FormFields = ({ form }) => {
                     <FormItem className="flex flex-col">
                     <FormLabel>Task Length</FormLabel>
                     <FormControl>
-                        <Input type="number" {...field} />
+                        <Input type="number" {...field} readOnly={isReadOnly} />
                     </FormControl>
                     <FormDescription>
                         Days required to complete task.
@@ -269,7 +272,9 @@ const FormFields = ({ form }) => {
                         <Calendar
                             mode="single"
                             selected={field.value}
-                            onSelect={field.onChange}
+                            //onSelect={field.onChange}
+                            onSelect={isReadOnly ? undefined : field.onChange} // ❗ don't update when readonly
+                            disabled={isReadOnly ? () => true : undefined}     // ❗ disables all dates visually
                             // disabled={(date) =>
                             //   date > new Date() || date < new Date("1900-01-01")
                             // }
@@ -314,7 +319,9 @@ const FormFields = ({ form }) => {
                         <Calendar
                             mode="single"
                             selected={field.value}
-                            onSelect={field.onChange}
+                            //onSelect={field.onChange}
+                            onSelect={isReadOnly ? undefined : field.onChange} // ❗ don't update when readonly
+                            disabled={isReadOnly ? () => true : undefined}     // ❗ disables all dates visually
                             // disabled={(date) =>
                             //   date > new Date() || date < new Date("1900-01-01")
                             // }
