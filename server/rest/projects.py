@@ -74,6 +74,7 @@ def get_project_report(project_id):
         'units.unit_tasks.sched_start',
         'units.unit_tasks.sched_end',
         'units.unit_tasks.progress',
+        'units.unit_tasks.status_code',
         'units.unit_tasks.started_status',
         'units.unit_tasks.started_date',
         'units.unit_tasks.complete_status',

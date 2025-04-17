@@ -27,7 +27,7 @@ import { useNavigate } from "react-router";
 
 import { useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react"
-import { status_options, getFilteredStatusOptions } from "@/utils/status_update";
+import { status_options, getFilteredStatusOptions, getReadableStatus } from "@/utils/status_codes";
 import { cn } from "@/lib/utils"
 import {
     Command,
@@ -42,15 +42,6 @@ import {
     PopoverContent,
     PopoverTrigger,
   } from "@/components/ui/popover"
-import {
-    Form,
-    FormControl,
-    FormDescription,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-  } from "@/components/ui/form"
 
 
 // {
@@ -132,6 +123,17 @@ const columns = [
     }
   ),
 
+  columnHelper.accessor(
+    "status_code", {
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Status" />
+        ),
+        cell: ({ row }) => {
+          const status = getReadableStatus(row.getValue("status_code"));        
+          return <div className="text-left font-medium">{status}</div>;
+        },
+    }
+  ),
 
   columnHelper.display({
     id: "status_update",
@@ -146,10 +148,14 @@ const columns = [
       const taskObj = row.original;
       //const length = parseFloat(row.getValue("days_length"));
 
+      // hide dropdown if task is completed
+      if(taskObj.status_code == 200){
+        return (<></>)
+      }
+
       const field = {
         value: newStatus
       }
-
 
       const handleStatusSelect = (status_code) => {
         console.log(status_code)

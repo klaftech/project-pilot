@@ -2,6 +2,11 @@ import { isDate } from "@/utils/date"
 
 export const status_options = [
     {
+      code: 0,
+      title: "Undefined",
+      update_visibility: false,
+    },
+    {
         code: 25,
         title: "25%",
         update_visibility: true,
@@ -48,7 +53,7 @@ export const status_options = [
     }
 ]
 
-export const getReadableUpdateStatus = (status_code) => {
+export const getReadableStatus = (status_code) => {
     const res = status_options.find((status) => status.code === status_code)
     return res.title
 }

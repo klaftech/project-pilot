@@ -9,7 +9,7 @@ import {
 
 import { Avatar } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { getReadableUpdateStatus } from "@/utils/status_update"
+import { getReadableStatus } from "@/utils/status_codes"
 // import { Input } from "@/components/ui/input"
 // import { Button } from "@/components/ui/button"
 
@@ -51,7 +51,7 @@ function UpdatesCardBubbles({updates}) {
                                     : "bg-muted rounded-tl-none"
                                 }`}
                                 >
-                                    <p className="text-sm">Status: {getReadableUpdateStatus(update.task_status)}</p>
+                                    <p className="text-sm">Status: {getReadableStatus(update.task_status)}</p>
                                     <p className="text-sm">{update.message && "Message: "+update.message}</p>
                                 </Card>
                                 <p className="text-xs text-muted-foreground mt-1 px-1">{update.timestamp}</p>

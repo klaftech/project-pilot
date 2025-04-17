@@ -718,6 +718,7 @@ class UnitTask(db.Model, SerializerMixin):
     pin_end = db.Column(db.DateTime, default=None, nullable=True)
     pin_honored = db.Column(db.Boolean, default=False)
     progress = db.Column(db.Integer, nullable=False, default=0)
+    status_code = db.Column(db.Integer, nullable=False, default=300)
     started_status = db.Column(db.Boolean, default=False)
     started_date = db.Column(db.DateTime, default=None, nullable=True)
     complete_status = db.Column(db.Boolean, default=False)
@@ -744,25 +745,7 @@ class UnitTask(db.Model, SerializerMixin):
         raise AttributeError('latest update is read-only')
 
 
-    # # TODO: remove
-    # @property
-    # def dependencies(self):
-    #     # Get this unit's UnitTasks corresponding to the MasterTask's dependencies (parent tasks)
-    #     # deps = []
-    #     # for master_dependency in self.master_task.dependencies:
-    #     #     for dependent_ut in master_dependency.unit_tasks:
-    #     #         if dependent_ut.unit_id == self.unit_id:
-    #     #             deps.append(dependent_ut)
-    #     # return deps
-    #     return [dependent_ut for master_dependency in self.master_task.dependencies for dependent_ut in master_dependency.unit_tasks if dependent_ut.unit_id == self.unit_id]
-
-    # #TODO: remove
-    # @dependencies.setter
-    # def dependencies(self):
-    #     raise AttributeError('UnitTask dependencies is read-only')
-    
-
-    # dependencies
+    # formerly called: dependencies
     @property
     def parents(self):
         # Get this unit's UnitTasks corresponding to the MasterTask's dependencies (parent tasks)
@@ -797,8 +780,6 @@ class UnitTask(db.Model, SerializerMixin):
 
     serialize_rules = (
         #'latest_update',
-        #'dependencies', #should be removed one day soon...
-        #'-dependencies.dependencies', #should be removed one day soon...
         'parents',
         '-parents.parents',
         '-parents.children',
@@ -830,6 +811,30 @@ class UnitTask(db.Model, SerializerMixin):
             raise ValueError(f'{attr} must be a valid date.')
         return value
     
+    
+    def set_status_code(self):
+        if self.complete_status == True or isinstance(self.complete_date, datetime):
+            # COMPLETED
+            new_code = 200
+        elif self.latest_update is not None and self.latest_update.get('status') == 500:
+            # STUCK
+            # task is not completed and there is a status update 500
+            new_code = 500
+        elif self.progress == 0 and (self.started_status == True or isinstance(self.started_date, datetime)):
+            # PENDING
+            # previous task is completed, but task has not yeet begun
+            new_code = 310
+        elif self.progress != 0 or (self.started_status == True or isinstance(self.started_date, datetime)):
+            # IN PROGRESS
+            # task is not completed, is not stuck and progress is more than 0
+            new_code = 311
+        else:
+            # SCHEDULED
+            # task is not completed and there is no progress yet
+            new_code = 300
+        
+        self.status_code = new_code
+        #db.session.commit()
     
 
     # function to be ran after updating task as completed, to set start date of all children tasks to be the following date
@@ -1103,6 +1108,12 @@ class UnitTask(db.Model, SerializerMixin):
         print(*logger, sep='\n')
         return logger
     
+    
+# update status code after any change
+def update_task_status_code(mapper, connection, target):
+    target.set_status_code()
+event.listen(UnitTask, 'before_update', update_task_status_code)
+
 
 class StatusUpdate(db.Model, SerializerMixin):
     __tablename__ = "status_updates"
@@ -1135,6 +1146,12 @@ class StatusUpdate(db.Model, SerializerMixin):
     
     def __repr__(self):
         return f'<StatusUpdate ID: {self.id}, Task: {self.task_id}, Status: {self.task_status}>'
+
+
+
+
+
+
 
 
 
