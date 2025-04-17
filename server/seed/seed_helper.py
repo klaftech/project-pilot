@@ -3,11 +3,13 @@ from models import db, User, Project, Group, MasterTask, MasterTaskDependency, T
 def add_users(): 
     print('Creating Users...')
     user_1 = User(
-        name="Admin", 
+        first_name="Admin",
+        last_name="Admin", 
         email="admin@example.com"
     )
     user_2 = User(
-        name='User',
+        first_name='User',
+        last_name='User',
         email="user@example.com"
     )
     user_1.password_hash = "123"

@@ -16,7 +16,8 @@ class StatusUpdates(Resource):
         'task_status',
         'timestamp',
         'user_id',
-        'user.name'
+        'user.first_name',
+        'user.last_name'
     )
 
     @staticmethod
@@ -104,7 +105,8 @@ class StatusUpdates(Resource):
             is_valid, message = self.validate_status_change(task.latest_update['status'], data['task_status'])
             if not is_valid:
                 #raise ValueError(message)
-                abort(422, message)
+                return make_response({"errors": message}, 422)
+                #abort(422, message)
             
         try:
             new_record = StatusUpdate(
@@ -113,7 +115,8 @@ class StatusUpdates(Resource):
                 user_id = session["user_id"]
             )
         except ValueError as e:
-            abort(422, e.args[0])
+            return make_response({"errors": e.args[0]}, 422)
+            #abort(422, e.args[0])
         
         db.session.add(new_record)
         db.session.commit()
@@ -175,7 +178,8 @@ class StatusUpdateByID(Resource):
         'task_status',
         'timestamp',
         'user_id',
-        'user.name'
+        'user.first_name',
+        'user.last_name'
     )
     
     @classmethod

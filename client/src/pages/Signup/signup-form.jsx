@@ -21,8 +21,10 @@ export function SignupForm({ className, serverErrors, onSignupSubmit })
   const form = useForm()
 
   const signupSchema = z.object({
-    name: z.string({ required_error: "Full name is required.", })
-      .min(2, { message: "Name must be at least 2 characters.", }),
+    first_name: z.string({ required_error: "First name is required.", })
+      .min(2, { message: "First name must be at least 2 characters.", }),
+    last_name: z.string({ required_error: "Last name is required.", })
+      .min(2, { message: "Last name must be at least 2 characters.", }),
     email: z.string().email(),
     password: z.string().min(4, { message: "Please enter a secure password.", }),
     confirmPassword: z.string().min(4, { message: "Please enter a secure password.", }),
@@ -34,7 +36,8 @@ export function SignupForm({ className, serverErrors, onSignupSubmit })
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      name: '',
+      first_name: '',
+      last_name: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -81,15 +84,20 @@ export function SignupForm({ className, serverErrors, onSignupSubmit })
               {serverErrors ? 
                 <div className="grid gap-6">
                   <div className="text-red-400 font-extrabold grid gap-2">
-                    Signup Error
+                    {serverErrors}
                   </div>
                 </div> : ""}
 
               <div className="grid gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input {...register('name')} id="name" type="text" placeholder="John Doe" required />
-                  {errors.name && <span>{errors.name.message}</span>}
+                  <Label htmlFor="first_name">First Name</Label>
+                  <Input {...register('first_name')} id="first_name" type="text" placeholder="John" required />
+                  {errors.first_name && <span>{errors.first_name.message}</span>}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="last_name">Last Name</Label>
+                  <Input {...register('last_name')} id="last_name" type="text" placeholder="Doe" required />
+                  {errors.last_name && <span>{errors.last_name.message}</span>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>

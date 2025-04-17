@@ -13,7 +13,8 @@ class UserSignup(Resource):
                 raise Exception("Passwords do not match")
             
             user = User(
-                name=data['name'],
+                first_name=data['first_name'],
+                last_name=data['last_name'],
                 email=data['email'],
             )
             user.password_hash=data['password']
@@ -21,7 +22,7 @@ class UserSignup(Resource):
             db.session.commit()
 
             session['user_id'] = user.id
-            return make_response(user.to_dict(only=('id','name','email','selectedProject','selectedUnit')), 201)
+            return make_response(user.to_dict(only=('id','first_name','last_name','email','selectedProject','selectedUnit')), 201)
         
         except Exception as e:
             return make_response({"errors": e.args}, 422)
@@ -33,7 +34,7 @@ class UserLogin(Resource):
         if user and user.authenticate(data['password']):
             session['user_id'] = user.id
 
-            user_obj = user.to_dict(only=('id','name','email','selectedProject','selectedUnit'))
+            user_obj = user.to_dict(only=('id','first_name','last_name','email','selectedProject','selectedUnit'))
 
             user_obj.get('selectedProject')
             if not user_obj.get('selectedProject'):
@@ -65,7 +66,7 @@ class UserAuthorize(Resource):
     def get(self):
         try:
             user = User.query.filter_by(id=session["user_id"]).first()
-            user_obj = user.to_dict(only=('id','name','email','selectedProject','selectedUnit'))
+            user_obj = user.to_dict(only=('id','first_name','last_name','email','selectedProject','selectedUnit'))
             
             if not user_obj.get('selectedProject'):
                 get_project = Project.query.first()
@@ -93,8 +94,10 @@ class UserProfile(Resource):
         user = User.query.filter_by(id=session["user_id"]).first()
         data = request.get_json()
         try:
-            if 'name' in data:
-                setattr(user, 'name', data['name'])
+            if 'first_name' in data:
+                setattr(user, 'first_name', data['first_name'])
+            if 'last_name' in data:
+                setattr(user, 'last_name', data['last_name'])
             if 'selectedProject' in data:
                 setattr(user, 'selectedProject', data['selectedProject'])
             if 'selectedUnit' in data:
@@ -104,5 +107,5 @@ class UserProfile(Resource):
         
         db.session.commit()
 
-        user_obj = user.to_dict(only=('id','name','email','selectedProject','selectedUnit'))
+        user_obj = user.to_dict(only=('id','first_name','last_name','email','selectedProject','selectedUnit'))
         return make_response(user_obj, 202)

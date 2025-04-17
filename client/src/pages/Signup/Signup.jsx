@@ -28,7 +28,8 @@ export default function SignupPage() {
                 {
                     method: "POST",
                     body: JSON.stringify({ 
-                        name: form_data['name'], 
+                        first_name: form_data['first_name'], 
+                        last_name: form_data['last_name'], 
                         email: form_data['email'], 
                         password: form_data['password'],
                         confirmPassword: form_data['confirmPassword']
@@ -39,6 +40,11 @@ export default function SignupPage() {
                 },
             )
             if(!response.ok){
+                if(response.status == 422){
+                  const error_data = await response.json()
+                  throw new Error(error_data.errors[0]);
+                }
+            
                 //throw new Error(`Response status: ${response.status}`);
                 throw new Error(response.status);
             }
@@ -53,8 +59,8 @@ export default function SignupPage() {
             //setUser(data)
             //navigate('/');
         } catch (error) {
-            setServerErrors(error)
-            //console.log(error)
+            setServerErrors(error.message)
+            //console.log(error.message)
         }
     }
 

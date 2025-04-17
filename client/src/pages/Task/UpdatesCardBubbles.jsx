@@ -40,7 +40,7 @@ function UpdatesCardBubbles({updates}) {
                         <div key={update.id} className={`flex ${update.id === "user" ? "justify-end" : "justify-start"}`}>
                             <Avatar className="h-8 w-8 mr-2 mt-1">
                                 <div className="bg-primary rounded-full w-full h-full flex items-center justify-center text-primary-foreground">
-                                    {update.user.name}
+                                    {update.user.first_name.charAt(0).toUpperCase() + " " + update.user.last_name.charAt(0).toUpperCase()}
                                 </div>
                             </Avatar>
                             <div className="max-w-[80%]">
