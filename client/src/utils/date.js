@@ -1,9 +1,14 @@
 //convert string to javascript date object
-export const stringToDate = (string) => {
-    if(string != null){
-        return new Date(string.replace(" ","T"))
+export const stringToDate = (dateString, asUtc = false) => {
+    if(dateString != null){
+        //return new Date(string.replace(" ","T"))
+        let isoString = dateString.trim().replace(" ", "T");
+        if (asUtc) {
+            isoString += "Z";
+        }
+        return new Date(isoString);
     } else {
-        return string
+        return dateString
     }        
     //"pin_start": task.pin_start.slice(0,10), //remove time
 }
@@ -20,6 +25,7 @@ export const getToday = () => {
 
 export const formatDatePretty = (date) => {
     return date.toLocaleDateString('en-US', { 
+        timeZone: 'America/New_York',
         year: 'numeric', 
         month: '2-digit', 
         day: '2-digit' 
@@ -28,9 +34,23 @@ export const formatDatePretty = (date) => {
 
 export const formatDatePrettyMMDD = (date) => {
     return date.toLocaleDateString('en-US', { 
+        timeZone: 'America/New_York',
         month: '2-digit', 
         day: '2-digit' 
     });   
+}
+
+export const formatDateTimePretty = (date) => {
+    return date.toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true  // Set to true for 12-hour format
+    });
 }
 
 export const isDateToday = (date) => {
