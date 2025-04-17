@@ -23,6 +23,36 @@ import {
 
 import { useNavigate } from "react-router";
 
+
+
+import { useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react"
+import { status_options, getFilteredStatusOptions } from "@/utils/status_update";
+import { cn } from "@/lib/utils"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+  } from "@/components/ui/command"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+  } from "@/components/ui/popover"
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+  } from "@/components/ui/form"
+
+
 // {
 //     "id": "591",
 //     "name": "Level Site",
@@ -101,6 +131,136 @@ const columns = [
         },
     }
   ),
+
+
+  columnHelper.display({
+    id: "status_update",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status Update" />
+    ),
+    cell: ({ row }) => {
+      const [open, setOpen] = useState(false)
+      const [newStatus, setNewStatus] = useState(null)
+      const [message, setMessage] = useState(null)
+      
+      const taskObj = row.original;
+      //const length = parseFloat(row.getValue("days_length"));
+
+      const field = {
+        value: newStatus
+      }
+
+
+      const handleStatusSelect = (status_code) => {
+        console.log(status_code)
+
+        const data = {
+          task_id: taskObj.id,
+          task_status: status_code,
+        }
+
+        //push change to api
+        fetch(
+          "/api/updates",
+          {
+            method: "POST",
+            body: JSON.stringify({...data}),
+            headers: {
+                "Content-Type": "application/json",
+            },
+          },
+        )
+        .then((res) => {
+            if(!res.ok){
+                //setErrors("Error: Failed to load the requested resource. ID: "+id)
+                //console.log("Error: "+res.status)
+                
+                //throw new Error(`Response status: ${response.status}`);
+                throw new Error(res.status);
+            }
+            return res.json()
+        })
+        .then((data) => {
+            console.log("statusUpdate: saved")
+            console.log("statusUpdate response: ", data)
+            
+            setMessage('Status Saved.')
+
+            //set new status as dropdown value
+            setNewStatus(status_code)
+            
+            // close the popover
+            setOpen(!open)
+            //setTimeout(setOpen, 200, !open); // close popover after 200 miliseconds
+        })
+        .catch((error) => {
+          setMessage("Error saving status, please try again later.")
+          //setMessage(error)
+          //console.log(error)
+        });
+      }
+
+      return (
+        <>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className={cn(
+                  "w-[200px] justify-between",
+                  !field.value && "text-muted-foreground"
+              )}
+            >
+              {field.value
+                ? status_options.find(
+                    (status) => status.code === field.value
+                )?.title
+                : "Select Status"}
+              <ChevronsUpDown className="opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0">
+          <Command>
+              {/* <CommandInput
+              placeholder="Search status..."
+              className="h-9"
+              /> */}
+              <CommandList>
+              <CommandEmpty>No status available.</CommandEmpty>
+              <CommandGroup>
+                  {getFilteredStatusOptions(taskObj, status_options).map((status) => (
+                  <CommandItem
+                      value={status.title}
+                      key={status.code}
+                      //onSelect={field.onChange}
+                      onSelect={() => {
+                          //form.setValue("group_id", group.id)
+                          //field.onChange(status.code)
+                          handleStatusSelect(status.code)
+                      }}
+                  >
+                      {status.title}
+                      <Check
+                      className={cn(
+                          "ml-auto",
+                          status.code === field.value
+                          ? "opacity-100"
+                          : "opacity-0"
+                      )}
+                      />
+                  </CommandItem>
+                  ))}
+              </CommandGroup>
+              </CommandList>
+          </Command>
+          </PopoverContent>
+      </Popover>
+      <div className="flex text-red-600 dark:text-sky-400">{message}</div>
+      </>
+      )
+    },
+  }),
 
   // columnHelper.accessor("start", {
   //   header: ({ column }) => (

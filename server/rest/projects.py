@@ -37,11 +37,14 @@ def get_project_report(project_id):
         joinedload(Project.units)
         .joinedload(Unit.unit_tasks)
         .joinedload(UnitTask.master_task)
-    ).get(project_id)
+    ).filter_by(id=project_id).first()
 
     if not model:
         return make_response({"error": f"Project ID: {project_id} not found"}, 404)
     
+    # Sort units by name (case-insensitive)
+    model.units.sort(key=lambda u: u.name.lower() if u.name else '')
+
     # Sort unit_tasks within each unit
     for unit in model.units:
         unit.unit_tasks.sort(
