@@ -28,50 +28,16 @@ import {
     FormMessage,
   } from "@/components/ui/form"
 import UserContext from '@/context/UserContext'
-import { status_options } from '@/utils/status_update'
+import { status_options, getFilteredStatusOptions } from '@/utils/status_update'
 import { getTaskStatusCode } from '@/utils/task'
 
 const FormFields = ({ form, taskObj }) => {
     
     const get_status = getTaskStatusCode(taskObj)
-    
     if (get_status == 200){
         return (<>Task is already completed</>)
     }
 
-    const getFilteredStatusOptions = () => {
-        return status_options.filter((status) => {
-          if (!status.update_visibility) return false;
-      
-          // Filter out current status
-          if (taskObj.progress === status.code) {
-            return false;
-          }
-
-          // Filter out 25 and 50 for tasks already at 75
-          if (taskObj.progress == 75 && (status.code === 25 || status.code === 50)) {
-            return false;
-          }
-
-          // Filter out 25 for tasks already at 50
-          if (taskObj.progress == 50 && (status.code === 25)) {
-            return false;
-          }
-          
-          // Filter out 25 and 75 for short tasks
-          if (taskObj.days_length <=7 && (status.code === 25 || status.code === 75)) {
-            return false;
-          }
-
-          // Filter out 25, 50, 75 and 100 for very short tasks
-          if (taskObj.days_length <=3 && (status.code === 25 || status.code === 50 || status.code === 75 || status.code === 100)) {
-            return false;
-          }
-      
-          return true;
-        });
-    }
-    
     return (
         <>
             <FormField
@@ -197,7 +163,7 @@ const FormFields = ({ form, taskObj }) => {
                             <CommandList>
                             <CommandEmpty>No status found.</CommandEmpty>
                             <CommandGroup>
-                                {getFilteredStatusOptions().map((status) => (
+                                {getFilteredStatusOptions(taskObj, status_options).map((status) => (
                                 <CommandItem
                                     value={status.title}
                                     key={status.code}
