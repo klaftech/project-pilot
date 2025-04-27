@@ -14,7 +14,8 @@ from helpers import get_next_monday, get_previous_monday
 import json
 import ipdb
 import re
-from datetime import datetime, timedelta, time, date
+from datetime import datetime, timezone, timedelta, time, date
+from dateutil.parser import parse as parse_datetime
 from collections import defaultdict, deque
 
 # Signup domain limitations and email address exceptions
@@ -99,15 +100,15 @@ class User(db.Model, SerializerMixin):
                     self.selectedUnit = None
 
     def __repr__(self):
-        return f'<User {self.name}>'
+        return f'<User {self.first_name} {self.last_name}>'
 
 class Project(db.Model, SerializerMixin):
     __tablename__ = "projects"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
-    start = db.Column(db.DateTime, nullable=True, server_default=db.func.now()) #default=datetime.strptime("2025-01-05", "%Y-%m-%d")
-    end = db.Column(db.DateTime, nullable=True, server_default=db.func.now())
+    start = db.Column(db.DateTime, nullable=True, default=datetime.now(timezone.utc)) #server_default=db.func.now() #default=datetime.strptime("2025-01-05", "%Y-%m-%d")
+    end = db.Column(db.DateTime, nullable=True, default=datetime.now(timezone.utc))
     project_type = db.Column(db.String, default="house")
     description = db.Column(db.String, nullable=True)
 
@@ -339,17 +340,27 @@ class MasterTask(db.Model, SerializerMixin):
         return value
     
     # validates date inputs
-    @validates('pin_start','pin_end')
-    def validate_dates(self, attr, value):
-        if not isinstance(value, datetime):
-            for format in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
-                try:
-                    return datetime.strptime(value, format)
-                except ValueError:
-                    pass
-            raise ValueError(f'{attr} must be a valid date.')
-        return value
+    # @validates('pin_start','pin_end')
+    # def validate_dates(self, attr, value):
+    #     if not isinstance(value, datetime):
+    #         for format in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
+    #             try:
+    #                 return datetime.strptime(value, format)
+    #             except ValueError:
+    #                 pass
+    #         raise ValueError(f'{attr} must be a valid date.')
+    #     return value
     
+    @validates('pin_start', 'pin_end')
+    def validate_dates(self, attr, value):
+        if isinstance(value, datetime):
+            return value.astimezone(timezone.utc)
+        try:
+            parsed = parse_datetime(value)
+            return parsed.astimezone(timezone.utc)
+        except (ValueError, TypeError):
+            raise ValueError(f"{attr} must be a valid datetime (preferably in ISO 8601).")
+        
     
     # in a DAG relationship, from every task's perspective: 
     # it itself is the vertex/node, 
@@ -673,7 +684,8 @@ class Unit(db.Model, SerializerMixin):
             # Step 4.1: add tasks that have no incoming edges (parents)
             if in_degree[current_task.id] == 0:
                 #print(f"========> pushing because HEADLESS {current_task}")
-                start_date = datetime.combine(datetime.now(), time.min) # use today as start
+                #start_date = datetime.combine(datetime.now(), time.min) # use today as start
+                start_date = datetime.now(timezone.utc) # UTC
                 unit_task = create_unit_task(current_task, start_date, True)
 
             else:
@@ -688,7 +700,8 @@ class Unit(db.Model, SerializerMixin):
                 parents_set = set(parents)
                 if all(parent_task in processed_tasks for parent_task in parents_set):
                     #print(f"========> pushing because all parents are procesed {current_task}")
-                    default_start = datetime.combine(datetime.now(), time.min) # use today as start
+                    #default_start = datetime.combine(datetime.now(), time.min) # use today as start
+                    default_start = datetime.now(timezone.utc) # UTC
                     earliest_start = default_start
                     processed_parents = [processed_parent for processed_parent in parents if processed_parent in parents]
                     for parent_task in processed_parents:
@@ -703,7 +716,8 @@ class Unit(db.Model, SerializerMixin):
                     # some of parents are not yet procceed, simply pop back on to the merry-go-round
                     # push it back onto the stack to continue the merry-go-round
                     
-                    default_start = datetime.combine(datetime.now(), time.min) # use today as start
+                    #default_start = datetime.combine(datetime.now(), time.min) # use today as start
+                    default_start = datetime.now(timezone.utc) # UTC
                     earliest_start = default_start
                     processed_parents = [processed_parent for processed_parent in parents if processed_parent in parents]
                     for parent_task in processed_parents:
@@ -854,7 +868,7 @@ class UnitTask(db.Model, SerializerMixin):
             new_code = 500
         elif self.progress == 0 and (self.started_status == True or isinstance(self.started_date, datetime)):
             # PENDING
-            # previous task is completed, but task has not yeet begun
+            # previous task is completed, but task has not yet begun
             new_code = 310
         elif self.progress != 0 or (self.started_status == True or isinstance(self.started_date, datetime)):
             # IN PROGRESS
@@ -1154,7 +1168,7 @@ class StatusUpdate(db.Model, SerializerMixin):
     task_status = db.Column(db.Integer, nullable=False)
     message = db.Column(db.String)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, server_default=db.func.now())
+    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc)) #server_default=db.func.now()
 
     user = db.relationship("User", back_populates="updates")
     unit_task = db.relationship("UnitTask", back_populates="updates")
@@ -1175,6 +1189,16 @@ class StatusUpdate(db.Model, SerializerMixin):
         if not value or not isinstance(value, int):
             raise ValueError('Status must be an integer')
         return value
+    
+    @validates('timestamp')
+    def validate_dates(self, attr, value):
+        if isinstance(value, datetime):
+            return value.astimezone(timezone.utc)
+        try:
+            parsed = parse_datetime(value)
+            return parsed.astimezone(timezone.utc)
+        except (ValueError, TypeError):
+            raise ValueError(f"{attr} must be a valid datetime (preferably in ISO 8601).")
     
     def __repr__(self):
         return f'<StatusUpdate ID: {self.id}, Task: {self.task_id}, Status: {self.task_status}>'

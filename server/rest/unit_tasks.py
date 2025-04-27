@@ -7,7 +7,8 @@ from sqlalchemy.orm import joinedload
 from config import db, app
 from models import User, Project, MasterTask, Unit, UnitTask, StatusUpdate
 from app_helpers import unit_task_recursively_update_children
-from datetime import datetime, time, date, timedelta
+#from datetime import datetime, time, date, timedelta
+from datetime import datetime, timezone
 from helpers import get_previous_monday
 
 # used for project todo list of tasks pending status updates
@@ -17,7 +18,8 @@ def get_project_pending_update(project_id):
     if not model:
         return make_response({"error": f"Project ID: {project_id} not found"}, 404)
     
-    today = date.today()
+    #today = date.today()
+    today = datetime.now(timezone.utc).date()
     previous_monday = get_previous_monday()
 
     # Subquery to get the latest timestamp per task
@@ -224,7 +226,8 @@ class UnitTaskByID(Resource):
 
                 model.complete_status = True
                 model.complete_comment = "marked complete on app"
-                model.complete_date = datetime.combine(datetime.now(), time.min)
+                #model.complete_date = datetime.combine(datetime.now(), time.min)
+                model.complete_date = datetime.now(timezone.utc)
                 model.complete_user_id = user.id
                 model.progress = 100
 

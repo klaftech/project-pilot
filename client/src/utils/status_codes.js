@@ -2,9 +2,14 @@ import { isDate } from "@/utils/date"
 
 export const status_options = [
     {
-      code: 0,
-      title: "Undefined",
-      update_visibility: false,
+        code: 0,
+        title: "Undefined",
+        update_visibility: false,
+    },
+    {
+        code: 1,
+        title: "Started",
+        update_visibility: true,
     },
     {
         code: 25,
@@ -24,7 +29,7 @@ export const status_options = [
     {
         code: 100,
         title: "100%",
-        update_visibility: true,
+        update_visibility: false,
     },
     {
         code: 200,
@@ -72,13 +77,13 @@ export const getFilteredStatusOptions = (taskObj, status_options) => {
         return false;
       }
 
-      // Filter out 25 and 50 for tasks already at 75
-      if (taskObj.progress == 75 && (status.code === 25 || status.code === 50)) {
+      // Filter out 1, 25 and 50 for tasks already at 75
+      if (taskObj.progress == 75 && (status.code === 1 || status.code === 25 || status.code === 50)) {
         return false;
       }
 
-      // Filter out 25 for tasks already at 50
-      if (taskObj.progress == 50 && (status.code === 25)) {
+      // Filter out 1, 25 for tasks already at 50
+      if (taskObj.progress == 50 && (status.code === 1 || status.code === 25)) {
         return false;
       }
       
