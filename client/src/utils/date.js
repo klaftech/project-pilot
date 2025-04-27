@@ -1,5 +1,5 @@
 //convert string to javascript date object
-export const stringToDate = (dateString, asUtc = false) => {
+export const stringToDate = (dateString, asUtc = true) => {
     if(dateString != null){
         //return new Date(string.replace(" ","T"))
         let isoString = dateString.trim().replace(" ", "T");

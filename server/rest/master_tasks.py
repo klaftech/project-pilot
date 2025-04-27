@@ -5,7 +5,7 @@ from flask_restful import Resource
 from config import db, app
 from models import User, MasterTask, MasterTaskDependency, Project
 from app_helpers import find_task_model_by_id, validate_date_input, master_task_recursively_update_children
-from datetime import datetime, time
+from datetime import datetime, timezone, time
 
 
 # do we need this?? it should be called /parents
@@ -186,7 +186,8 @@ class MasterTaskByID(Resource):
 
                 model.complete_status = data['complete_status']
                 model.complete_comment = "marked complete on app"
-                model.complete_date = datetime.combine(datetime.now(), time.min)
+                #model.complete_date = datetime.combine(datetime.now(), time.min)
+                model.complete_date = datetime.now(timezone.utc) # UTC
                 model.complete_user_id = user.id
 
             for attr,value in data.items():

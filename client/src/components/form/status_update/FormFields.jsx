@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react'
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns"
+import { format, parse } from "date-fns"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +32,15 @@ import { status_options, getFilteredStatusOptions } from '@/utils/status_codes'
 
 const FormFields = ({ form, taskObj }) => {
     
-    if (taskObj.status_code == 200){
+    //set fields as readonly because we're not ready to handle logic yet
+    const isReadOnly = false
+
+    if(!taskObj){
+        //if taskObj is not set, exit script
+        return 
+    }
+
+    if(taskObj.status_code == 200){
         return (<>Task is already completed</>)
     }
 
@@ -194,6 +202,54 @@ const FormFields = ({ form, taskObj }) => {
                     </FormItem>
                 )}
             />
+
+            <FormField
+                control={form.control}
+                name="record_date"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Date</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <FormControl>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-[240px] pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                            )}
+                            >
+                            {field.value ? (
+                                format(field.value, "PPP")
+                            ) : (
+                                <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={field.value}
+                            //onSelect={field.onChange}
+                            onSelect={isReadOnly ? undefined : field.onChange} // ❗ don't update when readonly
+                            disabled={isReadOnly ? () => true : undefined}     // ❗ disables all dates visually
+                            // disabled={(date) =>
+                            //   date > new Date() || date < new Date("1900-01-01")
+                            // }
+                            // initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <FormDescription>
+                        Status Date.
+                    </FormDescription>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+
         </>
     )
 }

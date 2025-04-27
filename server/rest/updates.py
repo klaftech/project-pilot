@@ -1,7 +1,7 @@
 # library imports
 from flask import request, abort, make_response, session
 from flask_restful import Resource
-from datetime import datetime, time
+from datetime import datetime, timezone, time
 
 from config import db
 from models import StatusUpdate, UnitTask, MasterTask
@@ -29,6 +29,7 @@ class StatusUpdates(Resource):
         :param new: The new status.
         :return: True if the status change is valid, otherwise False.
         
+        1   %
         25  %
         50  %
         75  %
@@ -39,7 +40,11 @@ class StatusUpdates(Resource):
         311 in progress
         500 Stuck        
         """
-        valid_statuses = [25, 50, 75, 100, 200, 300, 310, 311, 400, 500]
+        valid_statuses = [1, 25, 50, 75, 100, 200, 300, 310, 311, 400, 500]
+        
+        # allow continued status update of stuck
+        if old == 500 and new == 500:
+            return True, "Success"
         
         if old == new:
             return False, "No change in status."
@@ -53,15 +58,15 @@ class StatusUpdates(Resource):
             return False, "Completed task cannot be changed."
         
         # 1-100 can only be changed to 1-100 or 200 or 500
-        if old in [25, 50, 75, 100] and new not in [25, 50, 75, 100, 200, 500]:
+        if old in [1, 25, 50, 75, 100] and new not in [1, 25, 50, 75, 100, 200, 500]:
             return False, "Task in progress can only be changed to completed or stuck."
         
         # 300, 310 can only be changed to 1-100 or 100, 311 or 500
-        if old in [300, 310] and new not in [25, 50, 75, 100, 200, 311, 500]:
+        if old in [300, 310] and new not in [1, 25, 50, 75, 100, 200, 311, 500]:
             return False, "Scheduled cannot be changed to Pending and vice versa."
         
         # if changing completion percentage, can only be greater value
-        if old in [25, 50, 75, 100] and new in [25, 50, 75, 100] and valid_statuses.index(old) > valid_statuses.index(new):
+        if old in [1, 25, 50, 75, 100] and new in [1, 25, 50, 75, 100] and valid_statuses.index(old) > valid_statuses.index(new):
             return False, "Completion can only move forward"
 
         # using array index, ensure new value is larger than old value
@@ -101,6 +106,7 @@ class StatusUpdates(Resource):
         if task == None:
             return make_response({"error": "UnitTask associated with this StatusUpdate not found."}, 422)
         
+        # ensure status is valid and progressing forward
         if task.latest_update != None:
             is_valid, message = self.validate_status_change(task.latest_update['status'], data['task_status'])
             if not is_valid:
@@ -109,36 +115,46 @@ class StatusUpdates(Resource):
                 #abort(422, message)
             
         try:
+            # cast to int if is string
+            status = data['task_status']
+            if isinstance(status, str):
+                status = int(status)
+            
             new_record = StatusUpdate(
                 task_id = data['task_id'],
-                task_status = data['task_status'],
+                task_status = status,
                 user_id = session["user_id"]
             )
         except ValueError as e:
             return make_response({"errors": e.args[0]}, 422)
             #abort(422, e.args[0])
         
+        if 'record_date' in data:
+            new_record.timestamp = data['record_date']
+
         db.session.add(new_record)
         db.session.commit()
 
-        ### ensure task is started ###
-        if task.started_status != True or not isinstance(task.started_status, datetime):
-           task.started_status = True
-           task.started_date = datetime.combine(datetime.now(), time.min) # use today as start
-           db.session.commit()
+        
+        ### ensure task is started, except if status is stuck ###
+        if status != 500 and (task.started_status != True or not isinstance(task.started_date, datetime)):
+            if task.started_status != True:
+                task.started_status = True
+            if not isinstance(task.started_date, datetime):
+                #task.started_date = datetime.combine(datetime.now(), time.min) # use today as start
+                #task.started_date = datetime.now(timezone.utc) # UTC
+                task.started_date = new_record.timestamp # use StatusUpdate timestamp
+            db.session.commit()
 
 
         ### update task progress ###
-        # cast to int if is string
-        status = new_record.task_status
-        if isinstance(status, str):
-            status = int(status)
-
         # update UnitTask based on StatusUpdate
         if status == 100 or status == 200:
             task.progress = 100
             task.complete_status = True
-            task.complete_date = datetime.combine(datetime.now(), time.min)
+            #task.complete_date = datetime.combine(datetime.now(), time.min)
+            #task.complete_date = datetime.now(timezone.utc) # UTC
+            task.complete_date = new_record.timestamp # use StatusUpdate timestamp
             task.complete_user_id = session.get("user_id")
             task.complete_comment = "marked complete via status update"
             
@@ -146,6 +162,8 @@ class StatusUpdates(Resource):
 
             # reschedule dependent tasks to account for completed task
             unit_task_recursively_update_children(task)
+        elif status == 1:
+            task.progress = 1
         elif status == 25:
             task.progress = 25
         elif status == 50:
@@ -163,6 +181,10 @@ class StatusUpdates(Resource):
             pass
         else:
             pass
+        
+        # update task status
+        task.set_status_code()
+
         db.session.commit()
 
         if mark_children_started == True:

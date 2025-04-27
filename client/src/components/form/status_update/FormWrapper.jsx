@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react'
 import { useForm } from 'react-hook-form'
-import { format } from "date-fns"
+import { format, parse } from "date-fns"
+import { fromZonedTime } from "date-fns-tz"
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -15,7 +16,7 @@ import {
 
 //if formScenario=create, modelObj must contain object containing task_id
 const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
-    
+
     const [serverErrors, setServerErrors] = useState()
 
     const defaultFetchParams = {
@@ -29,6 +30,8 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
 
     const onFormSubmit = async (form_data) => {
 
+        console.log(form_data)
+
         // ensure we have task_id to link status to
         if(!modelObj.task_id){
             throw Exception("Task ID missing")
@@ -40,6 +43,22 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
         console.log('onFormSubmit() fired')
         console.log("fetchParams: ",url, request_method)
         console.log("formData: ",form_data)
+
+        if(form_data.record_date != undefined){
+            // Step 1: Parse the field value into a local Date object
+            //const localDate = parse(form_data.record_date, 'yyyy-MM-dd', new Date());
+
+            // Step 2: Convert the local date to UTC
+            //const utcDate = fromZonedTime(localDate, 'UTC');
+
+            // Step 3: Format the UTC date in the desired format (e.g., "PPP")
+            //const formattedDateInUTC = format(utcDate, "yyyy-MM-dd");
+            
+            //form_data.record_date = formattedDateInUTC
+            
+            form_data.record_date = format(form_data.record_date, 'yyyy-MM-dd')
+            console.log("formData.record_date (formatted): ",form_data.record_date)
+        }
 
         if(request_method == "POST"){
             form_data = {
@@ -91,6 +110,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
         task_id: '',
         message: undefined,
         task_status: '',
+        record_date: undefined
     }
 
     const taskSchema = z.object({
@@ -102,6 +122,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
              .int({ message: "Status must be selected.", })
              .positive({ message: "Status must be selected.", }),
         message: z.string().optional(),
+        record_date: z.date().optional(),
     })
 
     const form = useForm({
