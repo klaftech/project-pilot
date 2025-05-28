@@ -4,7 +4,7 @@ import { TriangleAlert } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react'
 import { taskBuilder, getTaskStatus } from '@/utils/task.js';
 import { getReadableStatus} from '@/utils/status_codes.js'
-import { stringToDate, getPreviousMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff } from '@/utils/date';
+import { stringToDate, getNextMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
 
@@ -138,36 +138,45 @@ function OverviewTable() {
                                     const task = taskBuilder(raw_task)
                                     
                                     //get background color for task cell
+                                    //set task status as required for this script
                                     let status_background = ""
-                                    let internal_task_status = "500"
+                                    let overview_task_status = "500"
                                     const taskStatusCode = task.status_code
                                     if(taskStatusCode === 200){
                                         //completed
                                         status_background = "bg-green-200"
-                                        internal_task_status = "200"
+                                        overview_task_status = "200"
                                     // } else if((raw_task.latest_update != null) && (raw_task.latest_update.status == 500)){
                                     //     //stuck. task is not completed and there is a status update 500
                                     //     status_background = "bg-red-200"
-                                    //     internal_task_status = "500"
+                                    //     overview_task_status = "500"
                                     } else if(taskStatusCode === 310){
                                         //pending. previous task is completed, but task not yet begun
                                         status_background = "bg-yellow-200"
-                                        internal_task_status = "310"
+                                        overview_task_status = "310"
                                     } else if(taskStatusCode === 311){
                                         //in progress. task is not completed, is not stuck and progress in more than 0
                                         status_background = "bg-blue-200"
-                                        internal_task_status = "311"
+                                        overview_task_status = "311"
                                     } else {
                                         //scheduled. task is not completed and there is no progress
                                         status_background = "" //"bg-yellow-200"
-                                        internal_task_status = "300"
+                                        overview_task_status = "300"
                                     }
+                                    
+                                    /*
+                                    if(raw_task.status_code != 300){
+                                        console.log(raw_task)
+                                        console.log("stringToDate: " + stringToDate(raw_task.latest_update.timestamp))
+                                        console.log("getPreviousPreviousMonday: " + getPreviousPreviousMonday())
+                                    }
+                                    */
 
-                                    //show badge with latest status update
-                                    // if most recent StatusUpdate is since previous monday, show on report
+                                    //display badge with latest status update
+                                    // if most recent StatusUpdate is between previous-previous monday and next monday, show on report
                                     let status_update_badge = null
                                     if(raw_task.latest_update != null){
-                                        if(stringToDate(raw_task.latest_update.timestamp) > getPreviousPreviousMonday()){
+                                        if((stringToDate(raw_task.latest_update.timestamp) > getPreviousPreviousMonday()) && (stringToDate(raw_task.latest_update.timestamp) < getNextMonday())){
                                             const latest_update_status = raw_task.latest_update.status
                                             let update_status_background = ""
                                             if(latest_update_status == 200){
@@ -181,13 +190,13 @@ function OverviewTable() {
                                         }
                                     }
 
-                                    //show warning badge if missing status update
-                                    //check that update was not missed. task is in progress and there is not recent update.
-                                    if((internal_task_status == 400) && (status_update_badge == null)){
+                                    //display warning badge if missing status update
+                                    //check that update was not missed. task is not completed or didn't start and there is not recent update.
+                                    if(taskStatusCode !== 200 && taskStatusCode !== 300 && status_update_badge == null){
                                         status_update_badge = <>&nbsp;<Badge className={"text-grey-500 bg-red-500"}><TriangleAlert className="scale-75" /></Badge></>
                                     }
 
-                                    //show badge displaying difference between started-completed dates
+                                    //display badge displaying difference between started-completed dates
                                     let diff_badge = <>&nbsp;</>
                                     if(task.started_status == true && isDate(task.started_date) && task.complete_status == true && isDate(task.complete_date)){
                                         const days_diff = getDaysDiff(task.started_date, task.complete_date)
