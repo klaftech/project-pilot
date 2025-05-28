@@ -64,7 +64,7 @@ function UpdatesCardWrapper({ taskObj }) {
                 </FormWrapper>
                 </>}
 
-                <UpdatesCardBubbles updates={updates} />
+                <UpdatesCardBubbles updates={updates} taskObj={taskObj} />
             </Card>
         </>
     )

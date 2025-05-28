@@ -10,11 +10,11 @@ import {
 import { Avatar } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { getReadableStatus } from "@/utils/status_codes"
-import { stringToDate, formatDateTimePretty } from "@/utils/date"
+import { stringToDate, formatDateTimePretty, formatDatePretty } from "@/utils/date"
 // import { Input } from "@/components/ui/input"
 // import { Button } from "@/components/ui/button"
 
-function UpdatesCardBubbles({updates}) {
+function UpdatesCardBubbles({updates, taskObj}) {
     // const handleSendMessage = (data) => console.log(data)
     // const setNewMessage = (message) => "value"
     // const newMessage = "new message"
@@ -36,6 +36,7 @@ function UpdatesCardBubbles({updates}) {
 
                 <ScrollArea className="flex-1 py-4">
                     <div className="space-y-4">
+                        {taskObj.started_status ? <div className="space-y-4 items-center justify-center">Scheduled Task Start: {formatDatePretty(taskObj.started_date)}</div> : ""}
                         {updates.map((update) => (
                         <div key={update.id} className={`flex ${update.id === "user" ? "justify-end" : "justify-start"}`}>
                             <Avatar className="h-8 w-8 mr-2 mt-1">

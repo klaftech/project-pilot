@@ -625,10 +625,10 @@ class Unit(db.Model, SerializerMixin):
             unit_task = UnitTask(unit_id=self.id,task_id=master_task.id)
             unit_task.sched_start = start_date
             unit_task.sched_end = unit_task.sched_start + timedelta(days = master_task.days_length)
-            # for headless task, mark task as started
-            if headless == True:
-                unit_task.started_status = True
-                unit_task.started_date = start_date
+            # for headless task (first task Unit), mark task as started
+            #if headless == True:
+            #    unit_task.started_status = True
+            #    unit_task.started_date = start_date
             db.session.add(unit_task)
                 
             unit_tasks.append(unit_task)
