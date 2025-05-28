@@ -1,21 +1,24 @@
 from app import app
 from models import db, User, Project, Group, MasterTask, MasterTaskDependency, TaskUser
 from seed_dev import add_dev
-from seed_development import add_construction_development
+from seed_lenox_development import add_lenox_development
 from seed_construction import add_construction, add_mini_construction
 from seed_helper import recursively_update_children, drop_tables, add_users
 
 with app.app_context():
 
+    print('Nothing to do here...')
     # prep database 
-    drop_tables()
-    add_users()
+    #drop_tables()
+    #add_users()
 
     # add seed data 
     #add_dev()
     #add_construction()
     # add_mini_construction()
-    add_construction_development()
+    
+    # lenox development
+    #add_lenox_development()
 
     # # add empty project
     # project_2 = Project(
