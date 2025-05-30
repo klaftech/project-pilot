@@ -164,7 +164,9 @@ class StatusUpdates(Resource):
             unit_task_recursively_update_children(task)
         elif status == 1:
             task.progress = 1
-            task.started_date = new_record.timestamp
+            # for non-dependent (or final) task, overwrite started_date (from previous task) with date from started status update
+            if not task.children:
+                task.started_date = new_record.timestamp
         elif status == 25:
             task.progress = 25
         elif status == 50:
