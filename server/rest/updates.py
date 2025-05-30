@@ -29,7 +29,7 @@ class StatusUpdates(Resource):
         :param new: The new status.
         :return: True if the status change is valid, otherwise False.
         
-        1   %
+        1   % started
         25  %
         50  %
         75  %
@@ -164,6 +164,7 @@ class StatusUpdates(Resource):
             unit_task_recursively_update_children(task)
         elif status == 1:
             task.progress = 1
+            task.started_date = new_record.timestamp
         elif status == 25:
             task.progress = 25
         elif status == 50:
