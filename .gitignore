@@ -4,5 +4,6 @@ server/__pycache__
 server/archive
 server/instance
 server/migrations
+server/rest/__pycache__
 client/dev
 .vercel

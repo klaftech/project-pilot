@@ -62,7 +62,7 @@ with app.app_context():
     # Create Project
     print('Creating Project...')
     project_1 = Project(
-        name='Lenox Development',
+        name='Amsterdam Development',
         project_type='development',
         description="Multi-Family Development"
     )
@@ -85,41 +85,43 @@ with app.app_context():
 
     # Create Tasks for Project 1
     print('Creating MasterTasks...')
-    task_1 = MasterTask(name='Stake & Digging', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_1 = MasterTask(name='Stake & Digging', project_id=project_1.id, group_id=group_1.id, days_length=7, override_start_date=True)
     task_2 = MasterTask(name='Foundation & Backfill', project_id=project_1.id, group_id=group_1.id, days_length=14)
-    task_3 = MasterTask(name='Framing', project_id=project_1.id, group_id=group_1.id, days_length=28)
+    task_3 = MasterTask(name='Framing', project_id=project_1.id, group_id=group_1.id, days_length=28, override_start_date=True)
     task_4 = MasterTask(name='Roof', project_id=project_1.id, group_id=group_1.id, days_length=7)
     task_5 = MasterTask(name='Slab Basement Framing', project_id=project_1.id, group_id=group_1.id, days_length=7)
     task_6 = MasterTask(name='Plumbing', project_id=project_1.id, group_id=group_1.id, days_length=7)
     task_7 = MasterTask(name='HVAC', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_8 = MasterTask(name='Siding', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_9 = MasterTask(name='Gas & Boxing', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_10 = MasterTask(name='Electric', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_11 = MasterTask(name='Rough Inspections/Point Loads', project_id=project_1.id, group_id=group_1.id, days_length=14)
-    task_12 = MasterTask(name='Insulation', project_id=project_1.id, group_id=group_1.id, days_length=2)
-    task_13 = MasterTask(name='Sheetrock', project_id=project_1.id, group_id=group_1.id, days_length=14)
-    task_14 = MasterTask(name='Doors & Moldings', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_15 = MasterTask(name='Priming', project_id=project_1.id, group_id=group_1.id, days_length=3)
-    task_16 = MasterTask(name='Tiles', project_id=project_1.id, group_id=group_1.id, days_length=14)
-    task_17 = MasterTask(name='Kitchen', project_id=project_1.id, group_id=group_1.id, days_length=2)
-    task_18 = MasterTask(name='Granite', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_19 = MasterTask(name='Driveway/Landscaping', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_20 = MasterTask(name='Hardwood', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_21 = MasterTask(name='Vinyl Trim', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_22 = MasterTask(name='Final Electric', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_23 = MasterTask(name='Final Plumbing', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_24 = MasterTask(name='Shelving', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_25 = MasterTask(name='Touch Ups', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_26 = MasterTask(name='Painting', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_27 = MasterTask(name='Staining', project_id=project_1.id, group_id=group_1.id, days_length=7)
-    task_28 = MasterTask(name='Cleaning', project_id=project_1.id, group_id=group_1.id, days_length=2)
+    task_8 = MasterTask(name='Gas & Boxing', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_9 = MasterTask(name='Electric', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_10 = MasterTask(name='Rough Inspections/Point Loads', project_id=project_1.id, group_id=group_1.id, days_length=14)
+    task_11 = MasterTask(name='Insulation', project_id=project_1.id, group_id=group_1.id, days_length=2)
+    task_12 = MasterTask(name='Sheetrock', project_id=project_1.id, group_id=group_1.id, days_length=14)
+    task_13 = MasterTask(name='Priming', project_id=project_1.id, group_id=group_1.id, days_length=3)
+    task_14 = MasterTask(name='Tiles', project_id=project_1.id, group_id=group_1.id, days_length=14)
+    task_15 = MasterTask(name='Hardwood', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_16 = MasterTask(name='Vinyl Trim', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_17 = MasterTask(name='Final Electric', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_18 = MasterTask(name='Final Plumbing', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_19 = MasterTask(name='Touch Ups', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_20 = MasterTask(name='Painting', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_21 = MasterTask(name='Staining', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    task_22 = MasterTask(name='Cleaning', project_id=project_1.id, group_id=group_1.id, days_length=2)
 
-    task_29 = MasterTask(name='Water & Sewer', project_id=project_1.id, group_id=group_1.id, days_length=2)
-    task_30 = MasterTask(name='Slab Plumbing', project_id=project_1.id, group_id=group_1.id, days_length=7)
+    # non-blocking tasks should be autostart_children=False, override_start_date=True
+    task_30 = MasterTask(name='Water & Sewer', project_id=project_1.id, group_id=group_1.id, days_length=2, autostart_children=False, override_start_date=True)
+    task_31 = MasterTask(name='Slab Plumbing', project_id=project_1.id, group_id=group_1.id, days_length=7, autostart_children=False, override_start_date=True)
+    task_32 = MasterTask(name='Siding', project_id=project_1.id, group_id=group_1.id, days_length=7, autostart_children=False, override_start_date=True)
+    task_33 = MasterTask(name='Stone', project_id=project_1.id, group_id=group_1.id, days_length=7, autostart_children=False, override_start_date=True)
+    task_34 = MasterTask(name='Doors & Moldings', project_id=project_1.id, group_id=group_1.id, days_length=7, autostart_children=False, override_start_date=True)
+    task_35 = MasterTask(name='Shelving', project_id=project_1.id, group_id=group_1.id, days_length=7, autostart_children=False, override_start_date=True)
+    task_36 = MasterTask(name='Kitchen', project_id=project_1.id, group_id=group_1.id, days_length=2, autostart_children=False, override_start_date=True)
+    task_37 = MasterTask(name='Granite', project_id=project_1.id, group_id=group_1.id, days_length=7, autostart_children=False, override_start_date=True)
+    task_38 = MasterTask(name='Driveway/Landscaping', project_id=project_1.id, group_id=group_1.id, days_length=7, autostart_children=False, override_start_date=True)
     
-
     # Adding all tasks to the session
-    db.session.add_all([task_1, task_2, task_3, task_4, task_5, task_6, task_7, task_8, task_9, task_10, task_11, task_12, task_13, task_14, task_15, task_16, task_17, task_18, task_19, task_20, task_21, task_22, task_23, task_24, task_25, task_26, task_27, task_28, task_29, task_30])
+    db.session.add_all([task_1, task_2, task_3, task_4, task_5, task_6, task_7, task_8, task_9, task_10, task_11, task_12, task_13, task_14, task_15, task_16, task_17, task_18, task_19, task_20, task_21, task_22])
+    db.session.add_all([task_30, task_31, task_32, task_33, task_34, task_35, task_36, task_37, task_38])
     db.session.commit()
     print('Complete.')
 
@@ -147,26 +149,43 @@ with app.app_context():
     td_19 = MasterTaskDependency(task_id=task_20.id, dependent_task_id=task_19.id)
     td_20 = MasterTaskDependency(task_id=task_21.id, dependent_task_id=task_20.id)
     td_21 = MasterTaskDependency(task_id=task_22.id, dependent_task_id=task_21.id)
-    td_22 = MasterTaskDependency(task_id=task_23.id, dependent_task_id=task_22.id)
-    td_23 = MasterTaskDependency(task_id=task_24.id, dependent_task_id=task_23.id)
-    td_24 = MasterTaskDependency(task_id=task_25.id, dependent_task_id=task_24.id)
-    td_25 = MasterTaskDependency(task_id=task_26.id, dependent_task_id=task_25.id)
-    td_26 = MasterTaskDependency(task_id=task_27.id, dependent_task_id=task_26.id)
-    td_27 = MasterTaskDependency(task_id=task_28.id, dependent_task_id=task_27.id)
-
-    td_28 = MasterTaskDependency(task_id=task_29.id, dependent_task_id=task_1.id)
-    td_29 = MasterTaskDependency(task_id=task_30.id, dependent_task_id=task_3.id)
     
-    db.session.add_all([td_1, td_2, td_3, td_4, td_5, td_6, td_7, td_8, td_9, td_10, td_11, td_12, td_13, td_14, td_15, td_16, td_17, td_18, td_19, td_20, td_21, td_22, td_23, td_24, td_25, td_26, td_27, td_28, td_29])
+    # define non-blocking & special task dependencies
+
+    # slab plumbing #31, dependent on framing #3
+    td_sp_1 = MasterTaskDependency(task_id=task_31.id, dependent_task_id=task_3.id)
+    # basement framing #5, is also dependent on slab plumbing #31
+    #td_sp_2 = MasterTaskDependency(task_id=task_5.id, dependent_task_id=task_31.id)
+
+    # water & sewer #30, dependent on foundation #2
+    td_sp_3 = MasterTaskDependency(task_id=task_30.id, dependent_task_id=task_2.id)
+    
+    # siding #32, dependent on HVAC #7
+    td_sp_4 = MasterTaskDependency(task_id=task_32.id, dependent_task_id=task_7.id)
+
+    # stone #33, dependent on siding #32
+    td_sp_5 = MasterTaskDependency(task_id=task_33.id, dependent_task_id=task_32.id)
+    
+    # doors & moldings #34, dependent on sheetrock #12
+    td_sp_6 = MasterTaskDependency(task_id=task_34.id, dependent_task_id=task_12.id)
+    
+    # shelving #35, dependent on vinyl trim #16
+    td_sp_7 = MasterTaskDependency(task_id=task_35.id, dependent_task_id=task_16.id)
+    
+    # kitchen #36, dependent on tiles #14
+    td_sp_8 = MasterTaskDependency(task_id=task_36.id, dependent_task_id=task_14.id)
+    # granite #37, dependent on kitchen #36
+    td_sp_9 = MasterTaskDependency(task_id=task_37.id, dependent_task_id=task_36.id)
+    
+    # driveway/landscaping #38, dependent on tiles #14
+    td_sp_10 = MasterTaskDependency(task_id=task_38.id, dependent_task_id=task_14.id)
+    
+
+    db.session.add_all([td_1, td_2, td_3, td_4, td_5, td_6, td_7, td_8, td_9, td_10, td_11, td_12, td_13, td_14, td_15, td_16, td_17, td_18, td_19, td_20, td_21])
+    db.session.add_all([td_sp_1, td_sp_3, td_sp_4, td_sp_5, td_sp_6, td_sp_7, td_sp_8, td_sp_9, td_sp_10])
     db.session.commit()
     print('Complete.')
 
-    # moved to Unit.build_tasklist
-    # # Recursively update children of tasks
-    # print('Updating Task Dependencies recursively...')
-    # for task in [task_1, task_2, task_3, task_4, task_5, task_6, task_7, task_8, task_9, task_10, task_11, task_12, task_13, task_14, task_15, task_16, task_17]:
-    #     recursively_update_children(task)
-    
     seed_status = ""
     
     # add units
