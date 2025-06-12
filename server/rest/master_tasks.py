@@ -83,6 +83,8 @@ class MasterTasks(Resource):
             'id',
             'name',
             'days_length',
+            'autostart_children',
+            'override_start_date',
             'pin_start',
             'pin_end',
             'group',
@@ -107,6 +109,11 @@ class MasterTasks(Resource):
                 days_length = data['days_length']
             )
 
+            if 'autostart_children' in data:
+                new_record.autostart_children = True
+            if 'override_start_date' in data:
+                new_record.override_start_date = True
+
             if 'pin_start' in data and validate_date_input(data['pin_start'], "%Y-%m-%d"):
                 new_record.pin_start = datetime.strptime(data['pin_start'], "%Y-%m-%d")
             if 'pin_end' in data and validate_date_input(data['pin_end'], "%Y-%m-%d"):
@@ -122,6 +129,8 @@ class MasterTasks(Resource):
             'id',
             'name',
             'days_length',
+            'autostart_children',
+            'override_start_date',
             'pin_start',
             'pin_end',
             'group',
@@ -155,6 +164,8 @@ class MasterTaskByID(Resource):
             'id',
             'name',
             'days_length',
+            'autostart_children',
+            'override_start_date',
             'pin_start',
             'pin_end',
             'group',
@@ -179,17 +190,7 @@ class MasterTaskByID(Resource):
             # for field in non_affecting_fields:
             #     if field in data:
             #         non_affected = True
-
-            if ('complete_status' in data) and (data['complete_status']) and not (model.complete_status):
-                print('TASK MARKED COMPLETE')
-                user = User.query.filter_by(id=session["user_id"]).first()
-
-                model.complete_status = data['complete_status']
-                model.complete_comment = "marked complete on app"
-                #model.complete_date = datetime.combine(datetime.now(), time.min)
-                model.complete_date = datetime.now(timezone.utc) # UTC
-                model.complete_user_id = user.id
-
+            
             for attr,value in data.items():
                setattr(model, attr, value)
 
@@ -200,12 +201,14 @@ class MasterTaskByID(Resource):
 
         # if non_affected == True:
         #recursively process dependencies
-        master_task_recursively_update_children(model)
+        #master_task_recursively_update_children(model)
         
         response_fields = (
             'id',
             'name',
             'days_length',
+            'autostart_children',
+            'override_start_date',
             'pin_start',
             'pin_end',
             'group',

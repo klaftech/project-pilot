@@ -4,6 +4,7 @@ from sqlalchemy.orm import validates, Session
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.orm import attributes
+from sqlalchemy import Index
 #from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy import event, func
@@ -282,6 +283,12 @@ class MasterTask(db.Model, SerializerMixin):
     days_length = db.Column(db.Integer, nullable=False)
     pin_start = db.Column(db.DateTime, default=None, nullable=True)
     pin_end = db.Column(db.DateTime, default=None, nullable=True)
+    autostart_children = db.Column(db.Boolean, default=True) # determine whether to auto-start children tasks upon completion of this task (should be False for non-blocking tasks)
+    override_start_date = db.Column(db.Boolean, default=False) # determines whether to override start date of task with date of started task status update
+
+    __table_args__ = (
+        db.Index('ix_mastertask_name_id', 'name', 'id'),
+    )
 
     project = db.relationship('Project', back_populates="master_tasks")
     group = db.relationship('Group', back_populates="master_tasks")
@@ -592,6 +599,10 @@ class Unit(db.Model, SerializerMixin):
     end = db.Column(db.DateTime, default=None, nullable=True)
     status = db.Column(db.String)
 
+    __table_args__ = (
+        db.Index('ix_unit_project_id_id', 'project_id', 'id'),
+    )
+
     project = db.relationship('Project', back_populates="units")
     unit_tasks = db.relationship('UnitTask', back_populates="unit", order_by="UnitTask.sched_start")
 
@@ -625,10 +636,13 @@ class Unit(db.Model, SerializerMixin):
             unit_task = UnitTask(unit_id=self.id,task_id=master_task.id)
             unit_task.sched_start = start_date
             unit_task.sched_end = unit_task.sched_start + timedelta(days = master_task.days_length)
+            
+            # Disabled, in order that we have to manually start a Unit
             # for headless task (first task Unit), mark task as started
             #if headless == True:
             #    unit_task.started_status = True
             #    unit_task.started_date = start_date
+            
             db.session.add(unit_task)
                 
             unit_tasks.append(unit_task)
@@ -772,6 +786,10 @@ class UnitTask(db.Model, SerializerMixin):
     complete_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     complete_comment = db.Column(db.String)
     
+    __table_args__ = (
+        db.Index('ix_unittask_status', 'started_status', 'complete_status'),
+    )
+
     unit = db.relationship('Unit', back_populates="unit_tasks")
     master_task = db.relationship('MasterTask', back_populates="unit_tasks")
     complete_user = db.relationship('User', back_populates="completed_tasks")
@@ -885,6 +903,10 @@ class UnitTask(db.Model, SerializerMixin):
 
     # function to be ran after updating task as completed, to set start date of all children tasks to be the following date
     def mark_children_started(self):
+        # check that master_task profile enabled autostart_children
+        if self.master_task.autostart_children == False:
+            return
+        
         # ensure that task is completed
         if self.complete_status != True or not isinstance(self.complete_date, date):
             print("Task must be completed before beginning children tasks.")
@@ -1169,6 +1191,10 @@ class StatusUpdate(db.Model, SerializerMixin):
     message = db.Column(db.String)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc)) #server_default=db.func.now()
+
+    __table_args__ = (
+        db.Index('ix_statusupdate_task_timestamp', 'task_id', 'timestamp'),
+    )
 
     user = db.relationship("User", back_populates="updates")
     unit_task = db.relationship("UnitTask", back_populates="updates")

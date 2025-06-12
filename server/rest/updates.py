@@ -161,11 +161,12 @@ class StatusUpdates(Resource):
             mark_children_started = True
 
             # reschedule dependent tasks to account for completed task
-            unit_task_recursively_update_children(task)
+            #unit_task_recursively_update_children(task)
         elif status == 1:
             task.progress = 1
-            # for non-dependent (or final) task, overwrite started_date (from previous task) with date from started status update
-            if not task.children:
+            
+            # override started_date (from previous task) with date from started status update
+            if task.master_task.override_start_date:
                 task.started_date = new_record.timestamp
         elif status == 25:
             task.progress = 25

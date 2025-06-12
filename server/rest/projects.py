@@ -43,7 +43,10 @@ def get_project_report(project_id):
         return make_response({"error": f"Project ID: {project_id} not found"}, 404)
     
     # Sort units by name (case-insensitive)
-    model.units.sort(key=lambda u: u.name.lower() if u.name else '')
+    #model.units.sort(key=lambda u: u.name.lower() if u.name else '')
+
+    # Sort units by completion percentage
+    model.units.sort(key=lambda u: u.stats['completion_percent'], reverse=True)
 
     # Sort unit_tasks within each unit
     for unit in model.units:
