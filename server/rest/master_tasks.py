@@ -52,6 +52,25 @@ def get_dependencies_available(task_id):
 
 
 class MasterTasks(Resource):
+    response_fields = (
+        'id',
+        'name',
+        'days_length',
+        'autostart_children',
+        'override_start_date',
+        'pin_start',
+        'pin_end',
+        'group',
+        'project',
+        #'parents.id',
+        #'parents.name',
+        #'parents.days_length',
+        #'children.id',
+        #'children.name',
+        #'children.days_length',
+        # 'unit_tasks',           
+    )
+
     def get(self):
         #tasks_query = Task.query.order_by(Task.sched_start.desc())  
         tasks_query = MasterTask.query  
@@ -78,25 +97,8 @@ class MasterTasks(Resource):
                                                     'group.name'
                 ))} for i,master_task in enumerate(MasterTask.topological_sort(model.id))]
             return make_response(tasklist, 200)
-
-        response_fields = (
-            'id',
-            'name',
-            'days_length',
-            'autostart_children',
-            'override_start_date',
-            'pin_start',
-            'pin_end',
-            'group',
-            'project',
-            # 'unit_tasks',
-            # 'parents',
-            # 'children',
-            # 'parent_tasks',
-            # 'children_tasks',
-            )
-        #rules=('-children_tasks','-parent_tasks')
-        tasks = [task.to_dict(only=response_fields) for task in tasks_query.all()]
+        
+        tasks = [task.to_dict(only=self.__class__.response_fields) for task in tasks_query.all()]
         return make_response(tasks, 200)
     
     def post(self):
@@ -125,27 +127,30 @@ class MasterTasks(Resource):
         db.session.add(new_record)
         db.session.commit()
 
-        response_fields = (
-            'id',
-            'name',
-            'days_length',
-            'autostart_children',
-            'override_start_date',
-            'pin_start',
-            'pin_end',
-            'group',
-            'project',
-            # 'unit_tasks',
-            # 'parents',
-            # 'children',
-            # 'parent_tasks',
-            # 'children_tasks',
-            )
-        return make_response(new_record.to_dict(only=response_fields), 201)
+        return make_response(new_record.to_dict(only=self.__class__.response_fields), 201)
     
 
 
 class MasterTaskByID(Resource):
+    response_fields = (
+        'id',
+        'name',
+        'days_length',
+        'autostart_children',
+        'override_start_date',
+        'pin_start',
+        'pin_end',
+        'group',
+        'project',
+        'parents.id',
+        'parents.name',
+        'parents.days_length',
+        'children.id',
+        'children.name',
+        'children.days_length',
+        # 'unit_tasks',           
+    )
+    
     @classmethod
     def find_model_by_id(cls, id):
         #return RoutineItem.query.get_or_404(id)
@@ -160,23 +165,7 @@ class MasterTaskByID(Resource):
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
         
-        response_fields = (
-            'id',
-            'name',
-            'days_length',
-            'autostart_children',
-            'override_start_date',
-            'pin_start',
-            'pin_end',
-            'group',
-            'project',
-            # 'unit_tasks',
-            # 'parents',
-            # 'children',
-            # 'parent_tasks',
-            # 'children_tasks',            
-            )
-        return make_response(model.to_dict(only=response_fields), 200)
+        return make_response(model.to_dict(only=self.__class__.response_fields), 200)
            
     def patch(self, id):
         model = self.__class__.find_model_by_id(id)
@@ -203,23 +192,7 @@ class MasterTaskByID(Resource):
         #recursively process dependencies
         #master_task_recursively_update_children(model)
         
-        response_fields = (
-            'id',
-            'name',
-            'days_length',
-            'autostart_children',
-            'override_start_date',
-            'pin_start',
-            'pin_end',
-            'group',
-            'project',
-            # 'unit_tasks',
-            # 'parents',
-            # 'children',
-            # 'parent_tasks',
-            # 'children_tasks',
-            )
-        return make_response(model.to_dict(only=response_fields), 202)
+        return make_response(model.to_dict(only=self.__class__.response_fields), 202)
     
     def delete(self, id):
         model = self.__class__.find_model_by_id(id)
