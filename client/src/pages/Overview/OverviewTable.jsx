@@ -4,7 +4,7 @@ import { TriangleAlert } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react'
 import { taskBuilder, getTaskStatus } from '@/utils/task.js';
 import { getReadableStatus} from '@/utils/status_codes.js'
-import { stringToDate, getNextMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff } from '@/utils/date';
+import { stringToDate, getNextMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff, getToday } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
 
@@ -206,16 +206,24 @@ function OverviewTable() {
                                             status_update_badge = <>&nbsp;<Badge className={"text-grey-500 bg-red-500"}><TriangleAlert className="scale-75" /></Badge></>
                                         }
 
-                                        //display badge displaying difference between started-completed dates
+                                        //display badge displaying task days count. with progress or difference between started-completed dates
                                         let diff_badge = <>&nbsp;</>
-                                        if(task.started_status == true && isDate(task.started_date) && task.complete_status == true && isDate(task.complete_date)){
-                                            const days_diff = getDaysDiff(task.started_date, task.complete_date)
+                                        //if(task.started_status == true && isDate(task.started_date) && task.complete_status == true && isDate(task.complete_date)){
+                                        if(task.started_status == true && isDate(task.started_date)){
+                                            //if task is completed, display difference if took longer than predefined length
+                                            let range_to
+                                            if(task.complete_status == true && isDate(task.complete_date)){
+                                                range_to = task.complete_date
+                                            } else {
+                                                range_to = getToday()
+                                            }
+
+                                            const days_diff = getDaysDiff(task.started_date, range_to)
                                             if(days_diff <= raw_task.master_task.days_length){
                                                 diff_badge = <>&nbsp;<Badge className={"text-grey-500 bg-green-500"}>{days_diff} days</Badge></>
                                             } else {
                                                 diff_badge = <>&nbsp;<Badge className={"text-grey-500 bg-red-500"}>{days_diff} days</Badge></>
                                             }
-
                                         }
                                         
                                         //display started, completed and badge
