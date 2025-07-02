@@ -87,6 +87,11 @@ export const getFilteredStatusOptions = (taskObj, status_options) => {
         return false;
       }
       
+      // Filter out 25 for mid-length tasks
+      if (taskObj.days_length <=14 && (status.code === 25)) {
+        return false;
+      }
+
       // Filter out 25 and 75 for short tasks
       if (taskObj.days_length <=7 && (status.code === 25 || status.code === 75)) {
         return false;
