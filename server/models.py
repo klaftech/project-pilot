@@ -167,10 +167,12 @@ class Project(db.Model, SerializerMixin):
 def get_stats(model):
     if isinstance(model, Project):
         # for project
-        base_query = db.session.query(func.count(UnitTask.id)).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)
+        base_count_query = db.session.query(func.count(UnitTask.id)).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)
+        base_query = UnitTask.query.join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)
     elif isinstance(model, Unit):
         # for unit
-        base_query = db.session.query(func.count(UnitTask.id)).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(UnitTask.unit_id == model.id)
+        base_count_query = db.session.query(func.count(UnitTask.id)).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(UnitTask.unit_id == model.id)
+        base_query = UnitTask.query.filter(UnitTask.unit_id == model.id)
     else:
         raise Exception('Unsupported Model Instance')
 
@@ -179,35 +181,56 @@ def get_stats(model):
     previous_monday = get_previous_monday()
     next_monday = get_next_monday()
 
-    get_completed = base_query.filter(UnitTask.complete_status == True)
-    get_upcoming = base_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_start < today).filter(UnitTask.sched_start > today-timedelta(days=7))
-    get_overdue = base_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today)
+    get_completed = base_count_query.filter(UnitTask.complete_status == True)
+    get_upcoming = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_start < today).filter(UnitTask.sched_start > today-timedelta(days=7))
+    get_overdue = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today)
 
-    count_project_total = base_query.first()[0]
-    count_project_completed = get_completed.first()[0]
-    count_project_overdue = get_overdue.first()[0]
-    count_project_upcoming = get_upcoming.first()[0]
+    count_model_total = base_count_query.first()[0]
+    count_model_completed = get_completed.first()[0]
+    count_model_overdue = get_overdue.first()[0]
+    count_model_upcoming = get_upcoming.first()[0]
     
-    count_week_scheduled = base_query.filter(UnitTask.sched_start > previous_monday).filter(UnitTask.sched_start < next_monday).first()[0]
+    count_week_scheduled = base_count_query.filter(UnitTask.sched_start > previous_monday).filter(UnitTask.sched_start < next_monday).first()[0]
     count_week_scheduled_completed = get_completed.filter(UnitTask.sched_start > previous_monday).filter(UnitTask.sched_start < next_monday).first()[0]
     count_week_completed = get_completed.filter(UnitTask.complete_date > previous_monday).filter(UnitTask.complete_date < next_monday).first()[0]
 
-    # calculate project completion percentage
-    if count_project_completed == 0 or count_project_total == 0:
+
+    # calculate model beginning and end dates and completion days
+    tasks_in_order = base_query.order_by(UnitTask.started_date.asc())
+    
+    # determine first task start date    
+    get_first_task = tasks_in_order.first()
+    first_task_date = get_first_task.started_date
+    
+    # determine last task end date
+    if count_model_total == 0 or count_model_total - count_model_completed > 0:
+        last_task_date = datetime.today()
+    else:
+        get_last_task = tasks_in_order.all()[count_model_total-1]
+        last_task_date = get_last_task.complete_date    
+
+    # get difference in days
+    time_difference = last_task_date - first_task_date
+    completion_days = time_difference.days
+
+
+    # calculate model (project/unit) completion percentage
+    if count_model_completed == 0 or count_model_total == 0:
         completion_percent = 0
     else:
-        completion_percent = int((count_project_completed / count_project_total)*100)
+        completion_percent = int((count_model_completed / count_model_total)*100)
+
     
     # define model (project/unit) completion status
     # options: on_schedule, in_progress, delayed, completed, pre
-    if count_project_total == 0:
+    if count_model_total == 0:
         model_status = "planning"
-    elif count_project_completed == count_project_total:
+    elif count_model_completed == count_model_total:
         model_status = "completed"
-    elif base_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today).first()[0] > 0:
+    elif base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today).first()[0] > 0:
         # if there are any tasks that completed=False and sched_end is smaller than today = should have been completed already
         model_status = "delayed" 
-    elif base_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today).first()[0] <= 0:
+    elif base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today).first()[0] <= 0:
         model_status = "on_schedule"
     else:
         model_status = "in_progress" # default catch-all
@@ -215,11 +238,17 @@ def get_stats(model):
     stats = {
         "status": model_status,
         "completion_percent": completion_percent,
+        "completion": {
+            "percent": completion_percent,
+            "days": completion_days,
+            "start": f'{first_task_date} 00:00:00',
+            "end": f'{last_task_date} 00:00:00',
+        },
         "counts": {
-            "count_tasks": count_project_total,
-            "count_completed": count_project_completed,
-            "count_overdue": count_project_overdue,
-            "count_upcoming": count_project_upcoming,
+            "count_tasks": count_model_total,
+            "count_completed": count_model_completed,
+            "count_overdue": count_model_overdue,
+            "count_upcoming": count_model_upcoming,
         },
         "week": {
             "count_scheduled": count_week_scheduled,
@@ -298,36 +327,13 @@ class MasterTask(db.Model, SerializerMixin):
         '-parent_tasks',
         '-children_tasks',
         '-children',
-        # '-children.owner_task', #copied rules from dependencies
-        # '-children.children_tasks', #copied rules from dependencies
-        # '-children.parent_task', #copied rules from dependencies
-        # '-children.parent_tasks', #copied rules from dependencies
-        #'-children.dependencies', #copied rules from dependencies
         '-parents',
-        # '-parents.owner_task', #copied rules from dependencies
-        # '-parents.children_tasks', #copied rules from dependencies
-        # '-parents.parent_task', #copied rules from dependencies
-        # '-parents.parent_tasks', #copied rules from dependencies
-        #'-parents.dependencies', #copied rules from dependencies
-        #'dependencies', #default does not serializer association proxy
-        #'-parent_tasks.owner_task', #avoid recursion
-        #'-children_tasks.parent_task', #avoid recursion
-        #'-children_tasks.owner_task.children_tasks', #avoid nested recursive data (a tasks child's owner is itself... so don't show it's child all over again)
-        #'-children_tasks.owner_task.dependencies', #avoid nested recursive data (a tasks child's owner is itself... so don't show dependencies)
-        #'-dependencies.owner_task',
-        #'-dependencies.children_tasks',
-        #'-dependencies.parent_task',
-        #'-dependencies.parent_tasks',
-        #'-dependencies.dependencies',
         '-unit_tasks.unit',
         '-unit_tasks.master_task',
         '-unit_tasks.complete_user',
         '-unit_tasks.updates',
-        #'-unit_tasks.dependencies',
         '-unit_tasks.parents',
         '-unit_tasks.children',
-        #'-project', #block all
-        #'-group', #block all
         '-project.master_tasks',
         '-project.units',
         '-project.groups',
@@ -632,8 +638,8 @@ class Unit(db.Model, SerializerMixin):
         if self.unit_tasks:
             raise ValueError(f'Could not build tasklist, tasks already exist for this Unit.')
         
-        def create_unit_task(master_task, start_date,headless=False):
-            unit_task = UnitTask(unit_id=self.id,task_id=master_task.id)
+        def create_unit_task(master_task, start_date, headless=False):
+            unit_task = UnitTask(unit_id=self.id, task_id=master_task.id)
             unit_task.sched_start = start_date
             unit_task.sched_end = unit_task.sched_start + timedelta(days = master_task.days_length)
             
@@ -727,22 +733,24 @@ class Unit(db.Model, SerializerMixin):
                         
                         unit_task = create_unit_task(current_task, earliest_start)
                 else:
-                    # some of parents are not yet procceed, simply pop back on to the merry-go-round
+                    # some of parents are not yet proccessed, simply pop back on to the merry-go-round
                     # push it back onto the stack to continue the merry-go-round
+                    #print(f"========> some parents are not yet proccessed, sending back onto the merry-go-round {current_task}")
                     
+                    # 07/07/2025 : all this should be commented out, apparantly if a task has 2 dependencies, it was creating duplicate
                     #default_start = datetime.combine(datetime.now(), time.min) # use today as start
-                    default_start = datetime.now(timezone.utc) # UTC
-                    earliest_start = default_start
-                    processed_parents = [processed_parent for processed_parent in parents if processed_parent in parents]
-                    for parent_task in processed_parents:
-                        #ipdb.set_trace()
-                        parent_unit_task = processed_list[parent_task.id]
-                        earliest_start = max(
-                            earliest_start,
-                            parent_unit_task.sched_end + timedelta(days=1)  # child task to start day after completion of parent task
-                        )
+                    # default_start = datetime.now(timezone.utc) # UTC
+                    # earliest_start = default_start
+                    # processed_parents = [processed_parent for processed_parent in parents if processed_parent in parents]
+                    # for parent_task in processed_parents:
+                    #     #ipdb.set_trace()
+                    #     parent_unit_task = processed_list[parent_task.id]
+                    #     earliest_start = max(
+                    #         earliest_start,
+                    #         parent_unit_task.sched_end + timedelta(days=1)  # child task to start day after completion of parent task
+                    #     )
 
-                        unit_task = create_unit_task(current_task, earliest_start)
+                    #     unit_task = create_unit_task(current_task, earliest_start)
                         
                     tasks_to_process.append(current_task)
 

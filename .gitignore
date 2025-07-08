@@ -1,7 +1,7 @@
 .env
 .venv
+server/local
 server/__pycache__
-server/archive
 server/instance
 server/migrations
 server/rest/__pycache__
