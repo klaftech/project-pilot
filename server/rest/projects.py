@@ -46,7 +46,7 @@ def get_project_report(project_id):
     #model.units.sort(key=lambda u: u.name.lower() if u.name else '')
 
     # Sort units by completion percentage
-    model.units.sort(key=lambda u: u.stats['completion_percent'], reverse=True)
+    model.units.sort(key=lambda u: u.stats.completion['percent'], reverse=True)
 
     # Sort unit_tasks within each unit
     for unit in model.units:

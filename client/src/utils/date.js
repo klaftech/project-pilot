@@ -2,6 +2,13 @@
 export const stringToDate = (dateString, asUtc = true) => {
     if(dateString != null){
         //return new Date(string.replace(" ","T"))
+
+        // if time is midnight, dont convert to UTC
+        let time = dateString.split(" ");
+        if (time[1] == "00:00:00"){
+            asUtc = false
+        }
+
         let isoString = dateString.trim().replace(" ", "T");
         if (asUtc) {
             isoString += "Z";
