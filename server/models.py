@@ -203,16 +203,30 @@ def get_stats(model):
     first_task_date = get_first_task.started_date
     
     # determine last task end date
-    if count_model_total == 0 or count_model_total - count_model_completed > 0:
+    if count_model_total == 0 or count_model_completed == 0:
+        # no tasks have been completed
+        last_task_date = None
+    elif count_model_total - count_model_completed > 0:
+        # there are still non-completed tasks in the model
         last_task_date = datetime.today()
     else:
+        # all tasks are completed, get last completion date
         get_last_task = tasks_in_order.all()[count_model_total-1]
         last_task_date = get_last_task.complete_date    
 
     # get difference in days
-    time_difference = last_task_date - first_task_date
-    completion_days = time_difference.days
+    if first_task_date == None or last_task_date == None:
+        completion_days = 0
+    else:
+        time_difference = last_task_date - first_task_date
+        completion_days = time_difference.days
 
+
+    # convert completion days to months
+    if completion_days != 0:
+        completion_months = completion_days / 30
+    else:
+        completion_months = 0
 
     # calculate model (project/unit) completion percentage
     if count_model_completed == 0 or count_model_total == 0:
@@ -237,12 +251,12 @@ def get_stats(model):
         
     stats = {
         "status": model_status,
-        "completion_percent": completion_percent,
         "completion": {
             "percent": completion_percent,
             "days": completion_days,
-            "start": f'{first_task_date} 00:00:00',
-            "end": f'{last_task_date} 00:00:00',
+            "months": f"{completion_months:.1f}",
+            "start": f'{first_task_date or None}',
+            "end": f'{last_task_date or None}',
         },
         "counts": {
             "count_tasks": count_model_total,
