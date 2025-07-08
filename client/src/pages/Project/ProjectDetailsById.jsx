@@ -251,7 +251,7 @@ const ProjectDetailsById = () => {
                   
                   <div className="md:flex md:grid-cols-3">
                       <div className="flex flex-col gap-1">
-                        <ProgressBar progress={projectObj.stats.completion_percent} />
+                        <ProgressBar progress={projectObj.stats.completion.percent} />
                       </div>
 
 

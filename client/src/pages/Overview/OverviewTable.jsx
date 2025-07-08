@@ -81,7 +81,7 @@ function OverviewTable() {
                 <Table className="min-w-full">
                     <TableHead>
                         <TableRow>
-                            <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 left-0 z-30" >Unit</TableCell>
+                            <TableCell className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 left-0 z-30">Unit</TableCell>
                             <TableCell colSpan={3} className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion</TableCell>
                             <TableCell colSpan={max_tasks} className="px-6 py-3 bg-grey-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Tasks &nbsp;
@@ -103,7 +103,7 @@ function OverviewTable() {
                                     {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{unit.stats.status}</TableCell> */}
                                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.completion.percent}%</TableCell>
                                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.counts.count_completed}/{unit.stats.counts.count_tasks}</TableCell>
-                                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.completion.days} days</TableCell>
+                                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.completion.months} mo</TableCell>
                                     {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.week.count_scheduled_completed}/{unit.stats.week.count_scheduled}</TableCell> */}
                                     {unit.unit_tasks.map((raw_task) => {
                                         /*
