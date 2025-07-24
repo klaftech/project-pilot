@@ -7,113 +7,18 @@ import { getReadableStatus} from '@/utils/status_codes.js'
 import { stringToDate, getNextMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff, getToday } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
-import ProjectsContext from '@/context/ProjectsContext';
 
 function OverviewTable() {
     const [project, setProject] = useState(null)
-    const [projectLoaded, setProjectLoaded] = useState(false)
-    const [projectMasterTasklist, setProjectMasterTasklist] = useState([])
-    const [projectMasterTasklistLoaded, setProjectMasterTasklistLoaded] = useState(false)
     const [error, setError] = useState(null)
     const {user, setUser} = useContext(UserContext);
 
     useEffect(() => {
-        fetchProject()
-        fetchProjectMasterTasklist()
-        //fetchRecentStatusUpdates()
+        fetchProjectReport()
     }, [])
 
-    //only fetch unittasks upon initial projectLoaded
-    useEffect(() => {
-        fetchUnitDetails()
-    }, [projectLoaded])
-
-    
-    const fetchUnitDetails = () => {
-        
-        const pushUnitDetails = (id, value, data) => {
-            //save data to corresponding id we have in state
-            //console.log(id, data)
-
-            const tempProject = {...project}
-            tempProject.units.map(unit => {
-                if(unit.id == id){
-                    if(value=="tasks"){
-                        unit.tasks = data
-                    }
-                    if(value=="stats"){
-                        unit.stats = data.stats
-                    }
-                }
-                return unit
-            })
-            //console.log(project.units)
-            //console.log(tempProject.units)
-            
-            
-            // sort units by completion percentage
-            if(value=="stats"){
-                tempProject.units.sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
-            }
-
-            // Elchonon 07/23/2025
-            // TODO: apparantly the tasklist is being saved to state without actually setting
-            // something about my deconstructing is wrong im afraid..
-            setProject(tempProject)
-        }
-        
-        const getUnitTasks = (unit_id) => {
-            fetch('/api/unittasks?unit_id='+unit_id)
-            .then(res => {
-                if(res.ok){
-                    res.json()
-                    .then(data => {
-                        pushUnitDetails(unit_id, "tasks", data)
-                    })
-                } else {
-                    console.log("unable to load unit tasks data")
-                    throw new Error(res.status);
-                }
-            })
-        }
-
-        const getUnitStats = (unit_id) => {
-            fetch('/api/units/' + unit_id + '/stats')
-            .then(res => {
-                if(res.ok){
-                    res.json()
-                    .then(data => {
-                        pushUnitDetails(unit_id, "stats", data)
-                    })
-                } else {
-                    console.log("unable to load unit stats data")
-                    throw new Error(res.status);
-                }
-            })
-        }
-
-        if(project){
-            /*
-            const unit = project.units[0]
-            const data = getUnitTasks(unit.id)
-            console.log(data)
-            */
-            
-            project.units.map((unit) => {
-                //for each unit.id, fetch unit details from api and add to state array  
-                getUnitTasks(unit.id)
-                getUnitStats(unit.id)
-            })   
-        }
-    }
-    
-    const handleProjectResponse = (data) => {
-        setProject(data)
-        setProjectLoaded(true)
-    }
-
-    const fetchProject = () => {
-        fetch('/api/projects/' + user.selectedProject + '?include_stats=false')
+    const fetchProjectReport = () => {
+        fetch('/api/projects/'+user.selectedProject+'/report')
         .then(res => {
             if(res.ok){
                 res.json()
@@ -125,12 +30,9 @@ function OverviewTable() {
                     // //convert week stats
                     // data.stats.week.range_start = stringToDate(data.stats.week.range_start)
                     // data.stats.week.range_end = stringToDate(data.stats.week.range_end)
-                    
-                    // sort units by completion percentage
-                    //data.units.sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
 
                     // set local state
-                    handleProjectResponse(data)
+                    setProject(data)
                 })
             } else {
                 console.log("unable to load projects data")
@@ -140,35 +42,12 @@ function OverviewTable() {
         })
     }
 
-    const fetchProjectMasterTasklist = () => {
-        //console.log("fetching project master tasklist from backend")
-        fetch('/api/mastertasks?project_id='+user.selectedProject)
-        .then(res => {
-            if(res.ok){
-                res.json()
-                .then(data => {
-                //console.log(data)
-                const ordered_data = data.map((element, index) => {
-                    const task = {...element[index]}
-                    task.order=index+1
-                    return task
-                })
-                //setProjectMasterTasklist(ordered_data)
-                setProjectMasterTasklist(data)
-                setProjectMasterTasklistLoaded(true)
-                })
-            } else {
-                setError("Unable to load the project master tasklist specified.")
-            }
-        })
-    }
-    console.log("ProjectMasterTasklist: ",projectMasterTasklist)
-    
-    console.log("Project: ", project)
-
     if(error){
-        return (<><p>{error}</p></>)
+        return (
+            {error}
+        )
     }
+
     if(!project && !error){
         return (
             <>
@@ -178,21 +57,11 @@ function OverviewTable() {
         )
     }
 
-    if(!projectMasterTasklistLoaded){
-        return (<><p>Loading Task List...</p></>)
-    }
-
-
     // get max amount of tasks from all units for determining amount of columns
     let max_tasks = 0
-    if(projectMasterTasklistLoaded){
-        max_tasks = projectMasterTasklist.length
-    }
-    /*
     if(project){
         max_tasks = project.master_tasks.length
     }
-    */
     // if(project.length > 0 && project.units.length > 0){
     //     max_tasks = project.units.reduce((accumulator, currentValue) => {
     //         // alternatively, can get using currentValue.stats.counts.count_tasks
@@ -226,22 +95,17 @@ function OverviewTable() {
                     <TableBody>
                         {project && project.units.length <= 0 && (<TableRow><TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">No Units Found</TableCell></TableRow>)}
                         {project && project.units.length > 0 && project.units.map((unit) => {
-                            console.log(unit)
-                            //const task_count = unit.unit_tasks.length
-                            //const placeholders_to_add = max_tasks-task_count
-                            const placeholders_to_add = max_tasks
+                            const task_count = unit.unit_tasks.length
+                            const placeholders_to_add = max_tasks-task_count
                             return (
                                 <TableRow key={unit.id}>
                                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 z-10 bg-white">{unit.name}</TableCell>
                                     {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">{unit.stats.status}</TableCell> */}
-                                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{Object.hasOwn(unit, 'stats') && unit.stats.completion.percent}%</TableCell>
-                                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{Object.hasOwn(unit, 'stats') && unit.stats.counts.count_completed}/{Object.hasOwn(unit, 'stats') && unit.stats.counts.count_tasks}</TableCell>
-                                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{Object.hasOwn(unit, 'stats') && unit.stats.completion.months} mo</TableCell>
+                                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.completion.percent}%</TableCell>
+                                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.counts.count_completed}/{unit.stats.counts.count_tasks}</TableCell>
+                                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.completion.months} mo</TableCell>
                                     {/* <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.stats.week.count_scheduled_completed}/{unit.stats.week.count_scheduled}</TableCell> */}
-
-                                    {Object.hasOwn(unit, 'tasks') && unit.tasks.map((raw_task) => {
-                                        //console.log(raw_task)
-                                    /*{unit.unit_tasks.map((raw_task) => {*/
+                                    {unit.unit_tasks.map((raw_task) => {
                                         /*
                                         // removed all schedule based logic 03/24/2025, instead simply show completed/in-progress/scheduled based on completion and latest_updates
                                         const task = taskBuilder(raw_task)
