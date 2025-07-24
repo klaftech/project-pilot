@@ -1,3 +1,4 @@
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates, Session
@@ -112,6 +113,7 @@ class Project(db.Model, SerializerMixin):
     end = db.Column(db.DateTime, nullable=True, default=datetime.now(timezone.utc))
     project_type = db.Column(db.String, default="house")
     description = db.Column(db.String, nullable=True)
+    stats_json = db.Column(JSONB, default=dict)
 
     groups = db.relationship('Group', back_populates="project")
     units = db.relationship('Unit', back_populates="project")
@@ -165,14 +167,39 @@ class Project(db.Model, SerializerMixin):
 
 
 def get_stats(model):
+    stats_dummy = {
+        "status": "Pending",
+        "completion": {
+            "percent": 1,
+            "days": 1,
+            "months": f"1",
+            "start": f'{None}',
+            "end": f'{None}',
+        },
+        "counts": {
+            "count_tasks": 0,
+            "count_completed": 0,
+            "count_overdue": 0,
+            "count_upcoming": 0,
+        },
+        "week": {
+            "count_scheduled": 0,
+            "count_scheduled_completed": 0,
+            "count_completed": 0,
+            "range_start": f'00:00:00', # working with date, not datetime. export valid datetime string
+            "range_end": f'00:00:00', # working with date, not datetime. export valid datetime string
+        }
+    }
+    #return stats_dummy 
+
     if isinstance(model, Project):
         # for project
         base_count_query = db.session.query(func.count(UnitTask.id)).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)
-        base_query = UnitTask.query.join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)
+        base_query = db.session.query(UnitTask).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)
     elif isinstance(model, Unit):
         # for unit
         base_count_query = db.session.query(func.count(UnitTask.id)).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(UnitTask.unit_id == model.id)
-        base_query = UnitTask.query.filter(UnitTask.unit_id == model.id)
+        base_query = db.session.query(UnitTask).filter(UnitTask.unit_id == model.id)
     else:
         raise Exception('Unsupported Model Instance')
 
@@ -618,6 +645,7 @@ class Unit(db.Model, SerializerMixin):
     start = db.Column(db.DateTime, default=None, nullable=True)
     end = db.Column(db.DateTime, default=None, nullable=True)
     status = db.Column(db.String)
+    stats_json = db.Column(JSONB, default=dict)
 
     __table_args__ = (
         db.Index('ix_unit_project_id_id', 'project_id', 'id'),
@@ -1257,6 +1285,82 @@ class StatusUpdate(db.Model, SerializerMixin):
 
 
 
+# BEGIN ################## Project / Unit Stats ##################
+def get_stats2(model):
+    stats_dummy = {
+        "status": "Pending",
+        "completion": {
+            "percent": 1,
+            "days": 1,
+            "months": 1,
+            "start": 1,
+            "end": 1,
+        },
+        "counts": {
+            "count_tasks": 0,
+            "count_completed": 0,
+            "count_overdue": 0,
+            "count_upcoming": 0,
+        },
+        "week": {
+            "count_scheduled": 0,
+            "count_scheduled_completed": 0,
+            "count_completed": 0,
+            "range_start": '00:00:00',
+            "range_end": '00:00:00',
+        }
+    }
+    return stats_dummy 
+
+
+def update_project_stats(project_id):
+    print("*********** updating project stats ***********")
+    project = Project.query.get(project_id)
+    if project:
+        project.stats_json = get_stats(project)  # get_stats returns a dict which cant be saved, get_stats2 returns valid json
+        #db.session.commit()
+
+def update_unit_stats(model):
+    print("*********** updating unit stats ***********")
+    unit = Unit.query.get(model.id)
+    if unit:
+        print(get_stats(unit))
+        unit.stats_json = get_stats(unit)  # get_stats returns a dict which cant be saved, get_stats2 returns valid json
+        #db.session.commit()
+
+
+def after_unit_change(mapper, connection, target):
+    print("*********** unit change triggered ***********")
+    # Update unit stats
+    update_unit_stats(target)
+    # Update project stats
+    #if target.master_task:
+    #    update_project_stats(target.master_task.project_id)
+
+def after_unit_task_change(mapper, connection, target):
+    print("*********** unittask change triggered ***********")
+    # Update unit stats
+    update_unit_stats(target.unit_id)
+    # Update project stats
+    if target.master_task:
+        update_project_stats(target.master_task.project_id)
+
+def after_status_change(mapper, connection, target):
+    print("*********** status change triggered ***********")
+    # Update unit stats
+    update_unit_stats(target.task_id.unit_id)
+
+
+#event.listen(Unit, 'after_insert', after_unit_change)
+#event.listen(Unit, 'after_update', after_unit_change)
+#event.listen(Unit, 'after_delete', after_unit_change)
+#event.listen(UnitTask, 'after_insert', after_unit_task_change)
+#event.listen(UnitTask, 'after_update', after_unit_task_change)
+#event.listen(UnitTask, 'after_delete', after_unit_task_change)
+#event.listen(StatusUpdate, 'after_insert', after_status_change)
+#event.listen(StatusUpdate, 'after_update', after_status_change)
+#event.listen(StatusUpdate, 'after_delete', after_status_change)
+# END ################## Project / Unit Stats ##################
 
 
 

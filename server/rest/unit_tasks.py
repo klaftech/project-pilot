@@ -98,7 +98,7 @@ def get_project_pending_update(project_id):
 class UnitTasks(Resource):
     response_fields = (
         'id',
-        #'latest_update',
+        'latest_update', #required for project overview. otherwise can remove to speed up
         'pin_start',
         'pin_end',
         'pin_honored',

@@ -2,7 +2,7 @@
 from flask import request, abort, make_response, session
 from flask_restful import Resource
 
-from config import db
+from config import db, app
 from models import Project, Unit
 from app_helpers import validate_date_input
 from datetime import datetime
@@ -48,6 +48,16 @@ class Units(Resource):
 
         return make_response(new_record.to_dict(), 201)
     
+
+
+# used for overview stats
+@app.route('/api/units/<unit_id>/stats', methods=['GET'])
+def get_unit_stats(unit_id):
+    model = Unit.query.filter_by(id=unit_id).first()
+    if not model:
+        return make_response({"error": f"Model ID: {id} not found"}, 404)
+    return make_response(model.to_dict(only=('id','stats')), 200)
+
 
 class UnitByID(Resource):
     @classmethod
