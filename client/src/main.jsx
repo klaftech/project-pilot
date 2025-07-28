@@ -5,7 +5,8 @@ import './index.css'
 
 import App from "./App";
 import ContextProviderWrapper from './context/ContextProviderWrapper';
-import { Toaster } from "@/components/ui/toaster";
+//import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner"
 
 const root = document.getElementById("root");
 

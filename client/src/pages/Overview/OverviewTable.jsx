@@ -8,26 +8,102 @@ import { stringToDate, getNextMonday, getPreviousPreviousMonday, isDate, formatD
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
 import ProjectsContext from '@/context/ProjectsContext';
+import { toast } from "sonner"
 
 function OverviewTable() {
     const [project, setProject] = useState(null)
     const [projectLoaded, setProjectLoaded] = useState(false)
     const [projectMasterTasklist, setProjectMasterTasklist] = useState([])
     const [projectMasterTasklistLoaded, setProjectMasterTasklistLoaded] = useState(false)
+    const [unitStatsLoaded, setUnitStatsLoaded] = useState(false)
     const [error, setError] = useState(null)
     const {user, setUser} = useContext(UserContext);
-
+    
     useEffect(() => {
         fetchProject()
         fetchProjectMasterTasklist()
-        //fetchRecentStatusUpdates()
-    }, [])
+    }, [!project])
 
     //only fetch unittasks upon initial projectLoaded
     useEffect(() => {
         fetchUnitDetails()
     }, [projectLoaded])
 
+    //count units missing stats, set unitStatsLoaded when reaches 0
+    useEffect(() => {
+        if(project && !unitStatsLoaded){
+            //check if fully loaded
+            const noStatsCount = project.units.filter(unit => !Object.hasOwn(unit, 'stats'))
+            if(noStatsCount == 0){
+                console.log("stats fully loaded")
+                //run sort
+                setUnitStatsLoaded(true)
+                resortUnits()
+            }
+        }
+    }, [project])
+
+    
+    const handleRequestError = (resource, action) => {
+        //build error codes
+        let errorCode = "ER-"
+        if(action == "fetch"){
+            errorCode += "FETCH"
+        }else if(action == "parse"){
+            errorCode += "PARSE"
+        }else if(action == "http"){
+            errorCode += "HTTP"
+        }
+
+        if(resource == "project"){
+            errorCode += "100"
+        }else if(resource == "mastertasks"){
+            errorCode += "110"
+        }else if(resource == "units"){
+            errorCode += "120"
+        }else if(resource == "stats"){
+            errorCode += "130"
+        }else{
+            errorCode += "500"
+        }
+
+        toast(errorCode + ". Failed to load data. Please check your internet connection or filter settings.")
+
+        if(resource == "project" || resource == "mastertasks"){
+            setError("Failed to load data. Please check your internet connection or filter settings.")
+        }
+    }
+
+
+    
+    const resortUnits = () => {
+        //resort
+        console.log("resort fired")
+        
+        //deep copy the array from state
+        const tempUnits = JSON.parse(JSON.stringify(project.units));
+        
+        // sort units by completion percentage
+        const sortedUnits = tempUnits.sort((a,b) => {
+            // 1 = a goes after b
+            // -1 = b goes after a
+            //if(!Object.hasOwn(a, 'stats')){
+            //    return 1
+            //} else if (!Object.hasOwn(b, 'stats')){
+            //    return -1
+            //} else {
+                b.stats['completion']['percent'] - a.stats['completion']['percent']
+            //}
+        })
+        console.log(sortedUnits)
+        const newProject = {
+            ...project,
+            units: sortedUnits
+        }
+        
+        setProject(newProject)
+    }
+    
     
     const fetchUnitDetails = () => {
         
@@ -35,8 +111,62 @@ function OverviewTable() {
             //save data to corresponding id we have in state
             //console.log(id, data)
 
-            const tempProject = {...project}
-            tempProject.units.map(unit => {
+            const shallowProject = {...project}
+            
+            shallowProject.units.map((unit) => {
+                if(unit.id == id){
+                    if(value=="tasks"){
+                        unit.tasks = data
+                    }
+                    if(value=="stats"){
+                        unit.stats = data.stats
+                    }
+                }
+            })
+            
+            /*
+            // sort units by completion percentage
+            shallowProject.units.sort((a,b) => {
+                console.log(a)
+                console.log(b)
+                // 1 = a goes after b
+                // -1 = b goes after a
+                if(!Object.hasOwn(a, 'stats')){
+                    return 1
+                } else if (!Object.hasOwn(b, 'stats')){
+                    return -1
+                } else {
+                    b.stats['completion']['percent'] - a.stats['completion']['percent']
+                }
+            })
+            */
+            
+            //tempProject.units.filter((unit) => Object.hasOwn(unit, 'stats')).sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
+            //tempProject.units.sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
+            //tempUnits.filter(unit => Object.hasOwn(unit, 'stats'))
+            
+            //console.log("SSSSS")
+            //console.log(newProject)
+            setProject(shallowProject)
+        }
+
+        const pushUnitDetails2 = (id, value, data) => {
+            //save data to corresponding id we have in state
+            //console.log(id, data)
+
+            //deep copy the array from state
+            const tempUnits = JSON.parse(JSON.stringify(project.units));
+            
+            /*
+            const currentUnit = tempUnits.filter(unit => unit.id == id)[0]
+            if(value=="tasks"){
+                currentUnit.tasks = data
+            }
+            if(value=="stats"){
+                currentUnit.stats = data.stats
+            }
+            */
+            tempUnits.map(unit => {
                 if(unit.id == id){
                     if(value=="tasks"){
                         unit.tasks = data
@@ -47,19 +177,33 @@ function OverviewTable() {
                 }
                 return unit
             })
-            //console.log(project.units)
-            //console.log(tempProject.units)
-            
-            
-            // sort units by completion percentage
-            if(value=="stats"){
-                tempProject.units.sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
-            }
+            console.log(tempUnits)
 
-            // Elchonon 07/23/2025
-            // TODO: apparantly the tasklist is being saved to state without actually setting
-            // something about my deconstructing is wrong im afraid..
-            setProject(tempProject)
+
+            // sort units by completion percentage
+            const sortedUnits = tempUnits.sort((a,b) => {
+                // 1 = a goes after b
+                // -1 = b goes after a
+                if(!Object.hasOwn(a, 'stats')){
+                    return 1
+                } else if (!Object.hasOwn(b, 'stats')){
+                    return -1
+                } else {
+                    b.stats['completion']['percent'] - a.stats['completion']['percent']
+                }
+            })
+            
+            //tempProject.units.filter((unit) => Object.hasOwn(unit, 'stats')).sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
+            //tempProject.units.sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
+            //tempUnits.filter(unit => Object.hasOwn(unit, 'stats'))
+            
+            const newProject = {
+                ...project,
+                units: tempUnits
+            }
+            //console.log("SSSSS")
+            //console.log(newProject)
+            setProject(newProject)
         }
         
         const getUnitTasks = (unit_id) => {
@@ -69,12 +213,13 @@ function OverviewTable() {
                     res.json()
                     .then(data => {
                         pushUnitDetails(unit_id, "tasks", data)
-                    })
+                    }, error => handleRequestError("units","parse"))
                 } else {
-                    console.log("unable to load unit tasks data")
-                    throw new Error(res.status);
+                    handleRequestError("units","fetch")
+                    //console.log("unable to load unit tasks data")
+                    //throw new Error(res.status);
                 }
-            })
+            },  error => handleRequestError("units","http"))
         }
 
         const getUnitStats = (unit_id) => {
@@ -84,26 +229,24 @@ function OverviewTable() {
                     res.json()
                     .then(data => {
                         pushUnitDetails(unit_id, "stats", data)
-                    })
+                    }, error => handleRequestError("stats","parse"))
                 } else {
-                    console.log("unable to load unit stats data")
-                    throw new Error(res.status);
+                    handleRequestError("stats","fetch")
+                    //console.log("unable to load unit stats data")
+                    //throw new Error(res.status);
                 }
-            })
+            }, error => handleRequestError("stats","http"))
         }
 
         if(project){
-            /*
-            const unit = project.units[0]
-            const data = getUnitTasks(unit.id)
-            console.log(data)
-            */
+            //const unit = project.units[10]
+            //getUnitStats(unit.id)
             
             project.units.map((unit) => {
                 //for each unit.id, fetch unit details from api and add to state array  
                 getUnitTasks(unit.id)
                 getUnitStats(unit.id)
-            })   
+            })
         }
     }
     
@@ -114,6 +257,13 @@ function OverviewTable() {
 
     const fetchProject = () => {
         fetch('/api/projects/' + user.selectedProject + '?include_stats=false')
+        /*
+        .then(res => res.json(), error => console.error("fatch error"))
+        .then(data => {
+            console.log(data)
+            handleProjectResponse(data)
+        }, error => console.error("parse error"))
+        */
         .then(res => {
             if(res.ok){
                 res.json()
@@ -131,13 +281,14 @@ function OverviewTable() {
 
                     // set local state
                     handleProjectResponse(data)
-                })
+                }, error => handleRequestError("project","parse"))
             } else {
-                console.log("unable to load projects data")
+                handleRequestError("project","fetch")
+                //console.log("unable to load projects data")
                 //throw new Error(res.status);
-                setError("Unable to load projects data.")
+                //setError("Unable to load projects data.")
             }
-        })
+        }, error => handleRequestError("project","http"))
     }
 
     const fetchProjectMasterTasklist = () => {
@@ -156,15 +307,17 @@ function OverviewTable() {
                 //setProjectMasterTasklist(ordered_data)
                 setProjectMasterTasklist(data)
                 setProjectMasterTasklistLoaded(true)
-                })
+                }, error => handleRequestError("mastertasks","parse"))
             } else {
-                setError("Unable to load the project master tasklist specified.")
+                handleRequestError("mastertasks","fetch")
+                //setError("Unable to load the project master tasklist specified.")
             }
-        })
+        }, error => handleRequestError("mastertasks","http"))
     }
-    console.log("ProjectMasterTasklist: ",projectMasterTasklist)
     
-    console.log("Project: ", project)
+    //console.log("ProjectMasterTasklist: ",projectMasterTasklist)
+    
+    //console.log("Project: ", project)
 
     if(error){
         return (<><p>{error}</p></>)
@@ -226,7 +379,7 @@ function OverviewTable() {
                     <TableBody>
                         {project && project.units.length <= 0 && (<TableRow><TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">No Units Found</TableCell></TableRow>)}
                         {project && project.units.length > 0 && project.units.map((unit) => {
-                            console.log(unit)
+                            //console.log(unit)
                             //const task_count = unit.unit_tasks.length
                             //const placeholders_to_add = max_tasks-task_count
                             const placeholders_to_add = max_tasks
