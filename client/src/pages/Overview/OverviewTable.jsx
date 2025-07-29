@@ -28,21 +28,6 @@ function OverviewTable() {
     useEffect(() => {
         fetchUnitDetails()
     }, [projectLoaded])
-
-    //count units missing stats, set unitStatsLoaded when reaches 0
-    useEffect(() => {
-        if(project && !unitStatsLoaded){
-            //check if fully loaded
-            const noStatsCount = project.units.filter(unit => !Object.hasOwn(unit, 'stats'))
-            if(noStatsCount == 0){
-                console.log("stats fully loaded")
-                //run sort
-                setUnitStatsLoaded(true)
-                resortUnits()
-            }
-        }
-    }, [project])
-
     
     const handleRequestError = (resource, action) => {
         //build error codes
@@ -74,27 +59,59 @@ function OverviewTable() {
         }
     }
 
+    const handleFetch = (resource, url, callback) => {
+        fetch(url)
+        .then(res => {
+            if(res.ok){
+                res.json()
+                .then(data => {
+                    callback(data)
+                }, error => handleRequestError(resource, "parse"))
+            } else {
+                handleRequestError(resource, "fetch")
+                //console.log("unable to load " + resource + " data")
+                //throw new Error(res.status);
+            }
+        }, error => handleRequestError(resource, "http"))
+    }
 
-    
+    /*
+    //count units missing stats, set unitStatsLoaded when reaches 0
+    useEffect(() => {
+        if(project && !unitStatsLoaded){
+            //check if fully loaded
+            const noStatsCount = project.units.filter(unit => !Object.hasOwn(unit, 'stats'))
+            if(noStatsCount == 0){
+                console.log("stats fully loaded")
+                //run sort
+                setUnitStatsLoaded(true)
+                resortUnits()
+            }
+        }
+    }, [project])
+
+    // used to resort units in state, however was simpler to just sort following data fetch
     const resortUnits = () => {
         //resort
         console.log("resort fired")
         
         //deep copy the array from state
         const tempUnits = JSON.parse(JSON.stringify(project.units));
-        
+        console.log(tempUnits)
+
         // sort units by completion percentage
         const sortedUnits = tempUnits.sort((a,b) => {
             // 1 = a goes after b
             // -1 = b goes after a
-            //if(!Object.hasOwn(a, 'stats')){
-            //    return 1
-            //} else if (!Object.hasOwn(b, 'stats')){
-            //    return -1
-            //} else {
-                b.stats['completion']['percent'] - a.stats['completion']['percent']
-            //}
+            if(!Object.hasOwn(a, 'stats')){
+                return 1
+            } else if (!Object.hasOwn(b, 'stats')){
+                return -1
+            } else {
+                return b.stats['completion']['percent'] - a.stats['completion']['percent']
+            }
         })
+        
         console.log(sortedUnits)
         const newProject = {
             ...project,
@@ -103,8 +120,9 @@ function OverviewTable() {
         
         setProject(newProject)
     }
-    
-    
+    */
+
+        
     const fetchUnitDetails = () => {
         
         const pushUnitDetails = (id, value, data) => {
@@ -123,12 +141,9 @@ function OverviewTable() {
                     }
                 }
             })
-            
-            /*
+                 
             // sort units by completion percentage
             shallowProject.units.sort((a,b) => {
-                console.log(a)
-                console.log(b)
                 // 1 = a goes after b
                 // -1 = b goes after a
                 if(!Object.hasOwn(a, 'stats')){
@@ -136,20 +151,20 @@ function OverviewTable() {
                 } else if (!Object.hasOwn(b, 'stats')){
                     return -1
                 } else {
-                    b.stats['completion']['percent'] - a.stats['completion']['percent']
+                    return b.stats['completion']['percent'] - a.stats['completion']['percent']
                 }
             })
-            */
             
             //tempProject.units.filter((unit) => Object.hasOwn(unit, 'stats')).sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
             //tempProject.units.sort((a,b) => b.stats['completion']['percent'] - a.stats['completion']['percent'])
             //tempUnits.filter(unit => Object.hasOwn(unit, 'stats'))
-            
-            //console.log("SSSSS")
-            //console.log(newProject)
+
             setProject(shallowProject)
         }
 
+        /*
+        // the problem with this version is that the function is fired too quickly for each unit for state updates to handle
+        // alternatively, attempted to run sort on state following stats load completion.
         const pushUnitDetails2 = (id, value, data) => {
             //save data to corresponding id we have in state
             //console.log(id, data)
@@ -157,15 +172,6 @@ function OverviewTable() {
             //deep copy the array from state
             const tempUnits = JSON.parse(JSON.stringify(project.units));
             
-            /*
-            const currentUnit = tempUnits.filter(unit => unit.id == id)[0]
-            if(value=="tasks"){
-                currentUnit.tasks = data
-            }
-            if(value=="stats"){
-                currentUnit.stats = data.stats
-            }
-            */
             tempUnits.map(unit => {
                 if(unit.id == id){
                     if(value=="tasks"){
@@ -179,7 +185,6 @@ function OverviewTable() {
             })
             console.log(tempUnits)
 
-
             // sort units by completion percentage
             const sortedUnits = tempUnits.sort((a,b) => {
                 // 1 = a goes after b
@@ -189,7 +194,7 @@ function OverviewTable() {
                 } else if (!Object.hasOwn(b, 'stats')){
                     return -1
                 } else {
-                    b.stats['completion']['percent'] - a.stats['completion']['percent']
+                    return b.stats['completion']['percent'] - a.stats['completion']['percent']
                 }
             })
             
@@ -201,41 +206,30 @@ function OverviewTable() {
                 ...project,
                 units: tempUnits
             }
-            //console.log("SSSSS")
+            
             //console.log(newProject)
             setProject(newProject)
         }
-        
+        */
+
         const getUnitTasks = (unit_id) => {
-            fetch('/api/unittasks?unit_id='+unit_id)
-            .then(res => {
-                if(res.ok){
-                    res.json()
-                    .then(data => {
-                        pushUnitDetails(unit_id, "tasks", data)
-                    }, error => handleRequestError("units","parse"))
-                } else {
-                    handleRequestError("units","fetch")
-                    //console.log("unable to load unit tasks data")
-                    //throw new Error(res.status);
+            handleFetch(
+                "units", 
+                '/api/unittasks?unit_id=' + unit_id, 
+                (data) => {
+                    pushUnitDetails(unit_id, "tasks", data)
                 }
-            },  error => handleRequestError("units","http"))
+            )
         }
 
         const getUnitStats = (unit_id) => {
-            fetch('/api/units/' + unit_id + '/stats')
-            .then(res => {
-                if(res.ok){
-                    res.json()
-                    .then(data => {
-                        pushUnitDetails(unit_id, "stats", data)
-                    }, error => handleRequestError("stats","parse"))
-                } else {
-                    handleRequestError("stats","fetch")
-                    //console.log("unable to load unit stats data")
-                    //throw new Error(res.status);
+            handleFetch(
+                "stats", 
+                '/api/units/' + unit_id + '/stats', 
+                (data) => {
+                    pushUnitDetails(unit_id, "stats", data)
                 }
-            }, error => handleRequestError("stats","http"))
+            )
         }
 
         if(project){
@@ -256,14 +250,40 @@ function OverviewTable() {
     }
 
     const fetchProject = () => {
+        handleFetch(
+            "project", 
+            '/api/projects/' + user.selectedProject + '?include_stats=false', 
+            (data) => {
+                handleProjectResponse(data)
+            }
+        )
+    }
+
+    const fetchProjectMasterTasklist = () => {
+        handleFetch(
+            "mastertasks", 
+            '/api/mastertasks?project_id='+user.selectedProject, 
+            (data) => {
+                const ordered_data = data.map((element, index) => {
+                    const task = {...element[index]}
+                    task.order=index+1
+                    return task
+                })
+                //setProjectMasterTasklist(ordered_data)
+                setProjectMasterTasklist(data)
+                setProjectMasterTasklistLoaded(true)
+            }
+        )
+    }
+
+    /*
+    const fetchProject_old = () => {
         fetch('/api/projects/' + user.selectedProject + '?include_stats=false')
-        /*
-        .then(res => res.json(), error => console.error("fatch error"))
-        .then(data => {
-            console.log(data)
-            handleProjectResponse(data)
-        }, error => console.error("parse error"))
-        */
+        // .then(res => res.json(), error => console.error("fatch error"))
+        // .then(data => {
+        //     console.log(data)
+        //     handleProjectResponse(data)
+        // }, error => console.error("parse error"))
         .then(res => {
             if(res.ok){
                 res.json()
@@ -290,31 +310,8 @@ function OverviewTable() {
             }
         }, error => handleRequestError("project","http"))
     }
+    */
 
-    const fetchProjectMasterTasklist = () => {
-        //console.log("fetching project master tasklist from backend")
-        fetch('/api/mastertasks?project_id='+user.selectedProject)
-        .then(res => {
-            if(res.ok){
-                res.json()
-                .then(data => {
-                //console.log(data)
-                const ordered_data = data.map((element, index) => {
-                    const task = {...element[index]}
-                    task.order=index+1
-                    return task
-                })
-                //setProjectMasterTasklist(ordered_data)
-                setProjectMasterTasklist(data)
-                setProjectMasterTasklistLoaded(true)
-                }, error => handleRequestError("mastertasks","parse"))
-            } else {
-                handleRequestError("mastertasks","fetch")
-                //setError("Unable to load the project master tasklist specified.")
-            }
-        }, error => handleRequestError("mastertasks","http"))
-    }
-    
     //console.log("ProjectMasterTasklist: ",projectMasterTasklist)
     
     //console.log("Project: ", project)
