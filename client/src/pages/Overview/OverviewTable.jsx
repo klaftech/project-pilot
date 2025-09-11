@@ -432,7 +432,7 @@ function OverviewTable() {
                                         //get background color for task cell
                                         //set task status as required for this script
                                         let status_background = ""
-                                        let overview_task_status = "500"
+                                        let overview_task_status = ""
                                         const taskStatusCode = task.status_code
                                         if(taskStatusCode === 200){
                                             //completed
@@ -450,6 +450,9 @@ function OverviewTable() {
                                             //in progress. task is not completed, is not stuck and progress in more than 0
                                             status_background = "bg-blue-200"
                                             overview_task_status = "311"
+                                        } else if(taskStatusCode === 500){
+                                            status_background = "bg-red-200"
+                                            overview_task_status = "500"
                                         } else {
                                             //scheduled. task is not completed and there is no progress
                                             status_background = "" //"bg-yellow-200"

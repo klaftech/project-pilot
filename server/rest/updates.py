@@ -38,7 +38,7 @@ class StatusUpdates(Resource):
         300 scheduled
         310 pending
         311 in progress
-        500 Stuck        
+        500 Stuck
         """
         valid_statuses = [1, 25, 50, 75, 100, 200, 300, 310, 311, 400, 500]
         
@@ -131,6 +131,9 @@ class StatusUpdates(Resource):
         
         if 'record_date' in data:
             new_record.timestamp = data['record_date']
+
+        if 'message' in data:
+            new_record.message = data['message']
 
         db.session.add(new_record)
         db.session.commit()
