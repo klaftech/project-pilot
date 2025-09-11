@@ -4,7 +4,7 @@ import { TriangleAlert } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react'
 import { taskBuilder, getTaskStatus } from '@/utils/task.js';
 import { getReadableStatus} from '@/utils/status_codes.js'
-import { stringToDate, getNextMonday, getPreviousPreviousMonday, isDate, formatDatePretty, getDaysDiff, getToday } from '@/utils/date';
+import { stringToDate, getNextMonday, getPreviousPreviousMonday, isDate, formatDatePretty, formatDateTimePretty, getDaysDiff, getToday } from '@/utils/date';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
 import ProjectsContext from '@/context/ProjectsContext';
@@ -151,7 +151,7 @@ function OverviewTable() {
                 } else if (!Object.hasOwn(b, 'stats')){
                     return -1
                 } else {
-                    return b.stats['completion']['percent'] - a.stats['completion']['percent']
+                    return (b.stats['completion']['percent'] - a.stats['completion']['percent'] || b.stats['counts']['count_in_progress'] - a.stats['counts']['count_in_progress'])
                 }
             })
             
@@ -370,6 +370,7 @@ function OverviewTable() {
                                 <Badge className="bg-blue-200 text-grey-50">In Progress</Badge>&nbsp;
                                 <Badge className="bg-red-200 text-grey-50">Stuck</Badge>&nbsp;
                                 <Badge className="bg-yellow-200 text-grey-50">Scheduled</Badge>&nbsp;
+                                Report Loaded: {formatDateTimePretty(new Date())}
                             </TableCell>
                         </TableRow>
                     </TableHead>

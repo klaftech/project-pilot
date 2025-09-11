@@ -138,7 +138,7 @@ class UnitTasks(Resource):
         if not project_filter and not unit_filter:
             return make_response({"error": f"Result set must be filtered"}, 422)
 
-        tasks = [task.to_dict(only=self.__class__.response_fields) for task in tasks_query.all()]
+        tasks = [task.to_dict(only=self.__class__.response_fields) for task in tasks_query.order_by(UnitTask.sched_start, UnitTask.task_id).all()]
         return make_response(tasks, 200)
     
     # no reason to ever create new UnitTask, they are directly linked to MasterTasks

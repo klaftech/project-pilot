@@ -209,11 +209,13 @@ def get_stats(model):
     next_monday = get_next_monday()
 
     get_completed = base_count_query.filter(UnitTask.complete_status == True)
+    get_in_progress = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.started_status == True).filter(UnitTask.status_code != 310)
     get_upcoming = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_start < today).filter(UnitTask.sched_start > today-timedelta(days=7))
     get_overdue = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today)
 
     count_model_total = base_count_query.first()[0]
     count_model_completed = get_completed.first()[0]
+    count_model_in_progress = get_in_progress.first()[0]
     count_model_overdue = get_overdue.first()[0]
     count_model_upcoming = get_upcoming.first()[0]
     
@@ -288,6 +290,7 @@ def get_stats(model):
         "counts": {
             "count_tasks": count_model_total,
             "count_completed": count_model_completed,
+            "count_in_progress": count_model_in_progress,
             "count_overdue": count_model_overdue,
             "count_upcoming": count_model_upcoming,
         },
