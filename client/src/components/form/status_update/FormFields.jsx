@@ -46,25 +46,6 @@ const FormFields = ({ form, taskObj }) => {
 
     return (
         <>
-            {/* <FormField
-                control={form.control}
-                name="message"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Status Message</FormLabel>
-                    <FormControl>
-                        <Input {...field} />
-                    </FormControl>
-                    {
-                    // <FormDescription>
-                    //    Task Name.
-                    //</FormDescription>
-                    }
-                    <FormMessage />
-                    </FormItem>
-                )}
-            /> */}
-
             {/* 
             <FormField
                 control={form.control}
@@ -245,6 +226,25 @@ const FormFields = ({ form, taskObj }) => {
                     <FormDescription>
                         Status Date.
                     </FormDescription>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <FormField
+                control={form.control}
+                name="message"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Status Message</FormLabel>
+                    <FormControl>
+                        <Input {...field} />
+                    </FormControl>
+                    {
+                    // <FormDescription>
+                    //    Task Name.
+                    //</FormDescription>
+                    }
                     <FormMessage />
                     </FormItem>
                 )}
