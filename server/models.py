@@ -179,6 +179,7 @@ def get_stats(model):
         "counts": {
             "count_tasks": 0,
             "count_completed": 0,
+            "count_in_progress": 0,
             "count_overdue": 0,
             "count_upcoming": 0,
         },
@@ -188,6 +189,9 @@ def get_stats(model):
             "count_completed": 0,
             "range_start": f'00:00:00', # working with date, not datetime. export valid datetime string
             "range_end": f'00:00:00', # working with date, not datetime. export valid datetime string
+        },
+        "updates": {
+            "last_activity": f'00:00:00'
         }
     }
     #return stats_dummy 
@@ -196,14 +200,15 @@ def get_stats(model):
         # for project
         base_count_query = db.session.query(func.count(UnitTask.id)).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)
         base_query = db.session.query(UnitTask).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)
+        base_statuses = db.session.query(StatusUpdate).join(UnitTask, UnitTask.id == StatusUpdate.task_id).join(Unit, Unit.id == UnitTask.unit_id).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == model.id)    
     elif isinstance(model, Unit):
         # for unit
         base_count_query = db.session.query(func.count(UnitTask.id)).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(UnitTask.unit_id == model.id)
         base_query = db.session.query(UnitTask).filter(UnitTask.unit_id == model.id)
+        base_statuses = db.session.query(StatusUpdate).join(UnitTask, UnitTask.id == StatusUpdate.task_id).join(Unit, Unit.id == UnitTask.unit_id).filter(Unit.id == model.id)
     else:
         raise Exception('Unsupported Model Instance')
-
-
+    
     today = date.today()
     previous_monday = get_previous_monday()
     next_monday = get_next_monday()
@@ -223,6 +228,9 @@ def get_stats(model):
     count_week_scheduled_completed = get_completed.filter(UnitTask.sched_start > previous_monday).filter(UnitTask.sched_start < next_monday).first()[0]
     count_week_completed = get_completed.filter(UnitTask.complete_date > previous_monday).filter(UnitTask.complete_date < next_monday).first()[0]
 
+    # determine most recent status update
+    most_recent_status = base_statuses.order_by(StatusUpdate.timestamp.desc()).first()
+    last_update = most_recent_status.timestamp
 
     # calculate model beginning and end dates and completion days
     tasks_in_order = base_query.order_by(UnitTask.started_date.asc())
@@ -300,6 +308,9 @@ def get_stats(model):
             "count_completed": count_week_completed,
             "range_start": f'{previous_monday} 00:00:00', # working with date, not datetime. export valid datetime string
             "range_end": f'{next_monday} 00:00:00', # working with date, not datetime. export valid datetime string
+        },
+        "updates": {
+            "latest_update": f'{last_update or None}',
         }
     }
     return stats

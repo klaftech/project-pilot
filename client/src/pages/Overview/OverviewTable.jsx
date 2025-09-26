@@ -370,7 +370,7 @@ function OverviewTable() {
                                 <Badge className="bg-blue-200 text-grey-50">In Progress</Badge>&nbsp;
                                 <Badge className="bg-red-200 text-grey-50">Stuck</Badge>&nbsp;
                                 <Badge className="bg-yellow-200 text-grey-50">Scheduled</Badge>&nbsp;
-                                Report Loaded: {formatDateTimePretty(new Date())}
+                                {Object.hasOwn(project, 'stats') && <>Last Update: {formatDateTimePretty(project.stats.updates.latest_update)}</>}
                             </TableCell>
                         </TableRow>
                     </TableHead>
