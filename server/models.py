@@ -230,7 +230,7 @@ def get_stats(model):
 
     # determine most recent status update
     most_recent_status = base_statuses.order_by(StatusUpdate.timestamp.desc()).first()
-    last_update = most_recent_status.timestamp
+    last_update = most_recent_status.timestamp if most_recent_status != None else None
 
     # calculate model beginning and end dates and completion days
     tasks_in_order = base_query.order_by(UnitTask.started_date.asc())
