@@ -18,6 +18,9 @@ import { filterFns } from "@tanstack/react-table"
 import { data } from "react-router"
 
 function UpdatesCardWrapper({ taskObj }) {
+    
+    console.log("UpdatesCardWrapper - taskObj: ",taskObj)
+    
     const [errors, setErrors] = useState(null)
     const [updates, setUpdates] = useState([])
 
@@ -28,11 +31,6 @@ function UpdatesCardWrapper({ taskObj }) {
 
     console.log(modelObj)
     console.log(updates)
-
-    if (taskObj.complete_status == false){
-        //setModelObj({task_id: taskObj.id, taskObj: {...taskObj}})
-        setShowForm(true)
-    }
 
     const fetchHelper = (url, callback) => (
         fetch(url)
@@ -54,11 +52,19 @@ function UpdatesCardWrapper({ taskObj }) {
         setModelObj({task_id: taskObj.id, taskObj: taskObj})
     },[taskObj.id])
 
+    useEffect(() => {
+        if (taskObj.complete_status == false){
+            //setModelObj({task_id: taskObj.id, taskObj: {...taskObj}})
+            setShowForm(true)
+        }
+    }, [taskObj.complete_status])
+
     //const formScenario = "create"
     //const modelObj = {task_id: taskObj.id, taskObj: {...taskObj}}
     //setModelObj({task_id: taskObj.id, taskObj: taskObj})
 
-     const sortArrayByDate = (data, sortOrder = 'asc') => {
+    // Sorting function to sort updates by timestamp
+    const sortArrayByDate = (data, sortOrder = 'asc') => {
         // Create a copy of the array to avoid direct mutation of state
         const sortedData = [...data].sort((a, b) => {
             const dateA = new Date(a.timestamp); // Replace 'dateProperty' with your actual property name
@@ -94,7 +100,7 @@ function UpdatesCardWrapper({ taskObj }) {
 
     
     return (
-        <>
+        <>          
             <Card>
                 {showForm &&             
                 <>
