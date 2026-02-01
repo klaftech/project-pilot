@@ -60,10 +60,17 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
             console.log("formData.record_date (formatted): ",form_data.record_date)
         }
 
+        // inject the relevant reference data based on request methdod scenario
         if(request_method == "POST"){
             form_data = {
                 ...form_data, 
                 task_id: modelObj.task_id,
+            }
+        }
+        if(request_method == "PATCH"){
+            form_data = {
+                ...form_data, 
+                id: modelObj.id,
             }
         }
 
@@ -108,7 +115,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
 
     const defaultFormValues = {
         task_id: '',
-        message: undefined,
+        message: '',
         task_status: '',
         record_date: undefined
     }
@@ -140,18 +147,21 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
             const data = modelObj
             
             setFetchParams({
-                url: "/api/updates/"+data.id, 
+                url: "/api/updates/" + data.id, 
                 request_method: "PATCH"
             })
             
-            // let pin_start = undefined
-            // if(data.pin_start){
-            //     //pin_start = new Date(data.pin_start).setHours(0, 0, 0, 0); //set to midnight //accepting string
-            //     pin_start = data.pin_start
-            // }
+            // convert string to javascript date
+            let record_date = undefined
+            if(data.timestamp){
+                //record_date = new Date(data.timestamp).setHours(0, 0, 0, 0); //set to midnight //accepting string
+                //record_date = data.timestamp
+                record_date = new Date(data.timestamp)
+            }
 
             form.setValue('task_status', data.task_status);
-            form.setValue('message', data.message);
+            form.setValue('record_date', record_date);
+            form.setValue('message', data.message !== null ? data.message : "");
         } else {
             console.log('useEffect. form reset to default values')
             setFetchParams(defaultFetchParams)
