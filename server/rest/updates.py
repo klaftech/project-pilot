@@ -120,9 +120,36 @@ class StatusUpdateByID(Resource):
         
         data = request.get_json()
         
-        # if status is completed, can't modify status
-        if ('task_status' in data) and (model.task_status == "200"):
-            return make_response({"error": "Completed Status can't be changed."}, 422)
+        # check for mismatched date or status for completed tasks
+        date_mismatch = False
+        if 'record_date' in data:
+            dt_model = datetime.strptime(str(model.timestamp), "%Y-%m-%d %H:%M:%S")
+            dt_data = datetime.strptime(str(data.get('record_date')), "%Y-%m-%d")
+            if dt_model.date() != dt_data.date():
+                date_mismatch = True
+
+        status_mismatch = False
+        if 'task_status' in data:
+            if data.get('task_status') is not model.task_status:
+                status_mismatch = True
+
+        #print("UnitTask status:", model.unit_task.status_code)
+        #print("task status:", model.task_status)
+        #print("date_mismatch:", date_mismatch)
+        #print("status_mismatch:", status_mismatch)
+
+        # for task completion updates, don't allow changing date or status
+        if (model.task_status == 200) and (status_mismatch or date_mismatch):
+            return make_response({"error": "Date and Status for a task completion update can't be changed."}, 422)
+
+        # for task completion updates, remove status and date from data to prevent changes
+        if model.task_status == 200:
+            if 'task_status' in data:
+                del data['task_status']
+            if 'record_date' in data:
+                del data['record_date']
+
+        #print("data after completed check:", data)
 
         try:
             # only allow updating specific fields
@@ -152,7 +179,9 @@ class StatusUpdateByID(Resource):
         
         db.session.commit()
 
-        update_unit_task(model.unit_task, model)
+        # update UnitTask if its not already completed and the status changed
+        if model.unit_task.status_code != 200 and status_mismatch:
+            update_unit_task(model.unit_task, model)
         
         return make_response(model.to_dict(only=self.__class__.response_fields), 202)
     

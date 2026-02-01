@@ -7,6 +7,9 @@ import {
     CardTitle,
   } from "@/components/ui/card"
 
+import { Button } from "@/components/ui/button"
+import { PencilIcon } from "lucide-react"
+
 import { Avatar } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { getReadableStatus } from "@/utils/status_codes"
@@ -14,7 +17,7 @@ import { stringToDate, formatDateTimePretty, formatDatePretty } from "@/utils/da
 // import { Input } from "@/components/ui/input"
 // import { Button } from "@/components/ui/button"
 
-function UpdatesCardBubbles({updates, taskObj}) {
+function UpdatesCardBubbles({updates, taskObj, clickEditStatus}) {
     // const handleSendMessage = (data) => console.log(data)
     // const setNewMessage = (message) => "value"
     // const newMessage = "new message"
@@ -54,6 +57,10 @@ function UpdatesCardBubbles({updates, taskObj}) {
                                 >
                                     <p className="text-sm">Status: {getReadableStatus(update.task_status)}</p>
                                     <p className="text-sm">{update.message && "Message: "+update.message}</p>
+                                    <Button variant="ghost" size="icon" onClick={()=>clickEditStatus(update)}>
+                                        <PencilIcon className="h-4 w-4" />
+                                        <span className="sr-only">Edit</span>
+                                    </Button>
                                 </Card>
                                 <p className="text-xs text-muted-foreground mt-1 px-1">{formatDateTimePretty(stringToDate(update.timestamp, true))}</p>
                             </div>

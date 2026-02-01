@@ -30,7 +30,7 @@ import {
 import UserContext from '@/context/UserContext'
 import { status_options, getFilteredStatusOptions } from '@/utils/status_codes'
 
-const FormFields = ({ form, taskObj }) => {
+const FormFields = ({ form, formScenario, taskObj }) => {
     
     //set fields as readonly because we're not ready to handle logic yet
     const isReadOnly = false
@@ -40,7 +40,7 @@ const FormFields = ({ form, taskObj }) => {
         return 
     }
 
-    if(taskObj.status_code == 200){
+    if(formScenario == "create" && taskObj.status_code == 200){
         return (<>Task is already completed</>)
     }
 
@@ -191,6 +191,7 @@ const FormFields = ({ form, taskObj }) => {
                     <FormItem className="flex flex-col">
                     <FormLabel>Date</FormLabel>
                     <Popover>
+                        {console.log(field)}
                         <PopoverTrigger asChild>
                         <FormControl>
                             <Button
