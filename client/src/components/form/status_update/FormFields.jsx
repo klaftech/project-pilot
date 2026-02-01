@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react'
+import { useFormContext } from 'react-hook-form'
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -32,8 +33,13 @@ import { status_options, getFilteredStatusOptions } from '@/utils/status_codes'
 
 const FormFields = ({ form, formScenario, taskObj }) => {
     
-    //set fields as readonly because we're not ready to handle logic yet
-    const isReadOnly = false
+    //get the form from context instead of props
+    const formContext = useFormContext()
+    const actualForm = form || formContext
+
+    // set read-only for some fields (except message) if editing the completion update of a completed task
+    const isReadyOnly = true ? actualForm.getValues("task_status") == 200 && taskObj.complete_status === true && formScenario == "update" : false
+    //console.log("isReadyOnly:", isReadyOnly)
 
     if(!taskObj){
         //if taskObj is not set, exit script
@@ -116,17 +122,18 @@ const FormFields = ({ form, formScenario, taskObj }) => {
             */}
 
             <FormField
-                control={form.control}
+                control={actualForm.control}
                 name="task_status"
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Current Status</FormLabel>
                     <Popover>
-                        <PopoverTrigger asChild>
+                        <PopoverTrigger asChild disabled={isReadyOnly}>
                         <FormControl>
                             <Button
                             variant="outline"
                             role="combobox"
+                            disabled={isReadyOnly}
                             className={cn(
                                 "w-[200px] justify-between",
                                 !field.value && "text-muted-foreground"
@@ -154,8 +161,10 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                                 <CommandItem
                                     value={status.title}
                                     key={status.code}
+                                    disabled={isReadyOnly}
                                     //onSelect={field.onChange}
                                     onSelect={() => {
+                                        if (isReadyOnly) return
                                         //form.setValue("group_id", group.id)
                                         field.onChange(status.code)
                                     }}
@@ -185,17 +194,18 @@ const FormFields = ({ form, formScenario, taskObj }) => {
             />
 
             <FormField
-                control={form.control}
+                control={actualForm.control}
                 name="record_date"
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Date</FormLabel>
                     <Popover>
                         {console.log(field)}
-                        <PopoverTrigger asChild>
+                        <PopoverTrigger asChild disabled={isReadyOnly}>
                         <FormControl>
                             <Button
                             variant={"outline"}
+                            disabled={isReadyOnly}
                             className={cn(
                                 "w-[240px] pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
@@ -215,8 +225,9 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                             mode="single"
                             selected={field.value}
                             //onSelect={field.onChange}
-                            onSelect={isReadOnly ? undefined : field.onChange} // ❗ don't update when readonly
-                            disabled={isReadOnly ? () => true : undefined}     // ❗ disables all dates visually
+                            // handle readonly state (don't allow changes if task_status is 200)
+                            onSelect={isReadyOnly ? undefined : field.onChange} // ❗ don't update when task is completed
+                            disabled={isReadyOnly ? () => true : undefined}     // ❗ disables all dates visually
                             // disabled={(date) =>
                             //   date > new Date() || date < new Date("1900-01-01")
                             // }
@@ -233,7 +244,7 @@ const FormFields = ({ form, formScenario, taskObj }) => {
             />
 
             <FormField
-                control={form.control}
+                control={actualForm.control}
                 name="message"
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
