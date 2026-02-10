@@ -12,6 +12,7 @@ from sqlalchemy import func
 # sets absolute path for deployment
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import app, db, api
@@ -21,13 +22,14 @@ from models import db, User, Project, Group, MasterTask, MasterTaskDependency, T
 
 # from app_helpers import find_task_model_by_id
 from rest.auth import UserSignup, UserLogin, UserLogout, UserAuthorize, UserProfile
+from rest.users import Users, UserByID
 from rest.groups import Groups, GroupByID
 from rest.updates import StatusUpdates, StatusUpdateByID
 from rest.master_tasks import MasterTasks, MasterTaskByID, Dependencies, DependencyByID, get_dependencies_ancestors, get_dependencies_descendents, get_dependencies_available
 from rest.units import Units, UnitByID, get_unit_stats
 from rest.unit_tasks import UnitTasks, UnitTaskByID, get_project_pending_update
 from rest.projects import get_projects, get_project_details, get_projects_minimal
-
+from rest.project_users import ProjectUsers, ProjectUserByID
 
 # the following adds route-specific authorization
 @app.before_request
@@ -47,6 +49,12 @@ api.add_resource(UserLogin, '/api/login')
 api.add_resource(UserLogout, '/api/logout')
 api.add_resource(UserAuthorize, '/api/authorize')
 api.add_resource(UserProfile, '/api/profile')
+
+api.add_resource(Users, '/api/users')
+api.add_resource(UserByID, '/api/users/<int:id>')
+
+api.add_resource(ProjectUsers, '/api/projectusers')
+api.add_resource(ProjectUserByID, '/api/projectusers/<int:id>')
 
 api.add_resource(Groups, '/api/groups')
 api.add_resource(GroupByID, '/api/groups/<int:id>')

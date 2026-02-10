@@ -4,7 +4,7 @@ from flask_restful import Resource
 
 from config import db
 from models import Group
-
+from rest.auth import allowed_projects
 
 class Groups(Resource):
     def get(self):
@@ -16,6 +16,8 @@ class Groups(Resource):
         project_filter = request.args.get("project_id")
         if project_filter != None:
             groups_query = groups_query.filter(Group.project_id == project_filter)
+            if Group.query.filter_by(project_id=project_filter).first().project not in allowed_projects():
+                return make_response({"error": "User not authorized for this project"}, 403)
         else:
             return make_response({"error": "Group must be specified"}, 422)
         
@@ -29,6 +31,8 @@ class Groups(Resource):
                 name = data['name'],
                 project_id = data['project_id']
             )
+            if Group.query.filter_by(project_id=data['project_id']).first().project not in allowed_projects():
+                return make_response({"error": "User not authorized for this project"}, 403)
         except ValueError as e:
             abort(422, e.args[0])
         
@@ -51,12 +55,17 @@ class GroupByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if model.project not in allowed_projects():
+            return make_response({"error": "User not authorized for this project"}, 403)
         return make_response(model.to_dict(rules=('-master_tasks','-project')), 200)
            
     def patch(self, id):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if model.project not in allowed_projects():
+            return make_response({"error": "User not authorized for this project"}, 403)
+        
         data = request.get_json()
         try:
             for attr,value in data.items():
@@ -72,7 +81,9 @@ class GroupByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
-        
+        if model.project not in allowed_projects():
+            return make_response({"error": "User not authorized for this project"}, 403)
+                
         # if there are tasks linked to this group, do not allow delete
         if model.master_tasks:
             tasks_list = ""

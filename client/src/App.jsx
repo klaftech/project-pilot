@@ -11,6 +11,7 @@ import TasksHomeContainer from '@/pages/Tasks/TasksHomeContainer';
 import ListContainer from '@/pages/List/ListContainer'
 import ScheduleContainer from "@/pages/Schedule/ScheduleContainer";
 import OverviewContainer from '@/pages/Overview/OverviewContainer'
+import AdminContainer from '@/pages/Admin/AdminContainer'
 import Signup from '@/pages/Signup/Signup'
 import Login from '@/pages/Login/Login'
 import Logout from '@/pages/Logout/Logout'
@@ -23,6 +24,8 @@ import AppDev from '@/dev/_AppDev'
 
 import UserContext from '@/context/UserContext'
 import { toast } from "sonner"
+import ShowAlert from "@/components/ShowAlert";
+import AppWrapper from '@/components/AppWrapper'
 
 function App() {
     
@@ -32,7 +35,7 @@ function App() {
     const {user, setUser} = useContext(UserContext);
     const navigate = useNavigate()
     let location = useLocation()
-    
+
     useEffect(() => {
         if(location.pathname != "/signup"){
             fetchUser()
@@ -66,6 +69,13 @@ function App() {
         <Signup />
     )
 
+    /* bypass issue of blank page showing on users with no project permissions, since they technically are "logged in" but have no access to any content */
+    if(user && user.selectedProject == null && location.pathname != "/logout") return (
+        <AppWrapper>
+             <ShowAlert message="You do not have any project permissions. Please contact your administrator." />
+        </AppWrapper>
+    )
+
     return (
         <>
         {/* since adding to App instead of individual pages, navigation pane doesn't auto-close on selection, moved to save on projects reload */}
@@ -80,6 +90,7 @@ function App() {
             <Route path="list" element={<ListContainer />} />
             <Route path="schedule" element={<ScheduleContainer />} />
             <Route path="overview" element={<OverviewContainer />} />
+            <Route path="admin" element={<AdminContainer />} />
             <Route path="signup" element={<Signup />} />
             <Route path="login" element={<Login />} />
             <Route path="logout" element={<Logout updateUser={setUser} />} />

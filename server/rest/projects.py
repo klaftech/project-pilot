@@ -7,12 +7,12 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime
 
 from config import db, app
-from models import Project, Unit, UnitTask
-
+from models import Project, ProjectUser, Unit, UnitTask, User
+from rest.auth import allowed_projects
 
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
-    projects = [project.to_dict() for project in Project.query.all()]
+    projects = [project.to_dict() for project in allowed_projects()]
     return make_response(projects, 200)
 
 @app.route('/api/projects/<project_id>', methods=['GET'])
@@ -23,9 +23,15 @@ def get_project_details(project_id):
         '-units.unit_tasks'
     )
     
+    if project_id == "null":
+        return make_response({"error": "Project ID must be specified"}, 422)
+    
     model = Project.query.filter_by(id=project_id).first()
     if not model:
         return make_response({"error": f"Project ID: {project_id} not found"}, 404)
+    
+    if model not in allowed_projects():
+        return make_response({"error": "User not authorized for this project"}, 403)
     
     # if request includes include_stats flag, override response fields
     include_stats = request.args.get("include_stats")
@@ -41,7 +47,14 @@ def get_project_details(project_id):
 # used for navigation menu
 @app.route('/api/projects/minimal', methods=['GET'])
 def get_projects_minimal():
-    projects = [project.to_dict(only=('id','name','project_type','description','start','end','units'),rules=('-units.stats','-units.unit_tasks')) for project in Project.query.all()]
+    user = User.query.filter_by(id=session.get('user_id')).first()
+    if not user:
+        return make_response({"error": "User not found"}, 404)
+    
+    projects = [project.to_dict(only=('id','name','project_type','description','start','end','units'),rules=('-units.stats','-units.unit_tasks')) for project in allowed_projects()]
+    
+    print(allowed_projects())
+    print("ProjectUser Links Found: ",len(projects))
     return make_response(projects, 200)
 
 
