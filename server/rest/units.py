@@ -6,7 +6,7 @@ from config import db, app
 from models import Project, Unit
 from app_helpers import validate_date_input
 from datetime import datetime
-
+from rest.auth import allowed_projects
 
 class Units(Resource):
     def get(self):
@@ -18,6 +18,9 @@ class Units(Resource):
         else:
             return make_response({"error": "Project must be specified"}, 422)
         
+        if Project.query.filter_by(id=project_filter).first() not in allowed_projects():
+            return make_response({"error": "User not authorized for this project"}, 403)
+
         units = [unit.to_dict(rules=('-project','-unit_tasks')) for unit in units_query.all()]
         return make_response(units, 200)
     
@@ -28,6 +31,9 @@ class Units(Resource):
                 name = data['name'],
                 project_id = data['project_id']
             )
+
+            if Project.query.filter_by(id=data['project_id']).first() not in allowed_projects():
+                return make_response({"error": "User not authorized for this project"}, 403)
 
             if 'start' in data and validate_date_input(data['start'], "%Y-%m-%d"):
                 new_record.start = datetime.strptime(data['start'], "%Y-%m-%d")
@@ -56,6 +62,8 @@ def get_unit_stats(unit_id):
     model = Unit.query.filter_by(id=unit_id).first()
     if not model:
         return make_response({"error": f"Model ID: {id} not found"}, 404)
+    if model.project not in allowed_projects():
+        return make_response({"error": "User not authorized for this project"}, 403)
     return make_response(model.to_dict(only=('id','stats')), 200)
 
 
@@ -72,12 +80,16 @@ class UnitByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if model.project not in allowed_projects():
+            return make_response({"error": "User not authorized for this project"}, 403)
         return make_response(model.to_dict(rules=('-unit_tasks.unit','-project.stats','-project.schedule')), 200)
            
     def patch(self, id):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if model.project not in allowed_projects():
+            return make_response({"error": "User not authorized for this project"}, 403)
         data = request.get_json()
         try:
             for attr,value in data.items():

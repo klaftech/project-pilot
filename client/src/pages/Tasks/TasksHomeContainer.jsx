@@ -27,7 +27,9 @@ export function TasksHomeContainer() {
     const [isLoaded, setIsLoaded] = useState(false)
 
     useEffect(() => {
-        fetchTasks()
+        if (user && user.selectedProject) {
+            fetchTasks()
+        }
     }, [])
 
     const fetchTasks = () => {

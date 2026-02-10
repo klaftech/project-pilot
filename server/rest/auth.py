@@ -3,7 +3,39 @@ from flask import request, abort, make_response, session
 from flask_restful import Resource
 
 from config import db
-from models import User, Project, Unit
+from models import ProjectUser, User, Project, Unit
+
+def allowed_projects():
+    user = User.query.filter_by(id=session.get('user_id')).first()
+    if not user:
+        return []
+    
+    if user.is_admin:
+        #print("Admin user, returning all projects")
+        projects = Project.query.order_by(Project.name.asc()).all()
+    else:
+        projects = Project.query.join(ProjectUser, ProjectUser.project_id == Project.id).filter(
+            ProjectUser.user_id == session.get('user_id')
+        ).order_by(Project.name.asc()).all()
+    return projects
+
+def get_user_object(user):
+    user_obj = user.to_dict(only=('id','first_name','last_name','email','is_admin','selectedProject','selectedUnit'))
+
+    user_obj.get('selectedProject')
+    if not user_obj.get('selectedProject') or user_obj['selectedProject'] not in [p.id for p in allowed_projects()]:
+        if allowed_projects():
+            user_obj['selectedProject'] = allowed_projects()[0].id
+        else:
+            user_obj['selectedProject'] = None
+        
+    if not user_obj.get('selectedUnit') or user_obj['selectedUnit'] not in [u.id for u in Unit.query.filter(Unit.project_id==user_obj['selectedProject']).all()]:
+        get_unit = Unit.query.filter(Unit.project_id==user_obj['selectedProject']).first()
+        if get_unit:
+            user_obj['selectedUnit'] = get_unit.id
+        else:
+            user_obj['selectedUnit'] = None
+    return user_obj
 
 class UserSignup(Resource):
     def post(self):
@@ -22,7 +54,8 @@ class UserSignup(Resource):
             db.session.commit()
 
             session['user_id'] = user.id
-            return make_response(user.to_dict(only=('id','first_name','last_name','email','selectedProject','selectedUnit')), 201)
+
+            return make_response(get_user_object(user), 201)
         
         except Exception as e:
             return make_response({"errors": e.args}, 422)
@@ -34,24 +67,7 @@ class UserLogin(Resource):
         if user and user.authenticate(data['password']):
             session['user_id'] = user.id
 
-            user_obj = user.to_dict(only=('id','first_name','last_name','email','selectedProject','selectedUnit'))
-
-            user_obj.get('selectedProject')
-            if not user_obj.get('selectedProject'):
-                get_project = Project.query.first()
-                if get_project:
-                    user_obj['selectedProject'] = get_project.id
-                else:
-                    user_obj['selectedProject'] = 0
-                
-            if not user_obj.get('selectedUnit'):
-                get_unit = Unit.query.filter(Unit.project_id==user_obj['selectedProject']).first()
-                if get_unit:
-                    user_obj['selectedUnit'] = get_unit.id
-                else:
-                    user_obj['selectedUnit'] = 0
-
-            return make_response(user_obj, 200)
+            return make_response(get_user_object(user), 200)
         return make_response({"errors": ["Login Error"]}, 403)
 
 class UserLogout(Resource):
@@ -65,24 +81,8 @@ class UserLogout(Resource):
 class UserAuthorize(Resource):
     def get(self):
         try:
-            user = User.query.filter_by(id=session["user_id"]).first()
-            user_obj = user.to_dict(only=('id','first_name','last_name','email','selectedProject','selectedUnit'))
-            
-            if not user_obj.get('selectedProject'):
-                get_project = Project.query.first()
-                if get_project:
-                    user_obj['selectedProject'] = get_project.id
-                else:
-                    user_obj['selectedProject'] = 0
-                
-            if not user_obj.get('selectedUnit'):
-                get_unit = Unit.query.filter(Unit.project_id==user_obj['selectedProject']).first()
-                if get_unit:
-                    user_obj['selectedUnit'] = get_unit.id
-                else:
-                    user_obj['selectedUnit'] = 0
-            
-            response = make_response(user_obj, 200)
+            user = User.query.filter_by(id=session["user_id"]).first()          
+            response = make_response(get_user_object(user), 200)
             return response
         except:
             abort(401, "Unauthorized")
@@ -107,5 +107,4 @@ class UserProfile(Resource):
         
         db.session.commit()
 
-        user_obj = user.to_dict(only=('id','first_name','last_name','email','selectedProject','selectedUnit'))
-        return make_response(user_obj, 202)
+        return make_response(get_user_object(user), 202)

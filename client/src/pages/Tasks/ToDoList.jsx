@@ -1,11 +1,14 @@
 import TaskCardColumn from './TaskCardColumn'
 import TaskCard from './TaskCard'
 import { getToday, isDateToday, getDiffToday } from '@/utils/date.js'
-import { useState } from 'react'
+import { useContext,useState } from 'react'
 import { Separator } from "@/components/ui/separator"
+import UserContext from '@/context/UserContext'
 
 export const ToDoList = ({ tasks, isLoaded, handleClickEdit, handleClickView, handleClickComplete, handleClickDelete, handleClickStatusUpdate }) => {
 
+    const {user, setUser} = useContext(UserContext);
+    
     const displayOptions = {
         displayUnit: true,
         displayStatus: false,

@@ -10,13 +10,20 @@ from app_helpers import unit_task_recursively_update_children
 #from datetime import datetime, time, date, timedelta
 from datetime import datetime, timezone
 from helpers import get_previous_monday
+from rest.auth import allowed_projects
 
 # used for project todo list of tasks pending status updates
 @app.route('/api/unittasks/pending_update/project/<project_id>', methods=['GET'])
 def get_project_pending_update(project_id):
+    if project_id == "null":
+        return make_response([], 200)
+
     model = Project.query.filter_by(id=project_id).first()
     if not model:
         return make_response({"error": f"Project ID: {project_id} not found"}, 404)
+
+    if model not in allowed_projects():
+        return make_response({"error": "User not authorized for this project"}, 403)
     
     #today = date.today()
     today = datetime.now(timezone.utc).date()
@@ -128,12 +135,20 @@ class UnitTasks(Resource):
         tasks_query = UnitTask.query.order_by(UnitTask.sched_start.asc())
 
         project_filter = request.args.get("project_id")
-        if project_filter != None:        
+        if project_filter != None:
+            if project_filter == "null":
+                return make_response([], 200)
             tasks_query = tasks_query.join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == project_filter)
-        
+            if Project.query.filter_by(id=project_filter).first() not in allowed_projects():
+                return make_response({"error": "User not authorized for this project"}, 403)
+
         unit_filter = request.args.get("unit_id")
         if unit_filter != None:
+            if unit_filter == "null":
+                return make_response([], 200)
             tasks_query = tasks_query.filter(UnitTask.unit_id == unit_filter)
+            if Unit.query.filter_by(id=unit_filter).first().project not in allowed_projects():
+                return make_response({"error": "User not authorized for this project"}, 403)
         
         if not project_filter and not unit_filter:
             return make_response({"error": f"Result set must be filtered"}, 422)
@@ -205,6 +220,8 @@ class UnitTaskByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if model.unit.project not in allowed_projects():
+            return make_response({"error": "User not authorized for this project"}, 403)
         return make_response(model.to_dict(only=self.__class__.response_fields,rules=('latest_update',)), 200)
            
     def patch(self, id):
@@ -214,6 +231,9 @@ class UnitTaskByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if model.unit.project not in allowed_projects():
+            return make_response({"error": "User not authorized for this project"}, 403)
+        
         data = request.get_json()
         try:
             # # determine if changes are non-schedule affecting, to bypass recursively updating dependencies

@@ -34,6 +34,7 @@ class User(db.Model, SerializerMixin):
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
     _password_hash = db.Column(db.String)
     selectedProject = db.Column(db.Integer, nullable=True)
     selectedUnit = db.Column(db.Integer, nullable=True)
@@ -49,11 +50,13 @@ class User(db.Model, SerializerMixin):
     def authenticate(self, password):
         return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
 
+    projects = db.relationship('ProjectUser', back_populates="user")
     completed_tasks = db.relationship('UnitTask', back_populates="complete_user")
     updates = db.relationship('StatusUpdate', back_populates="user")
     
     serialize_rules = (
         '-_password_hash',
+        '-projects',
         '-completed_tasks.complete_user',
         '-completed_tasks.unit',
         '-completed_tasks.unit_tasks',
@@ -115,6 +118,7 @@ class Project(db.Model, SerializerMixin):
     description = db.Column(db.String, nullable=True)
     stats_json = db.Column(JSONB, default=dict)
 
+    users = db.relationship('ProjectUser', back_populates="project")
     groups = db.relationship('Group', back_populates="project")
     units = db.relationship('Unit', back_populates="project")
     master_tasks = db.relationship('MasterTask', back_populates="project")
@@ -122,6 +126,7 @@ class Project(db.Model, SerializerMixin):
     serialize_rules = (
         'stats',
         'schedule',
+        '-users',
         '-groups.project',
         '-groups.master_tasks',
         '-units.project',
@@ -164,6 +169,37 @@ class Project(db.Model, SerializerMixin):
 
     def __repr__(self):
         return f'<Project {self.name} (ID: {self.id})>'
+
+
+class ProjectUser(db.Model, SerializerMixin):
+    __tablename__ = "project_users"
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    deleted = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc)) #server_default=db.func.now()
+
+    user = db.relationship('User', back_populates="projects")
+    project = db.relationship('Project', back_populates="users")
+    
+    serialize_rules = (
+        'deleted',
+        'timestamp',
+        '-project_id',
+        '-user_id',
+        '-user',
+        '-project',
+        '-user.projects',
+        '-project.users'
+    )
+
+    __table_args__ = (
+        db.Index('unique_project_user', 'project_id', 'user_id', unique=True, postgresql_where=db.text('deleted = false')),
+    )
+    
+    def __repr__(self):
+        return f'<ProjectUser ID: {self.id}, Project: {self.project_id}, User: {self.user_id}, Deleted: {self.deleted}>'
+    
 
 
 def get_stats(model):

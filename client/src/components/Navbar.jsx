@@ -330,7 +330,13 @@ const AppNavbar = ({
       description: "Project Overview",
       icon: <Book className="size-5 shrink-0" />,
       url: "/overview",
-  },
+    },
+    ...(user.is_admin ? [{
+      title: "Admin",
+      description: "Admin Panel",
+      icon: <Book className="size-5 shrink-0" />,
+      url: "/admin",
+    }] : []),
     // {
     //   title: "Products",
     //   url: "#",

@@ -23,6 +23,9 @@ from datetime import datetime, timezone, time
 
 @app.route('/api/mastertasks/<task_id>/descendents', methods=['GET'])
 def get_dependencies_descendents(task_id):
+    if task_id == "null":
+        return make_response([], 200)
+    
     task_model = find_task_model_by_id(task_id)
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
@@ -33,6 +36,9 @@ def get_dependencies_descendents(task_id):
 
 @app.route('/api/mastertasks/<task_id>/ancestors', methods=['GET'])
 def get_dependencies_ancestors(task_id):
+    if task_id == "null":
+        return make_response([], 200)
+    
     task_model = find_task_model_by_id(task_id)
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
@@ -43,6 +49,9 @@ def get_dependencies_ancestors(task_id):
 
 @app.route('/api/mastertasks/<task_id>/available', methods=['GET'])
 def get_dependencies_available(task_id):
+    if task_id == "null":
+        return make_response([], 200)
+    
     task_model = find_task_model_by_id(task_id)
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
@@ -76,6 +85,8 @@ class MasterTasks(Resource):
         tasks_query = MasterTask.query  
 
         project_id = request.args.get("project_id")
+        if project_id == "null":
+            return make_response([], 200)
         if project_id != None:
             model = Project.query.filter_by(id=project_id).first()
             if not model:
