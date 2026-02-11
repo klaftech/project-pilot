@@ -4,8 +4,14 @@ import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format, parse } from "date-fns"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+    InputGroup,
+    InputGroupAddon,
+    InputGroupText,
+    InputGroupTextarea,
+} from "@/components/ui/input-group"
 import {
     Command,
     CommandEmpty,
@@ -246,11 +252,27 @@ const FormFields = ({ form, formScenario, taskObj }) => {
             <FormField
                 control={actualForm.control}
                 name="message"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Status Message</FormLabel>
                     <FormControl>
-                        <Input {...field} />
+                        {/*<Input {...field} />*/}
+                        <InputGroup>
+                            <InputGroupTextarea
+                            {...field}
+                            id="form-rhf-demo-description"
+                            placeholder="All work has been completed as expected."
+                            rows={6}
+                            className="min-h-24 resize-none"
+                            aria-invalid={fieldState.invalid}
+                            maxLength="200"
+                            />
+                            <InputGroupAddon align="block-end">
+                            <InputGroupText className="tabular-nums">
+                                {field.value.length}/200 characters
+                            </InputGroupText>
+                            </InputGroupAddon>
+                        </InputGroup>
                     </FormControl>
                     {
                     // <FormDescription>

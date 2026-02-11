@@ -78,6 +78,8 @@ class StatusUpdates(Resource):
             new_record.timestamp = data['record_date']
 
         if 'message' in data:
+            if len(data['message']) > 200:
+                return make_response({"errors": "Message cannot exceed 200 characters"}, 422)
             new_record.message = data['message']
 
         db.session.add(new_record)
@@ -166,6 +168,8 @@ class StatusUpdateByID(Resource):
                 model.task_status = status
                 data_changed = True
             if 'message' in data:
+                if len(data['message']) > 200:
+                    return make_response({"error": "Message cannot exceed 200 characters"}, 422)
                 model.message = data['message']
                 data_changed = True
             if 'record_date' in data:
