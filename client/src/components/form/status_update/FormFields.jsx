@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react'
-import { useFormContext } from 'react-hook-form'
+import { useFormContext, Controller } from 'react-hook-form'
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -12,6 +12,13 @@ import {
     InputGroupText,
     InputGroupTextarea,
 } from "@/components/ui/input-group"
+import {
+    Field,
+    FieldDescription,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from "@/components/ui/field"
 import {
     Command,
     CommandEmpty,
@@ -191,14 +198,16 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                         </Command>
                         </PopoverContent>
                     </Popover>
-                    <FormDescription>
+                    {/* <FormDescription>
                         Select updated status.
-                    </FormDescription>
+                    </FormDescription> */}
                     <FormMessage />
                     </FormItem>
                 )}
             />
 
+            <div className="mb-4"></div>
+            
             <FormField
                 control={actualForm.control}
                 name="record_date"
@@ -241,49 +250,71 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                         />
                         </PopoverContent>
                     </Popover>
-                    <FormDescription>
+                    {/* <FormDescription>
                         Status Date.
+                    </FormDescription> */}
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <div className="mb-4"></div>
+
+            <Controller
+              name="message"
+              control={actualForm.control}
+              render={({ field, fieldState }) => {
+                const { ref, ...fieldProps } = field;
+                return (        
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="form-rhf-demo-description">
+                    Notes
+                  </FieldLabel>
+                  <InputGroup>
+                    <InputGroupTextarea
+                      {...fieldProps}
+                      id="form-rhf-demo-description"
+                      placeholder="All work has been completed as expected."
+                      rows={4}
+                      className="min-h-24 resize-none"
+                      aria-invalid={fieldState.invalid}
+                      maxLength="200"
+                    />
+                    <InputGroupAddon align="block-end">
+                      <InputGroupText className="tabular-nums">
+                        {field.value.length}/200 characters
+                      </InputGroupText>
+                    </InputGroupAddon>
+                  </InputGroup>
+                  <FieldDescription>
+                    Please add any relevant notes regarding this status update.
+                  </FieldDescription>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}}
+            />
+
+            {/* <FormField
+                control={actualForm.control}
+                name="message"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Status Message</FormLabel>
+                    <FormControl>
+                        <Input {...field} />
+                    </FormControl>
+                    <FormDescription>
+                        Status Message
                     </FormDescription>
                     <FormMessage />
                     </FormItem>
                 )}
-            />
+            /> */}
 
-            <FormField
-                control={actualForm.control}
-                name="message"
-                render={({ field, fieldState }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Status Message</FormLabel>
-                    <FormControl>
-                        {/*<Input {...field} />*/}
-                        <InputGroup>
-                            <InputGroupTextarea
-                            {...field}
-                            id="form-rhf-demo-description"
-                            placeholder="All work has been completed as expected."
-                            rows={6}
-                            className="min-h-24 resize-none"
-                            aria-invalid={fieldState.invalid}
-                            maxLength="200"
-                            />
-                            <InputGroupAddon align="block-end">
-                            <InputGroupText className="tabular-nums">
-                                {field.value.length}/200 characters
-                            </InputGroupText>
-                            </InputGroupAddon>
-                        </InputGroup>
-                    </FormControl>
-                    {
-                    // <FormDescription>
-                    //    Task Name.
-                    //</FormDescription>
-                    }
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-
+            {/* add spacing at bottom of form */}
+            <div className="mb-6"></div>
         </>
     )
 }

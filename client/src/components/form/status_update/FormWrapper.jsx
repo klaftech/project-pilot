@@ -128,7 +128,9 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
              .number({ required_error: "Status must be selected.", })
              .int({ message: "Status must be selected.", })
              .positive({ message: "Status must be selected.", }),
-        message: z.string().optional(),
+        message: z.string()
+            .max(200, "Description can't be more than 200 characters.")
+            .optional(),
         record_date: z.date().optional(),
     })
 
