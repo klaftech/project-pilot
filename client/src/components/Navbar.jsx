@@ -413,7 +413,7 @@ const AppNavbar = ({
       <div className="container">
 
         {/* Desktop Menu */}
-        <nav className="hidden justify-between lg:flex">
+        <nav className="hidden justify-between md:flex">
           <div className="flex items-center gap-6">
             <NavLink to={logo.url} className="flex items-center gap-2">
               <img src={logo.src} className="w-8" alt={logo.alt} />
@@ -443,7 +443,7 @@ const AppNavbar = ({
         </nav>
 
         {/* Mobile Menu */}
-        <div className="block lg:hidden">
+        <div className="block md:hidden">
           <div className="flex items-center justify-between">
             <NavLink to={logo.url} className="flex items-center gap-2">
               <img src={logo.src} className="w-8" alt={logo.alt} />

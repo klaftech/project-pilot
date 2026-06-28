@@ -64,76 +64,7 @@ const FormFields = ({ form, formScenario, taskObj }) => {
     }
 
     return (
-        <>
-            {/* 
-            <FormField
-                control={form.control}
-                name="project_id"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Project</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                                "w-[200px] justify-between",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            {field.value
-                                ? projects.find(
-                                    (project) => project.id === field.value
-                                )?.name
-                                : "Select Project"}
-                            <ChevronsUpDown className="opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
-                        <Command>
-                            <CommandInput
-                            placeholder="Search projects..."
-                            className="h-9"
-                            />
-                            <CommandList>
-                            <CommandEmpty>No projects found.</CommandEmpty>
-                            <CommandGroup>
-                                {projects.map((project) => (
-                                <CommandItem
-                                    value={project.name}
-                                    key={project.id}
-                                    onSelect={() => {
-                                        field.onChange(project.id)
-                                    }}
-                                >
-                                    {project.name}
-                                    <Check
-                                    className={cn(
-                                        "ml-auto",
-                                        project.id === field.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                    />
-                                </CommandItem>
-                                ))}
-                            </CommandGroup>
-                            </CommandList>
-                        </Command>
-                        </PopoverContent>
-                    </Popover>
-                    <FormDescription>
-                        Assign task to a project.
-                    </FormDescription>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            */}
-
+        <div className="space-y-5">
             <FormField
                 control={actualForm.control}
                 name="task_status"
@@ -148,7 +79,7 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                             role="combobox"
                             disabled={isReadyOnly}
                             className={cn(
-                                "w-[200px] justify-between",
+                                "w-full justify-between",
                                 !field.value && "text-muted-foreground"
                             )}
                             >
@@ -161,7 +92,7 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                             </Button>
                         </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                         <Command>
                             {/* <CommandInput
                             placeholder="Search status..."
@@ -205,8 +136,6 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                     </FormItem>
                 )}
             />
-
-            <div className="mb-4"></div>
             
             <FormField
                 control={actualForm.control}
@@ -215,14 +144,13 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                     <FormItem className="flex flex-col">
                     <FormLabel>Date</FormLabel>
                     <Popover>
-                        {console.log(field)}
                         <PopoverTrigger asChild disabled={isReadyOnly}>
                         <FormControl>
                             <Button
                             variant={"outline"}
                             disabled={isReadyOnly}
                             className={cn(
-                                "w-[240px] pl-3 text-left font-normal",
+                                "w-full pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                             )}
                             >
@@ -258,8 +186,6 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                 )}
             />
 
-            <div className="mb-4"></div>
-
             <Controller
               name="message"
               control={actualForm.control}
@@ -270,25 +196,18 @@ const FormFields = ({ form, formScenario, taskObj }) => {
                   <FieldLabel htmlFor="form-rhf-demo-description">
                     Notes
                   </FieldLabel>
-                  <InputGroup>
-                    <InputGroupTextarea
-                      {...fieldProps}
-                      id="form-rhf-demo-description"
-                      placeholder="All work has been completed as expected."
-                      rows={4}
-                      className="min-h-24 resize-none"
-                      aria-invalid={fieldState.invalid}
-                      maxLength="200"
-                    />
-                    <InputGroupAddon align="block-end">
-                      <InputGroupText className="tabular-nums">
-                        {field.value.length}/200 characters
-                      </InputGroupText>
-                    </InputGroupAddon>
-                  </InputGroup>
-                  <FieldDescription>
-                    Please add any relevant notes regarding this status update.
-                  </FieldDescription>
+                  <InputGroupTextarea
+                    {...fieldProps}
+                    id="form-rhf-demo-description"
+                    placeholder="Add any relevant notes..."
+                    rows={3}
+                    className="min-h-20 resize-none w-full"
+                    aria-invalid={fieldState.invalid}
+                    maxLength="200"
+                  />
+                  <p className="text-xs text-right text-muted-foreground mt-1">
+                    {field.value.length}/200
+                  </p>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
@@ -314,8 +233,8 @@ const FormFields = ({ form, formScenario, taskObj }) => {
             /> */}
 
             {/* add spacing at bottom of form */}
-            <div className="mb-6"></div>
-        </>
+            <div className="pb-2"></div>
+        </div>
     )
 }
 export default FormFields

@@ -5,8 +5,8 @@ import {
     TooltipTrigger,
   } from "@/components/ui/tooltip"
 import { Progress } from "@/components/ui/progress"
-import { CircleCheckBig, Trash, Eye, Pencil , TrendingUp, CircleCheck, Calendar, ArrowUpDown, Workflow } from "lucide-react";
-import { useState } from 'react'
+import { Button } from "@/components/ui/button"
+import { CircleCheckBig, Trash, Eye, Pencil, TrendingUp } from "lucide-react";
 import { formatDatePretty, isDateToday } from '@/utils/date.js'
 import StatusBadge from "@/components/StatusBadge.jsx";
 
@@ -30,21 +30,15 @@ export function TaskCard({
     onClickStatusUpdate = ()=>console.log("clicked") 
 }) {
 
-    const [isHoveringEdit, setIsHoveringEdit] = useState(false);
-    const [isHoveringView, setIsHoveringView] = useState(false);
-    const [isHoveringDelete, setIsHoveringDelete] = useState(false);
-    const [isHoveringComplete, setIsHoveringComplete] = useState(false);
-    const [isHoveringStatusUpdate, setIsHoveringStatusUpdate] = useState(false);
-
     return (
-        <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col">
-            <p className="font-medium">{task.name}</p>
-            {displayOptions.displayUnit && task.unit && <p className="text-muted-foreground">Unit: {task.unit.name}</p>}
-            
-            {displayOptions.displayProgress && 
-            <div className="flex p-1">
-                <Progress value={task.progress} /*className="w-[%60]"}*/ />
+        <div className="group bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3">
+            <div>
+                <p className="font-semibold text-sm leading-snug">{task.name}</p>
+                {displayOptions.displayUnit && task.unit && <p className="text-xs text-muted-foreground mt-0.5">{task.unit.name}</p>}
             </div>
+
+            {displayOptions.displayProgress && 
+            <Progress value={task.progress} className="h-1.5" />
             }
 
             {displayOptions.displayStatus && 
@@ -54,117 +48,72 @@ export function TaskCard({
             }
 
             {displayOptions.displaySchedule && 
-                <p className="py-3 text-sm text-muted-foreground">
-                    {isDateToday(task.start) ? "Today" : formatDatePretty(task.start)} - {isDateToday(task.end) ? "Today" : formatDatePretty(task.end)}
+                <p className="text-xs text-muted-foreground">
+                    {isDateToday(task.start) ? "Today" : formatDatePretty(task.start)} — {isDateToday(task.end) ? "Today" : formatDatePretty(task.end)}
                 </p>
             }
-            
-            <div className="mt-2 flex gap-4">
-                
+
+            {/* Secondary icon actions */}
+            {(displayOptions.clickEdit || displayOptions.clickView || displayOptions.clickComplete || displayOptions.clickDelete) && (
+            <div className="flex gap-3 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {displayOptions.clickEdit && 
                 <TooltipProvider>
                     <Tooltip>
-                        <TooltipTrigger>
-                            <Pencil 
-                                className="size-5 text-muted-foreground" 
-                                onClick={()=>onClickEdit(task)}
-                                color={isHoveringEdit ? "red" : "black"}
-                                onMouseEnter={() => setIsHoveringEdit(true)}
-                                onMouseLeave={() => setIsHoveringEdit(false)}
-                            />            
+                        <TooltipTrigger asChild>
+                            <Pencil className="size-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" onClick={()=>onClickEdit(task)} />
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Update Task</p>
-                        </TooltipContent>
+                        <TooltipContent><p>Edit Task</p></TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
                 }
-
                 {displayOptions.clickView && 
                 <TooltipProvider>
                     <Tooltip>
-                        <TooltipTrigger>
-                            <Eye 
-                                className="size-5 text-muted-foreground" 
-                                onClick={()=>onClickView(task)}
-                                color={isHoveringView ? "red" : "black"}
-                                onMouseEnter={() => setIsHoveringView(true)}
-                                onMouseLeave={() => setIsHoveringView(false)}
-                            />
+                        <TooltipTrigger asChild>
+                            <Eye className="size-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" onClick={()=>onClickView(task)} />
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <p>View Task</p>
-                        </TooltipContent>
+                        <TooltipContent><p>View Task</p></TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
                 }
-
                 {displayOptions.clickComplete && 
                 <TooltipProvider>
                     <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                             <CircleCheckBig 
-                                className="size-5 text-muted-foreground" 
-                                onClick={()=>{
-                                    if(!task.complete_status){
-                                        onClickComplete(task)
-                                    }}}
-                                color={isHoveringComplete || task.complete_status ? "red" : "black"}
-                                onMouseEnter={() => setIsHoveringComplete(true)}
-                                onMouseLeave={() => setIsHoveringComplete(false)}
+                                className={`size-4 cursor-pointer transition-colors ${task.complete_status ? "text-green-500" : "text-muted-foreground hover:text-green-500"}`}
+                                onClick={()=>{ if(!task.complete_status){ onClickComplete(task) }}}
                             />
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Mark Complete</p>
-                        </TooltipContent>
+                        <TooltipContent><p>Mark Complete</p></TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
                 }
-
                 {displayOptions.clickDelete && 
                 <TooltipProvider>
                     <Tooltip>
-                        <TooltipTrigger>
-                            <Trash 
-                                className="size-5 text-muted-foreground" 
-                                onClick={()=>onClickDelete(task)}
-                                color={isHoveringDelete ? "red" : "black"}
-                                onMouseEnter={() => setIsHoveringDelete(true)}
-                                onMouseLeave={() => setIsHoveringDelete(false)}
-                            />
+                        <TooltipTrigger asChild>
+                            <Trash className="size-4 text-muted-foreground hover:text-destructive cursor-pointer transition-colors" onClick={()=>onClickDelete(task)} />
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Delete Task</p>
-                        </TooltipContent>
+                        <TooltipContent><p>Delete Task</p></TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
                 }
-
-                {displayOptions.clickStatusUpdate && 
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger>
-                            <TrendingUp 
-                                className="size-5 text-muted-foreground" 
-                                onClick={()=>onClickStatusUpdate(task)}
-                                color={isHoveringStatusUpdate ? "red" : "black"}
-                                onMouseEnter={() => setIsHoveringStatusUpdate(true)}
-                                onMouseLeave={() => setIsHoveringStatusUpdate(false)}
-                            />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Status Update</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                }
-                        
-              <a href="#">
-                <div className="size-5 text-muted-foreground" />
-              </a>
             </div>
+            )}
 
-            
+            {/* Primary CTA */}
+            {displayOptions.clickStatusUpdate && (
+                <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1.5 text-xs mt-auto"
+                    onClick={() => onClickStatusUpdate(task)}
+                >
+                    <TrendingUp className="size-3.5" />
+                    Update Status
+                </Button>
+            )}
         </div>
     )
 }

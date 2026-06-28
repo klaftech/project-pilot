@@ -108,9 +108,16 @@ function ScheduleContainer() {
     return (
         <AppWrapper>
             <div className="container mx-auto p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight">Schedule</h1>
+                        <p className="text-sm text-muted-foreground mt-1">Project Gantt chart</p>
+                    </div>
+                    {isLoaded && <UnitFilter />}
+                </div>
                 {!isLoaded && <LoadingWrapper />}
-                {isLoaded && sortedTasks && sortedTasks.length > 0 && <><UnitFilter /><GanttChart tasks={sortedTasks} setTasks={handleSetTasks} /></>}
-                {isLoaded && (!sortedTasks || sortedTasks.length <= 0) && <p>No tasks found for this project.</p>}
+                {isLoaded && sortedTasks && sortedTasks.length > 0 && <GanttChart tasks={sortedTasks} setTasks={handleSetTasks} />}
+                {isLoaded && (!sortedTasks || sortedTasks.length <= 0) && <p className="text-muted-foreground">No tasks found for this unit.</p>}
             </div>
         </AppWrapper>
     )

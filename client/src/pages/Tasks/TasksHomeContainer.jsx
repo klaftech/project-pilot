@@ -7,6 +7,7 @@ import { ChevronRight } from "lucide-react";
 
 import AppWrapper from '@/components/AppWrapper'
 import UserContext from '@/context/UserContext'
+import ProjectsContext from '@/context/ProjectsContext'
 import UnitTaskList from './UnitTaskList'
 import ToDoList from './ToDoList'
 import { taskBuilder } from '@/utils/task';
@@ -19,6 +20,8 @@ export function TasksHomeContainer() {
     
     const navigate = useNavigate();
     const {user, setUser} = useContext(UserContext);
+    const {projects} = useContext(ProjectsContext);
+    const activeProjectName = projects.find(p => p.id === user?.selectedProject)?.name ?? null;
 
     // ********************************************************************
     // ******************** START MANAGE TASKS DATA ***********************
@@ -133,15 +136,18 @@ export function TasksHomeContainer() {
 
     return (
         <AppWrapper>
-            <div className="flex items-center px-2 m-1">
-                {user && user.selectedProject && <Badge>Project ID: {user.selectedProject}</Badge>}
-            </div>
+            {activeProjectName && (
+                <div className="mb-6">
+                    <h1 className="text-2xl font-semibold tracking-tight">{activeProjectName}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Weekly task status updates</p>
+                </div>
+            )}
 
-            <DialogPopupForm isOpen={isOpen} setIsOpen={setIsOpen} title="Save Update" description="Enter Weekly Task Status Update" >
+            <DialogPopupForm isOpen={isOpen} setIsOpen={setIsOpen} title={taskObj ? taskObj.name : "Save Update"} description={taskObj?.unit ? taskObj.unit.name : "Weekly task status update"} >
                 <FormWrapper formScenario={formScenario} modelObj={modelObj} onSubmitHook={handleSubmitHook} >
                     <FormFields form="" taskObj={taskObj} />
                     <DialogFooter>
-                        <Button type="submit">Save</Button>    
+                        <Button type="submit">Save Update</Button>    
                     </DialogFooter>
                 </FormWrapper>
             </DialogPopupForm>

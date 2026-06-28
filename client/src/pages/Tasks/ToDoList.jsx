@@ -29,14 +29,19 @@ export const ToDoList = ({ tasks, isLoaded, handleClickEdit, handleClickView, ha
 
     return (
         <>
-            <div className="bg-white p-6 shadow-lg rounded-lg flex flex-col gap-6">
-                <div className="text-center">
-                    {title}
+            <div className="bg-white border rounded-xl shadow-sm flex flex-col gap-4 p-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-semibold">{title}</h2>
+                        {isLoaded && <p className="text-sm text-muted-foreground mt-0.5">{tasklist.length} task{tasklist.length !== 1 ? 's' : ''} awaiting update</p>}
+                    </div>
                 </div>
                 <Separator orientation="horizontal" />
-                <div className="container mx-auto p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                        {!isLoaded ? "Tasks are still loading..." : tasklist.length > 0 ? tasklist : "All caught up!"}
+                <div className="container mx-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {!isLoaded ? "Tasks are still loading..." : tasklist.length > 0 ? tasklist : (
+                            <p className="col-span-full text-center text-muted-foreground py-8">All caught up! No pending updates.</p>
+                        )}
                     </div>
                 </div>
             </div>

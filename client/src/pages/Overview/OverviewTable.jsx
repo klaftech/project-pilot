@@ -358,6 +358,16 @@ function OverviewTable() {
                 Use a width of 125% to counteract the shrink (since 1 / 0.8 = 1.25).
                 Use transform-origin: top left to anchor the shrink from the top-left.
             */}
+            {project && (
+                <div className="flex items-center justify-between px-2 pb-3">
+                    <h2 className="text-xl font-semibold">{project.name}</h2>
+                    {Object.hasOwn(project, 'stats') && (
+                        <span className="text-xs text-muted-foreground">
+                            Last update: {formatDateTimePretty(project.stats.updates.latest_update)}
+                        </span>
+                    )}
+                </div>
+            )}
             <TableContainer component={Paper} className="overflow-x-auto">
                 <Table className="min-w-full">
                     <TableHead>
@@ -369,8 +379,7 @@ function OverviewTable() {
                                 <Badge className="bg-green-200 text-grey-50">Completed</Badge>&nbsp;
                                 <Badge className="bg-blue-200 text-grey-50">In Progress</Badge>&nbsp;
                                 <Badge className="bg-red-200 text-grey-50">Stuck</Badge>&nbsp;
-                                <Badge className="bg-yellow-200 text-grey-50">Scheduled</Badge>&nbsp;
-                                {Object.hasOwn(project, 'stats') && <>Last Update: {formatDateTimePretty(project.stats.updates.latest_update)}</>}
+                                <Badge className="bg-yellow-200 text-grey-50">Scheduled</Badge>
                             </TableCell>
                         </TableRow>
                     </TableHead>

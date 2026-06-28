@@ -18,25 +18,16 @@ const UnitFilter = () => {
     }
     
     return (
-        <div className="max-w-md mx-auto p-1">
-            <div>
-            <label className="block text-sm font-medium mb-2">Select a Unit:</label>
-            
+        <div className="flex items-center gap-3">
+            <label className="text-sm font-medium whitespace-nowrap">Unit:</label>
             <Select onValueChange={handleUnitChange} value={user.selectedUnit}>
-                <SelectTrigger>
-                <SelectValue placeholder="Select a unit" />
+                <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Select a unit" />
                 </SelectTrigger>
                 <SelectContent>
-                {units.map(unit => <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>)}
+                    {units.map(unit => <SelectItem key={unit.id} value={unit.id}>{unit.name}</SelectItem>)}
                 </SelectContent>
             </Select>
-            </div>
-
-            {user.selectedUnit && (
-            <div className="text-sm text-muted-foreground">
-                Showing Unit ID: <span className="font-medium">{user.selectedUnit}</span>
-            </div>
-            )}
         </div>
     )
 }
