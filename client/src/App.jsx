@@ -15,6 +15,7 @@ import AdminContainer from '@/pages/Admin/AdminContainer'
 import Signup from '@/pages/Signup/Signup'
 import Login from '@/pages/Login/Login'
 import Logout from '@/pages/Logout/Logout'
+import ProfilePage from '@/pages/Profile/Profile'
 import HTTP404 from '@/pages/404/HTTP404'
 import Navbar from '@/components/Navbar'
 
@@ -94,6 +95,7 @@ function App() {
             <Route path="signup" element={<Signup />} />
             <Route path="login" element={<Login />} />
             <Route path="logout" element={<Logout updateUser={setUser} />} />
+            <Route path="profile" element={<ProfilePage />} />
 
             <Route path="form" element={<TaskInnerForm />} />
             <Route path="toast" element={<ToastDemo />} />

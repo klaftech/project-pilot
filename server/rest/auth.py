@@ -102,6 +102,14 @@ class UserProfile(Resource):
                 setattr(user, 'selectedProject', data['selectedProject'])
             if 'selectedUnit' in data:
                 setattr(user, 'selectedUnit', data['selectedUnit'])
+            if 'password' in data:
+                if data['password'] != data['confirmPassword']:
+                    raise Exception("Passwords do not match")
+                setattr(user, 'password_hash', data['password'])
+                # log the user out after password change
+                db.session.commit()
+                session['user_id'] = None
+                return make_response("", 204)
         except ValueError as e:
             return make_response({"error": e.args}, 422)
         

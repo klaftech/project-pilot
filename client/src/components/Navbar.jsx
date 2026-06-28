@@ -428,11 +428,11 @@ const AppNavbar = ({
             </div>
           </div>
           <div className="flex gap-2">
-            {/* <NavLink to={auth.signup.url}>
+            <NavLink to="/profile">
                 <Button className="flex gap-2" variant="outline" size="sm">
-                    {auth.signup.text}
+                    Profile
                 </Button>
-            </NavLink> */}
+            </NavLink>
             <NavLink to={auth.logout.url}>
                 {/*<Button asChild size="sm">*/}
                 <Button className="flex gap-2" size="sm">
@@ -488,11 +488,11 @@ const AppNavbar = ({
                     </div>
                   </div>
                   <div className="flex flex-col gap-3">
-                    {/* <NavLink className="flex flex-col gap-3" to={auth.signup.url}>
+                    <NavLink className="flex flex-col gap-3" to="/profile">
                         <Button variant="outline">
-                            {auth.signup.text}
+                            Profile
                         </Button>
-                    </NavLink> */}
+                    </NavLink>
                     <NavLink className="flex flex-col gap-3" to={auth.logout.url}>
                         <Button>
                             {auth.logout.text}
