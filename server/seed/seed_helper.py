@@ -35,11 +35,11 @@ def recursively_update_children(task_model):
             logger.append('##############################################')
             logger.append(f'Recursively Updating: {current_task.name}')
             
-            recalc = current_task.calculate_schedule()
-            for message in recalc:
-                logger.append(f'=> {message}')
-            db.session.commit()
-            logger.append(f'Successfully Updated')
+            #recalc = current_task.calculate_schedule()
+            #for message in recalc:
+            #    logger.append(f'=> {message}')
+            #db.session.commit()
+            #logger.append(f'Successfully Updated')
 
             if current_task.children_tasks:
                 for child in current_task.children_tasks:

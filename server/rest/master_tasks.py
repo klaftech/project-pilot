@@ -276,8 +276,8 @@ class Dependencies(Resource):
         
         # the task_model now has a new PARENT 
         # update its schedule based on new dependency
-        task_model.calculate_schedule()
-        db.session.commit()
+        #task_model.calculate_schedule()
+        #db.session.commit()
         
         #recursively process dependencies
         master_task_recursively_update_children(task_model)
@@ -312,8 +312,8 @@ class DependencyByID(Resource):
         db.session.commit()
         
         # upon deletion of a MasterTaskDependency, recalculate owner_task schedule
-        task_model.calculate_schedule()
-        db.session.commit()
+        #task_model.calculate_schedule()
+        #db.session.commit()
 
         # then, recursively process all its dependencies
         master_task_recursively_update_children(task_model)

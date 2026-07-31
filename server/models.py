@@ -1088,7 +1088,6 @@ class UnitTask(db.Model, SerializerMixin):
     def calculate_schedule(self):
         # function is not to be used, because we are no longer using schedule calculations (03/26/2025)
         # using simple started_date instead.
-        return
         
         def handle_pin_start():
             if self.pin_start:
@@ -1422,7 +1421,8 @@ def update_schedule_insert(mapper, connection, target):
 
 def update_schedule_update(mapper, connection, target):
     # TODO: only run if there are changes to scheduling values
-    target.calculate_schedule()
+    #target.calculate_schedule()
+    pass
 
 def handle_project_change(mapper, connection, target):
     target.handle_project_change()

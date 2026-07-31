@@ -1,74 +1,76 @@
 # ProjectPilot
 
-ProjectPilot is a innovative project management platform that asynchronously handles project scheduling based on task rules and dependencies. The project dashboard features robust reporting and a high-level overview of the project progress, making it easy to quickly pinpoint bottlenecks and delays.
+Project management for multi-unit construction, built around task dependencies and automatic schedule propagation.
 
-## Demo
-[Live Demo](https://project-pilot-seven.vercel.app/)
+**In production.** Licensed to a commercial and residential development firm operating along the East Coast.
 
-[Presentation Slides](https://docs.google.com/presentation/d/1EcQUvc2fFBbMIu7x39l0bFjSWCR0OthasWq1PwccOoo/edit?usp=sharing)
+🔗 [projectpilot.me](https://projectpilot.me)
 
-## Overview 
-This is a project management system that allows scheduling and task management of dependent tasks across multi-phase projects. 
-The system predicts project and task completion timeline, by factoring in the cascading effect of delays of predecessor tasks. 
+---
 
-## Navigation
-The app has simple views to quantify and achieve task completion
-- Secure Login: Secure authorization and authentication lifecycle including user login, logout, password reset and update pages.
-- Project Summary: Provides a high-level view of the project, displaying key details like progress, deadlines, team members, task status summaries. 
-Includes visual elements like charts and task breakdowns for quick insights and efficient project tracking and completion prediction. 
-- My Tasks: Displays tasks to be completed with status, priority, and due date. 
-Tasks are displayed as cards, organized into Due Today, Upcoming, and Delayed sections.
-- Task List: Displays tasks with statuses, priorities, assignees, due dates, and dependencies, enabling clear tracking and real-time updates.
-- Project Schedule: Graph to visually map out tasks, timelines, dependencies, and progress, providing a clear overview of project flow and scheduling, allowing tracking of delays and bottlenecks.
-- Overview: Unified chart displaying overview of all projects, broken downs by each individual task and its status. This overview allows for very high-level management across entire system.
+## The problem
 
-## Interactions
-- Add, edit and delete tasks to a project.
-- Add, edit and delete dependency to a task that will reschedule task and its dependencies to be required following pointing tasks completion.
-- At a minimum define task completion time in days.
-- Assign a task to multiple users.
-- Pin a task to not start or end before a specific date. 
-- View gantt chart of task schedule and dependencies mapping.
+Construction schedules are graphs, not lists. Framing can't start before the foundation cures; drywall waits on rough-in inspection. When one task slips, everything downstream slips with it — and on a development with dozens of units running the same task sequence in parallel, tracing that ripple by hand is where projects lose weeks.
+
+Most project tools either ignore dependencies entirely or make you re-enter the same task list for every unit. ProjectPilot does neither.
+
+## Core concepts
+
+**Template and instance.** A `MasterTask` defines a step once — its duration, its dependencies, who owns it. A `Unit` is a single house, apartment, or lot. Instantiating the template against a unit produces `UnitTask` records that carry their own status and dates while staying linked to the master definition. Change the template, and every unit inherits it; change one unit's task, and the others are untouched.
+
+**Dependency-driven scheduling.** Tasks declare predecessors through `MasterTaskDependency`. When a task's status or completion date changes, the scheduler walks the dependency graph and recalculates predicted start and finish dates for everything downstream. Recalculation is bound to SQLAlchemy insert and update events, so schedules stay consistent no matter which entry point wrote the change — REST call, bulk edit, or status update.
+
+Tasks can also be pinned so they never start or end before a fixed date, which models real-world constraints like permit windows and material delivery that dependencies alone can't express.
+
+**Scoped access.** Project membership is explicit through `ProjectUser` and `Group`. Users see the projects, units, and tasks their role grants them — a field supervisor's view of their own units, an administrator's view across the portfolio.
+
+## Features
+
+- **Overview** — every project broken down by task and status in a single chart, for portfolio-level management
+- **Project summary** — progress, deadlines, team, and status breakdowns with predicted completion
+- **Schedule** — Gantt view mapping tasks, timelines, dependencies, and slippage
+- **My Tasks** — personal queue split into Due Today, Upcoming, and Delayed
+- **Task list** — filterable view with status, priority, assignee, due date, and dependencies
+- **Status updates** — timestamped progress entries with notes, feeding the prediction model
+- Multi-user task assignment, full auth lifecycle including password reset
 
 ## Stack
-Front-end: 
-- React JavaScript (Vite)
-- [shadcn/ui](https://github.com/shadcn-ui/) (Based on [Radix UI](https://www.radix-ui.com/))
-- [Tailwind CSS](https://tailwindcss.com/)
 
-Backend:
-- Flask (Python)
-- SQLAlchemy (Database ORM)
-- Alembic (Database migrations)
+**Frontend** — React (Vite), shadcn/ui on Radix, Tailwind CSS
+**Backend** — Flask, SQLAlchemy, Alembic migrations
+**Database** — PostgreSQL
+**Deployment** — Vercel
 
-Database:
-- PostgreSQL
+## Structure
 
-## Installation 
-1. Fork and clone the this repo to your local machine.
-2. Install npm dependencies for front-end
 ```
-npm install --prefix client
+server/
+  models.py       Domain model and scheduling logic
+  rest/           Resource endpoints (projects, units, tasks, groups, auth, updates)
+  seed/           Development seed data
+client/
+  src/pages/      Overview, Project, Unit, Task, Schedule, Admin, auth
+  src/components/ Shared UI and forms
+  src/context/    Application state
 ```
-3. Create React build
-```
-npm run build --prefix client
-```
-4. Install pip dependencies for back-end
+
+## Local development
+
+Requires Python 3, Node, and a PostgreSQL instance.
+
 ```bash
-pip install 
-```
-5. Launch pip shell and change into /server directory
-```
-pip shell
-cd server
-```
-6. Launch WSGI server
-```
-gunicorn app:app
+# Frontend
+npm install --prefix client
+npm run build --prefix client
+
+# Backend
+pip install -r requirements.txt
+flask db upgrade
+python server/app.py
 ```
 
-## Contributing
+Configure your database connection and secret key in the environment before first run.
 
-Pull requests are welcome. For major changes, please open an issue first
-to discuss what you would like to change.
+---
+
+Built and maintained by [Elchonon Klafter](https://klaftech.com).
