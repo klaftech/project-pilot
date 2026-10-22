@@ -6,8 +6,11 @@ from flask_restful import Resource
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 
+from collections import defaultdict
+from sqlalchemy import func
+
 from config import db, app
-from models import Project, ProjectUser, Unit, UnitTask, User
+from models import Project, ProjectUser, Unit, UnitTask, User, MasterTask, StatusUpdate, latest_updates_by_task, summarize_unit_tasks
 from rest.auth import allowed_projects
 
 @app.route('/api/projects', methods=['GET'])
@@ -43,6 +46,52 @@ def get_project_details(project_id):
         )
 
     return make_response(model.to_dict(rules=(response_fields)), 200)
+
+# used for the overview matrix: one request for every unit, its summary and its tasks
+@app.route('/api/projects/<int:project_id>/overview', methods=['GET'])
+def get_project_overview(project_id):
+    from rest.unit_tasks import UnitTasks
+    model = Project.query.filter_by(id=project_id).first()
+    if not model:
+        return make_response({"error": f"Project ID: {project_id} not found"}, 404)
+    if model not in allowed_projects():
+        return make_response({"error": "User not authorized for this project"}, 403)
+
+    tasks = (UnitTask.query
+             .join(Unit, Unit.id == UnitTask.unit_id)
+             .filter(Unit.project_id == model.id)
+             .options(joinedload(UnitTask.master_task).joinedload(MasterTask.group), joinedload(UnitTask.unit))
+             .order_by(UnitTask.sched_start, UnitTask.task_id)
+             .all())
+    latest = latest_updates_by_task([t.id for t in tasks])
+    fields = tuple(f for f in UnitTasks.response_fields if f != 'latest_update')
+
+    tasks_by_unit = defaultdict(list)
+    for task in tasks:
+        tasks_by_unit[task.unit_id].append(task)
+
+    units = []
+    for unit in Unit.query.filter_by(project_id=model.id).order_by(Unit.name).all():
+        unit_tasks = tasks_by_unit.get(unit.id, [])
+        rows = []
+        for task in unit_tasks:
+            row = task.to_dict(only=fields)
+            row['latest_update'] = latest.get(task.id)
+            rows.append(row)
+        units.append({'id': unit.id, 'name': unit.name, 'stats': summarize_unit_tasks(unit_tasks), 'tasks': rows})
+
+    latest_update = (db.session.query(func.max(StatusUpdate.timestamp))
+                     .join(UnitTask, UnitTask.id == StatusUpdate.task_id)
+                     .join(Unit, Unit.id == UnitTask.unit_id)
+                     .filter(Unit.project_id == model.id)
+                     .scalar())
+    return make_response({
+        'id': model.id,
+        'name': model.name,
+        'master_task_count': MasterTask.query.filter_by(project_id=model.id).count(),
+        'latest_update': latest_update.strftime(StatusUpdate.datetime_format) if latest_update else None,
+        'units': units,
+    }, 200)
 
 # used for navigation menu
 @app.route('/api/projects/minimal', methods=['GET'])

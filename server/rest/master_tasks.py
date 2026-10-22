@@ -4,7 +4,7 @@ from flask_restful import Resource
 
 from config import db, app
 from models import User, MasterTask, MasterTaskDependency, Project, Group
-from rest.auth import can_access_project
+from rest.auth import can_access_project, current_user_is_admin, admin_required_response
 from app_helpers import find_task_model_by_id, validate_date_input, master_task_recursively_update_children
 from datetime import datetime, timezone, time
 
@@ -122,6 +122,8 @@ class MasterTasks(Resource):
         return make_response(tasks, 200)
     
     def post(self):
+        if not current_user_is_admin():
+            return admin_required_response()
         data = request.get_json()
         if not can_access_project(data.get('project_id')):
             return make_response({"error": "User not authorized for this project"}, 403)
@@ -194,6 +196,8 @@ class MasterTaskByID(Resource):
         return make_response(model.to_dict(only=self.__class__.response_fields), 200)
            
     def patch(self, id):
+        if not current_user_is_admin():
+            return admin_required_response()
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
@@ -228,6 +232,8 @@ class MasterTaskByID(Resource):
         return make_response(model.to_dict(only=self.__class__.response_fields), 202)
     
     def delete(self, id):
+        if not current_user_is_admin():
+            return admin_required_response()
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
@@ -273,6 +279,8 @@ class Dependencies(Resource):
         # return make_response(tasks, 200)
     
     def post(self):
+        if not current_user_is_admin():
+            return admin_required_response()
         data = request.get_json()
         try:
             task_id = data['task_id']
@@ -330,6 +338,8 @@ class DependencyByID(Resource):
         return make_response(model.to_dict(), 200)
     
     def delete(self, id):
+        if not current_user_is_admin():
+            return admin_required_response()
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)

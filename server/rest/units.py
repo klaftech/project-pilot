@@ -6,7 +6,7 @@ from config import db, app
 from models import Project, Unit
 from app_helpers import validate_date_input
 from datetime import datetime
-from rest.auth import allowed_projects
+from rest.auth import allowed_projects, current_user_is_admin, admin_required_response
 
 class Units(Resource):
     def get(self):
@@ -25,6 +25,8 @@ class Units(Resource):
         return make_response(units, 200)
     
     def post(self):
+        if not current_user_is_admin():
+            return admin_required_response()
         data = request.get_json()
         try:
             new_record = Unit(
@@ -82,9 +84,12 @@ class UnitByID(Resource):
             return make_response({"error": f"Model ID: {id} not found"}, 404)
         if model.project not in allowed_projects():
             return make_response({"error": "User not authorized for this project"}, 403)
-        return make_response(model.to_dict(rules=('-unit_tasks.unit','-project.stats','-project.schedule')), 200)
+        # unit page summary: no task list (the page loads tasks separately when it needs them)
+        return make_response(model.to_dict(only=('id', 'name', 'start', 'end', 'status', 'project_id', 'project.id', 'project.name', 'stats')), 200)
            
     def patch(self, id):
+        if not current_user_is_admin():
+            return admin_required_response()
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)

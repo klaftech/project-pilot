@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 # load environment variables from the .env file (if present)
 load_dotenv()
 signup_allowed_domain = os.getenv('SIGNUP_ALLOWED_DOMAIN')
-signup_allowed_email_exceptions = [e.strip() for e in os.getenv('SIGNUP_ALLOWED_EMAIL_EXCEPTIONS', '').split(",") if e.strip()]
+signup_allowed_email_exceptions = [e.strip().lower() for e in os.getenv('SIGNUP_ALLOWED_EMAIL_EXCEPTIONS', '').split(",") if e.strip()]
 
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
@@ -68,13 +68,16 @@ class User(db.Model, SerializerMixin):
         # Check if value is not empty
         if not value:
             raise ValueError('Email cannot be empty')
+
+        # emails are case-insensitive: store them lower-cased
+        value = value.strip().lower()
         
         # Validate email format using regex
         if not re.match(r"[^@]+@[^@]+\.[^@]+", value):
             raise ValueError('Invalid email format')
         
         # Check if email is unique in the database
-        if User.query.filter(User.email == value).first() is not None:
+        if User.query.filter(func.lower(User.email) == value).filter(User.id != self.id).first() is not None:
             raise ValueError('Email must be unique')
         
         # Check if email is from the allowed domain (if set) or in the list of exceptions
@@ -771,6 +774,9 @@ class Unit(db.Model, SerializerMixin):
         unit_tasks = [] #list to final UnitTasks
         processed_tasks = [] #list of Tasks that have been processed off tasks_to_process
         
+        # tasks without parents start on the unit's start date (if given), otherwise today
+        unit_start = self.start if isinstance(self.start, datetime) else utc_now()
+
         # Step 1: Get all master tasks for indicated project
         master_tasks = MasterTask.query.filter(MasterTask.project_id==self.project_id).all()
 
@@ -799,7 +805,7 @@ class Unit(db.Model, SerializerMixin):
             if in_degree[current_task.id] == 0:
                 #print(f"========> pushing because HEADLESS {current_task}")
                 #start_date = datetime.combine(datetime.now(), time.min) # use today as start
-                start_date = utc_now()
+                start_date = unit_start
                 unit_task = create_unit_task(current_task, start_date, True)
 
             else:
@@ -815,7 +821,7 @@ class Unit(db.Model, SerializerMixin):
                 if all(parent_task in processed_tasks for parent_task in parents_set):
                     #print(f"========> pushing because all parents are procesed {current_task}")
                     #default_start = datetime.combine(datetime.now(), time.min) # use today as start
-                    default_start = utc_now()
+                    default_start = unit_start
                     earliest_start = default_start
                     processed_parents = [processed_parent for processed_parent in parents if processed_parent in parents]
                     for parent_task in processed_parents:
@@ -901,7 +907,7 @@ class UnitTask(db.Model, SerializerMixin):
 
     @property
     def latest_update(self):
-        if result := StatusUpdate.query.filter(StatusUpdate.task_id == self.id).order_by(StatusUpdate.timestamp.desc()).first():
+        if result := StatusUpdate.query.filter(StatusUpdate.task_id == self.id).order_by(StatusUpdate.timestamp.desc(), StatusUpdate.id.desc()).first():
             return {
                 "id": result.id,
                 "status": result.task_status,
@@ -1342,6 +1348,52 @@ class StatusUpdate(db.Model, SerializerMixin):
 
 
 
+
+
+def latest_updates_by_task(task_ids):
+    # one query instead of UnitTask.latest_update per row; same shape and timestamp format as the property
+    if not task_ids:
+        return {}
+    rows = (db.session.query(StatusUpdate.task_id, StatusUpdate.id, StatusUpdate.task_status, StatusUpdate.timestamp)
+            .filter(StatusUpdate.task_id.in_(task_ids))
+            .distinct(StatusUpdate.task_id)
+            .order_by(StatusUpdate.task_id, StatusUpdate.timestamp.desc(), StatusUpdate.id.desc())
+            .all())
+    return {
+        r.task_id: {
+            "id": r.id,
+            "status": r.task_status,
+            "timestamp": r.timestamp.strftime(StatusUpdate.datetime_format) if r.timestamp else None,
+        }
+        for r in rows
+    }
+
+
+def summarize_unit_tasks(tasks):
+    # the subset of get_stats() the overview needs, computed from already-loaded tasks (no queries)
+    total = len(tasks)
+    completed = sum(1 for t in tasks if t.complete_status)
+    in_progress = sum(1 for t in tasks if not t.complete_status and t.started_status and t.status_code != 310)
+    starts = [t.started_date for t in tasks if t.started_date]
+    first = min(starts) if starts else None
+    if total == 0 or completed == 0:
+        last = None
+    elif total - completed > 0:
+        last = utc_now()
+    else:
+        last = max((t.complete_date for t in tasks if t.complete_date), default=None)
+    days = (last - first).days if first and last else 0
+    return {
+        "completion": {
+            "percent": int(completed / total * 100) if total and completed else 0,
+            "months": f"{(days / 30 if days else 0):.1f}",
+        },
+        "counts": {
+            "count_tasks": total,
+            "count_completed": completed,
+            "count_in_progress": in_progress,
+        },
+    }
 
 
 # BEGIN ################## Project / Unit Stats ##################

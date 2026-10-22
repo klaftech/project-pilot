@@ -4,7 +4,7 @@ from flask_restful import Resource
 
 from config import db
 from models import Group
-from rest.auth import allowed_projects, can_access_project
+from rest.auth import allowed_projects, can_access_project, current_user_is_admin, admin_required_response
 
 class Groups(Resource):
     def get(self):
@@ -25,6 +25,8 @@ class Groups(Resource):
         return make_response(groups, 200)
     
     def post(self):
+        if not current_user_is_admin():
+            return admin_required_response()
         data = request.get_json()
         if not can_access_project(data.get('project_id')):
             return make_response({"error": "User not authorized for this project"}, 403)
@@ -60,6 +62,8 @@ class GroupByID(Resource):
         return make_response(model.to_dict(rules=('-master_tasks','-project')), 200)
            
     def patch(self, id):
+        if not current_user_is_admin():
+            return admin_required_response()
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
@@ -78,6 +82,8 @@ class GroupByID(Resource):
         return make_response(model.to_dict(), 202)
     
     def delete(self, id):
+        if not current_user_is_admin():
+            return admin_required_response()
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)

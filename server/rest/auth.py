@@ -2,6 +2,8 @@
 from flask import request, abort, make_response, session
 from flask_restful import Resource
 
+from sqlalchemy import func
+
 from config import db
 from models import ProjectUser, User, Project, Unit
 from helpers import utc_now
@@ -20,6 +22,14 @@ def allowed_projects():
             ProjectUser.deleted == False
         ).order_by(Project.name.asc()).all()
     return projects
+
+def current_user_is_admin():
+    user = User.query.filter_by(id=session.get('user_id')).first()
+    return bool(user and user.is_admin)
+
+def admin_required_response():
+    # project structure (templates, dependencies, groups, units) is managed by admins
+    return make_response({"error": "Only administrators can change project structure"}, 403)
 
 def can_access_project(project_id):
     try:
@@ -75,7 +85,12 @@ class UserLogin(Resource):
         data = request.get_json(silent=True) or {}
         if not data.get('email') or not data.get('password'):
             return make_response({"errors": ["Email and password are required"]}, 400)
-        user = User.query.filter(User.email == data['email']).first()
+        email = data['email'].strip()
+        user = User.query.filter(User.email == email).first()
+        if not user:
+            # emails are case-insensitive; only fall back when the match is unambiguous
+            matches = User.query.filter(func.lower(User.email) == email.lower()).all()
+            user = matches[0] if len(matches) == 1 else None
         if user and user.authenticate(data['password']):
             session['user_id'] = user.id
             user.last_login_at = utc_now()

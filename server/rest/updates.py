@@ -250,6 +250,9 @@ def update_unit_task(task, status_update_record):
         task.complete_date = status_update_record.timestamp # use StatusUpdate timestamp
         task.complete_user_id = session.get("user_id")
         task.complete_comment = "marked complete via status update"
+        # a back-dated completion can't come before the start date set by the parent's completion
+        if isinstance(task.started_date, datetime) and isinstance(task.complete_date, datetime) and task.started_date > task.complete_date:
+            task.started_date = task.complete_date
         
         mark_children_started = True
 

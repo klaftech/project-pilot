@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
 from config import db, app
-from models import User, Project, MasterTask, Unit, UnitTask, StatusUpdate
+from models import User, Project, MasterTask, Unit, UnitTask, StatusUpdate, latest_updates_by_task
 from app_helpers import unit_task_recursively_update_children
 #from datetime import datetime, time, date, timedelta
 from datetime import datetime, timezone
@@ -98,7 +98,13 @@ def get_project_pending_update(project_id):
         'master_task.group.name'
     )
 
-    dataset = [unit_task.to_dict(only=response_fields) for unit_task in check_updates.all()]
+    tasks = check_updates.all()
+    latest = latest_updates_by_task([t.id for t in tasks])
+    dataset = []
+    for unit_task in tasks:
+        row = unit_task.to_dict(only=response_fields)
+        row['latest_update'] = latest.get(unit_task.id)
+        dataset.append(row)
 
     return make_response(dataset, 200)
 
@@ -157,7 +163,14 @@ class UnitTasks(Resource):
         if not project_filter and not unit_filter:
             return make_response({"error": f"Result set must be filtered"}, 422)
 
-        tasks = [task.to_dict(only=self.__class__.response_fields) for task in tasks_query.order_by(UnitTask.sched_start, UnitTask.task_id).all()]
+        models = tasks_query.order_by(UnitTask.sched_start, UnitTask.task_id).all()
+        latest = latest_updates_by_task([t.id for t in models])
+        fields = tuple(f for f in self.__class__.response_fields if f != 'latest_update')
+        tasks = []
+        for task in models:
+            row = task.to_dict(only=fields)
+            row['latest_update'] = latest.get(task.id)
+            tasks.append(row)
         return make_response(tasks, 200)
     
     # no reason to ever create new UnitTask, they are directly linked to MasterTasks
