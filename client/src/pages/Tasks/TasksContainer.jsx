@@ -73,35 +73,6 @@ export function TasksContainer() {
         }
     }
 
-    const handleClickDelete = async (task) => {
-        const url = "api/unittasks/"+task.id
-        try {
-            const response = await fetch(
-                url,
-                {
-                    method: "DELETE",
-                },
-            )
-            if(!response.ok){
-                //throw new Error(`Response status: ${response.status}`);
-                if(response.status == "424"){
-                    const data = await response.json()
-                    throw new Error(data.error)
-                } else {
-                    throw new Error(response.status);
-                }
-            }
-            
-            console.log("onClickDelete(): task deleted")
-            
-            removeTask(task)
-            reloadTasks()
-        } catch (error) {
-            console.log(error.message)
-            setAlert(error.message)
-        }
-    }
-
     const handleSubmitHook = (data) => {
         // close the dialog box
         setIsOpen(!isOpen)
@@ -136,7 +107,7 @@ export function TasksContainer() {
                 </FormWrapper>
             </DialogPopupForm>
             
-            <UnitTaskList tasks={tasks} isLoaded={isLoaded} handleClickEdit={handleClickEdit} handleClickView={handleClickView} handleClickComplete={handleClickComplete} handleClickDelete={handleClickDelete} />
+            <UnitTaskList tasks={tasks} isLoaded={isLoaded} handleClickEdit={handleClickEdit} handleClickView={handleClickView} handleClickComplete={handleClickComplete} />
         
         </AppWrapper>
     )

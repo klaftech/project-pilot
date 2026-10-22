@@ -1,3 +1,4 @@
+import { toast } from "sonner"
 import { useState, useEffect, useContext } from 'react'
 import { useForm } from 'react-hook-form'
 import { format } from "date-fns"
@@ -30,9 +31,12 @@ const FormWrapper = ({ formScenario, taskEditObj, pushUpdateTask, submitHook, ch
 
     const onTaskSubmit = async (form_data) => {
 
-        let project_id = 4
-        if(user && user.selectedProject){
-            project_id = user.selectedProject
+        // never fall back to a default project: a task created in the wrong project is hard to notice
+        const project_id = user?.selectedProject
+        if(fetchParams.request_method == "POST" && !project_id){
+            setServerErrors(new Error("No project selected"))
+            toast.error("Select a project before creating a task.")
+            return
         }
 
         

@@ -49,7 +49,7 @@ export default function UserContextProvider({ children }) {
             
             const isEmpty = (obj) => Object.keys(obj).length === 0;
             if (!isEmpty(payload)){
-                console.log("Pushing User Updates: ".payload)
+                console.log("Pushing User Updates:", payload)
                 handleUserSelection(payload)
             }
         }

@@ -97,9 +97,13 @@ function App() {
             <Route path="logout" element={<Logout updateUser={setUser} />} />
             <Route path="profile" element={<ProfilePage />} />
 
-            <Route path="form" element={<TaskInnerForm />} />
-            <Route path="toast" element={<ToastDemo />} />
-            <Route path="dev" element={<AppDev />} />
+            {import.meta.env.DEV && (
+                <>
+                    <Route path="form" element={<TaskInnerForm />} />
+                    <Route path="toast" element={<ToastDemo />} />
+                    <Route path="dev" element={<AppDev />} />
+                </>
+            )}
             
             <Route path="*" element={<HTTP404 endpoint={location.pathname} />} />
         </Routes>

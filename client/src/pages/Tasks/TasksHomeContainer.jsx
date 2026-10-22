@@ -107,11 +107,6 @@ export function TasksHomeContainer() {
         }
     }
 
-    // see TasksContainer.jsx for code
-    const handleClickDelete = async (task) => {
-        console.log("No action")
-    }
-
     const handleClickStatusUpdate = (task) => {
         setModelObj({task_id: task.id})
         setTaskObj(task)
@@ -152,8 +147,8 @@ export function TasksHomeContainer() {
                 </FormWrapper>
             </DialogPopupForm>
 
-            <ToDoList tasks={tasks} isLoaded={isLoaded} handleClickEdit={handleClickEdit} handleClickView={handleClickView} handleClickComplete={handleClickComplete} handleClickDelete={handleClickDelete} handleClickStatusUpdate={handleClickStatusUpdate} />
-            {/* <UnitTaskList tasks={tasks} handleClickEdit={handleClickEdit} handleClickView={handleClickView} handleClickComplete={handleClickComplete} handleClickDelete={handleClickDelete} /> */}
+            <ToDoList tasks={tasks} isLoaded={isLoaded} handleClickEdit={handleClickEdit} handleClickView={handleClickView} handleClickComplete={handleClickComplete} handleClickStatusUpdate={handleClickStatusUpdate} />
+            {/* <UnitTaskList tasks={tasks} handleClickEdit={handleClickEdit} handleClickView={handleClickView} handleClickComplete={handleClickComplete} /> */}
         </AppWrapper>
     )
 }

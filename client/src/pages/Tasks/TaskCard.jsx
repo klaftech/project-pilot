@@ -6,7 +6,7 @@ import {
   } from "@/components/ui/tooltip"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { CircleCheckBig, Trash, Eye, Pencil, TrendingUp } from "lucide-react";
+import { CircleCheckBig, Eye, Pencil, TrendingUp } from "lucide-react";
 import { formatDatePretty, isDateToday } from '@/utils/date.js'
 import StatusBadge from "@/components/StatusBadge.jsx";
 
@@ -19,13 +19,11 @@ export function TaskCard({
         displayProgress: true,
         clickEdit: false,
         clickView: true,
-        clickDelete: false,
         clickComplete: true,
         clickStatusUpdate: true
     }, 
     onClickEdit = ()=>console.log("clicked"), 
     onClickView = ()=>console.log("clicked"), 
-    onClickDelete = ()=>console.log("clicked"), 
     onClickComplete = ()=>console.log("clicked"), 
     onClickStatusUpdate = ()=>console.log("clicked") 
 }) {
@@ -54,7 +52,7 @@ export function TaskCard({
             }
 
             {/* Secondary icon actions */}
-            {(displayOptions.clickEdit || displayOptions.clickView || displayOptions.clickComplete || displayOptions.clickDelete) && (
+            {(displayOptions.clickEdit || displayOptions.clickView || displayOptions.clickComplete) && (
             <div className="flex gap-3 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {displayOptions.clickEdit && 
                 <TooltipProvider>
@@ -86,16 +84,6 @@ export function TaskCard({
                             />
                         </TooltipTrigger>
                         <TooltipContent><p>Mark Complete</p></TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                }
-                {displayOptions.clickDelete && 
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Trash className="size-4 text-muted-foreground hover:text-destructive cursor-pointer transition-colors" onClick={()=>onClickDelete(task)} />
-                        </TooltipTrigger>
-                        <TooltipContent><p>Delete Task</p></TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
                 }

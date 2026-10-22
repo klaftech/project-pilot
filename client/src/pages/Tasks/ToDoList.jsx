@@ -5,7 +5,7 @@ import { useContext,useState } from 'react'
 import { Separator } from "@/components/ui/separator"
 import UserContext from '@/context/UserContext'
 
-export const ToDoList = ({ tasks, isLoaded, handleClickEdit, handleClickView, handleClickComplete, handleClickDelete, handleClickStatusUpdate }) => {
+export const ToDoList = ({ tasks, isLoaded, handleClickEdit, handleClickView, handleClickComplete, handleClickStatusUpdate }) => {
 
     const {user, setUser} = useContext(UserContext);
     
@@ -16,7 +16,6 @@ export const ToDoList = ({ tasks, isLoaded, handleClickEdit, handleClickView, ha
         displayProgress: true,
         clickEdit: false,
         clickView: false,
-        clickDelete: false,
         clickComplete: false,
         clickStatusUpdate: true
     }
