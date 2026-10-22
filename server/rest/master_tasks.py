@@ -3,7 +3,8 @@ from flask import request, abort, make_response, session
 from flask_restful import Resource
 
 from config import db, app
-from models import User, MasterTask, MasterTaskDependency, Project
+from models import User, MasterTask, MasterTaskDependency, Project, Group
+from rest.auth import can_access_project
 from app_helpers import find_task_model_by_id, validate_date_input, master_task_recursively_update_children
 from datetime import datetime, timezone, time
 
@@ -29,6 +30,8 @@ def get_dependencies_descendents(task_id):
     task_model = find_task_model_by_id(task_id)
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+    if not can_access_project(task_model.project_id):
+        return make_response({"error": "User not authorized for this project"}, 403)
     
     tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in set(task_model.get_descendents())]
     return make_response(tasks, 200)
@@ -42,6 +45,8 @@ def get_dependencies_ancestors(task_id):
     task_model = find_task_model_by_id(task_id)
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+    if not can_access_project(task_model.project_id):
+        return make_response({"error": "User not authorized for this project"}, 403)
     
     tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in set(task_model.get_ancestors())]
     return make_response(tasks, 200)
@@ -55,6 +60,8 @@ def get_dependencies_available(task_id):
     task_model = find_task_model_by_id(task_id)
     if not task_model:
         return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+    if not can_access_project(task_model.project_id):
+        return make_response({"error": "User not authorized for this project"}, 403)
     
     tasks = [task.to_dict(rules=('-project','-unit_tasks','-parents','-children','-children_tasks','-parent_tasks')) for task in task_model.get_available()]
     return make_response(tasks, 200)
@@ -91,6 +98,8 @@ class MasterTasks(Resource):
             model = Project.query.filter_by(id=project_id).first()
             if not model:
                 return make_response({"error": f"Project ID: {project_id} not found"}, 404)
+            elif not can_access_project(model.id):
+                return make_response({"error": "User not authorized for this project"}, 403)
             else:
                 tasks_query = tasks_query.filter(MasterTask.project_id == project_id)
         else:
@@ -114,6 +123,8 @@ class MasterTasks(Resource):
     
     def post(self):
         data = request.get_json()
+        if not can_access_project(data.get('project_id')):
+            return make_response({"error": "User not authorized for this project"}, 403)
         try:
             new_record = MasterTask(
                 name = data['name'],
@@ -161,6 +172,8 @@ class MasterTaskByID(Resource):
         'children.days_length',
         # 'unit_tasks',           
     )
+
+    editable_fields = ('name', 'group_id', 'days_length', 'pin_start', 'pin_end', 'autostart_children', 'override_start_date')
     
     @classmethod
     def find_model_by_id(cls, id):
@@ -175,6 +188,8 @@ class MasterTaskByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if not can_access_project(model.project_id):
+            return make_response({"error": "User not authorized for this project"}, 403)
         
         return make_response(model.to_dict(only=self.__class__.response_fields), 200)
            
@@ -182,7 +197,13 @@ class MasterTaskByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if not can_access_project(model.project_id):
+            return make_response({"error": "User not authorized for this project"}, 403)
         data = request.get_json()
+        if 'group_id' in data:
+            group = Group.query.filter_by(id=data['group_id']).first()
+            if not group or group.project_id != model.project_id:
+                return make_response({"error": "Group must belong to the task's project"}, 422)
         try:
             # # determine if changes are non-schedule affecting, to bypass recursively updating dependencies
             # non_affecting_fields = ['name','group_id']
@@ -192,7 +213,8 @@ class MasterTaskByID(Resource):
             #         non_affected = True
             
             for attr,value in data.items():
-               setattr(model, attr, value)
+                if attr in self.__class__.editable_fields:
+                    setattr(model, attr, value)
 
         except ValueError as e:
             return make_response({"error": e.args}, 422)
@@ -209,6 +231,8 @@ class MasterTaskByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if not can_access_project(model.project_id):
+            return make_response({"error": "User not authorized for this project"}, 403)
         
         # if there are tasks dependent on this task (childrent_task), do not allow delete
         # no need to validate parent_tasks, because model cascade="delete-orphan" will delete all associated TaskDependency links that this task is dependent on
@@ -257,6 +281,8 @@ class Dependencies(Resource):
             task_model = self.__class__.find_task_model_by_id(task_id)
             if not task_model:
                 return make_response({"error": f"MasterTask Model ID: {task_id} not found"}, 404)
+            if not can_access_project(task_model.project_id):
+                return make_response({"error": "User not authorized for this project"}, 403)
 
             dependent_task_model = self.__class__.find_task_model_by_id(parent_task_id)
             if not dependent_task_model:
@@ -299,12 +325,16 @@ class DependencyByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if not can_access_project(model.owner_task.project_id):
+            return make_response({"error": "User not authorized for this project"}, 403)
         return make_response(model.to_dict(), 200)
     
     def delete(self, id):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if not can_access_project(model.owner_task.project_id):
+            return make_response({"error": "User not authorized for this project"}, 403)
         
         task_model = MasterTask.query.filter_by(id=model.task_id).first()
 

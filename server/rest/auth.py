@@ -15,17 +15,25 @@ def allowed_projects():
         projects = Project.query.order_by(Project.name.asc()).all()
     else:
         projects = Project.query.join(ProjectUser, ProjectUser.project_id == Project.id).filter(
-            ProjectUser.user_id == session.get('user_id')
+            ProjectUser.user_id == session.get('user_id'),
+            ProjectUser.deleted == False
         ).order_by(Project.name.asc()).all()
     return projects
+
+def can_access_project(project_id):
+    try:
+        project_id = int(project_id)
+    except (TypeError, ValueError):
+        return False
+    return any(project.id == project_id for project in allowed_projects())
 
 def get_user_object(user):
     user_obj = user.to_dict(only=('id','first_name','last_name','email','is_admin','selectedProject','selectedUnit'))
 
-    user_obj.get('selectedProject')
-    if not user_obj.get('selectedProject') or user_obj['selectedProject'] not in [p.id for p in allowed_projects()]:
-        if allowed_projects():
-            user_obj['selectedProject'] = allowed_projects()[0].id
+    projects = allowed_projects()
+    if not user_obj.get('selectedProject') or user_obj['selectedProject'] not in [p.id for p in projects]:
+        if projects:
+            user_obj['selectedProject'] = projects[0].id
         else:
             user_obj['selectedProject'] = None
         
@@ -62,7 +70,9 @@ class UserSignup(Resource):
 
 class UserLogin(Resource):
     def post(self):
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data.get('email') or not data.get('password'):
+            return make_response({"errors": ["Email and password are required"]}, 400)
         user = User.query.filter(User.email == data['email']).first()
         if user and user.authenticate(data['password']):
             session['user_id'] = user.id
@@ -74,7 +84,7 @@ class UserLogout(Resource):
     def delete(self):
         user_id = session.get('user_id')
         if user_id != None:
-            session['user_id'] = None
+            session.clear()
             return make_response("", 204)
         return make_response({"errors":"User not logged in"}, 401)
     
@@ -108,9 +118,10 @@ class UserProfile(Resource):
                 setattr(user, 'password_hash', data['password'])
                 # log the user out after password change
                 db.session.commit()
-                session['user_id'] = None
+                session.clear()
                 return make_response("", 204)
-        except ValueError as e:
+        except Exception as e:
+            db.session.rollback()
             return make_response({"error": e.args}, 422)
         
         db.session.commit()

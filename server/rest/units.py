@@ -61,7 +61,7 @@ class Units(Resource):
 def get_unit_stats(unit_id):
     model = Unit.query.filter_by(id=unit_id).first()
     if not model:
-        return make_response({"error": f"Model ID: {id} not found"}, 404)
+        return make_response({"error": f"Unit ID: {unit_id} not found"}, 404)
     if model.project not in allowed_projects():
         return make_response({"error": "User not authorized for this project"}, 403)
     return make_response(model.to_dict(only=('id','stats')), 200)
@@ -93,7 +93,8 @@ class UnitByID(Resource):
         data = request.get_json()
         try:
             for attr,value in data.items():
-                setattr(model, attr, value) 
+                if attr in ('name', 'start', 'end', 'status'):
+                    setattr(model, attr, value) 
         except ValueError as e:
             return make_response({"error": e.args}, 422)
         

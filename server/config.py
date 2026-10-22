@@ -1,8 +1,7 @@
 # library imports
 import os
 from dotenv import load_dotenv
-from flask import Flask, render_template
-from flask_cors import CORS
+from flask import Flask, render_template, request, make_response
 from flask_migrate import Migrate
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
@@ -26,7 +25,17 @@ app = Flask(
 )
 @app.errorhandler(404)
 def not_found(e):
+    # unknown API routes should 404 as JSON, everything else falls through to the SPA router
+    if request.path.startswith('/api/'):
+        return make_response({"error": "Not found"}, 404)
     return render_template("index.html")
+
+@app.after_request
+def set_security_headers(response):
+    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    return response
 
 
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
@@ -35,6 +44,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
 app.json.compact = False                                  
 app.secret_key = os.getenv('SECRET_KEY')
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+# Vercel sets VERCEL=1; keep plain-http cookies working for local development
+app.config['SESSION_COOKIE_SECURE'] = bool(os.getenv('VERCEL'))
 
 metadata = MetaData(
   naming_convention={
@@ -56,4 +69,4 @@ bcrypt = Bcrypt(app)
 Api.error_router = lambda self, handler, e: handler(e)
 api = Api(app)
 
-CORS(app)
+# CORS is not needed: production serves the client from the same origin and the Vite dev server proxies /api

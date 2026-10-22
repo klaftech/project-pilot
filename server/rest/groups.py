@@ -4,7 +4,7 @@ from flask_restful import Resource
 
 from config import db
 from models import Group
-from rest.auth import allowed_projects
+from rest.auth import allowed_projects, can_access_project
 
 class Groups(Resource):
     def get(self):
@@ -16,7 +16,7 @@ class Groups(Resource):
         project_filter = request.args.get("project_id")
         if project_filter != None:
             groups_query = groups_query.filter(Group.project_id == project_filter)
-            if Group.query.filter_by(project_id=project_filter).first().project not in allowed_projects():
+            if not can_access_project(project_filter):
                 return make_response({"error": "User not authorized for this project"}, 403)
         else:
             return make_response({"error": "Group must be specified"}, 422)
@@ -26,13 +26,13 @@ class Groups(Resource):
     
     def post(self):
         data = request.get_json()
+        if not can_access_project(data.get('project_id')):
+            return make_response({"error": "User not authorized for this project"}, 403)
         try:
             new_record = Group(
                 name = data['name'],
                 project_id = data['project_id']
             )
-            if Group.query.filter_by(project_id=data['project_id']).first().project not in allowed_projects():
-                return make_response({"error": "User not authorized for this project"}, 403)
         except ValueError as e:
             abort(422, e.args[0])
         
@@ -68,8 +68,8 @@ class GroupByID(Resource):
         
         data = request.get_json()
         try:
-            for attr,value in data.items():
-                setattr(model, attr, value) 
+            if 'name' in data:
+                model.name = data['name']
         except ValueError as e:
             return make_response({"error": e.args}, 422)
         

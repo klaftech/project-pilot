@@ -9,8 +9,9 @@ from models import User, Project, MasterTask, Unit, UnitTask, StatusUpdate
 from app_helpers import unit_task_recursively_update_children
 #from datetime import datetime, time, date, timedelta
 from datetime import datetime, timezone
-from helpers import get_previous_monday
+from helpers import get_previous_monday, utc_today
 from rest.auth import allowed_projects
+from rest.updates import update_unit_task
 
 # used for project todo list of tasks pending status updates
 @app.route('/api/unittasks/pending_update/project/<project_id>', methods=['GET'])
@@ -26,7 +27,7 @@ def get_project_pending_update(project_id):
         return make_response({"error": "User not authorized for this project"}, 403)
     
     #today = date.today()
-    today = datetime.now(timezone.utc).date()
+    today = utc_today()
     previous_monday = get_previous_monday()
 
     # Subquery to get the latest timestamp per task
@@ -147,7 +148,10 @@ class UnitTasks(Resource):
             if unit_filter == "null":
                 return make_response([], 200)
             tasks_query = tasks_query.filter(UnitTask.unit_id == unit_filter)
-            if Unit.query.filter_by(id=unit_filter).first().project not in allowed_projects():
+            unit = Unit.query.filter_by(id=unit_filter).first()
+            if not unit:
+                return make_response({"error": f"Unit ID: {unit_filter} not found"}, 404)
+            if unit.project not in allowed_projects():
                 return make_response({"error": "User not authorized for this project"}, 403)
         
         if not project_filter and not unit_filter:
@@ -226,7 +230,7 @@ class UnitTaskByID(Resource):
            
     def patch(self, id):
         # if the patch is marking task completed, all other data sent is ignored.
-        mark_children_started = False
+        mark_completed = False
 
         model = self.__class__.find_model_by_id(id)
         if not model:
@@ -244,20 +248,11 @@ class UnitTaskByID(Resource):
             #         non_affected = True
 
             if ('complete_status' in data) and (data['complete_status']) and not (model.complete_status):
-                mark_children_started = True
-                print('UNIT TASK MARKED COMPLETE')
-                user = User.query.filter_by(id=session["user_id"]).first()
-
-                model.complete_status = True
-                model.complete_comment = "marked complete on app"
-                #model.complete_date = datetime.combine(datetime.now(), time.min)
-                model.complete_date = datetime.now(timezone.utc)
-                model.complete_user_id = user.id
-                model.progress = 100
-
+                mark_completed = True
             else:
                 for attr,value in data.items():
-                    setattr(model, attr, value)
+                    if attr in ('pin_start', 'pin_end'):
+                        setattr(model, attr, value)
 
         except ValueError as e:
             return make_response({"error": e.args}, 422)
@@ -268,7 +263,17 @@ class UnitTaskByID(Resource):
         #recursively process dependencies
         #unit_task_recursively_update_children(model)
         
-        if mark_children_started == True:
-            model.mark_children_started()
+        if mark_completed == True:
+            # record completion as a StatusUpdate so it appears in task history, then apply it
+            # through the same path as any other update (sets completion, progress, starts children)
+            completion = StatusUpdate(
+                task_id = model.id,
+                task_status = 200,
+                user_id = session["user_id"],
+                message = "Marked complete from task list"
+            )
+            db.session.add(completion)
+            db.session.commit()
+            update_unit_task(model, completion)
 
         return make_response(model.to_dict(only=self.__class__.response_fields), 202)

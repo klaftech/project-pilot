@@ -38,7 +38,7 @@ def authenticate_user():
     
     # if the user is in session OR the request endpoint is open-access, the request will be processed as usual
     if request.endpoint not in open_access_list and not session.get("user_id"):
-        raise Unauthorized    
+        return make_response({"error": "Unauthorized"}, 401)
 
 # see rest.project for /api/project...
 # see rest.unit_tasks for /api/unittasks/pending_update/project/<id>

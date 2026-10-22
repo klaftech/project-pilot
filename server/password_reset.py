@@ -1,15 +1,21 @@
+# usage: python server/password_reset.py user@example.com
+import sys
+import string, secrets
 from app import app
 from models import db, User
-import string, secrets
+
+if len(sys.argv) != 2:
+    print('usage: python server/password_reset.py <email>')
+    sys.exit(1)
 
 with app.app_context():
     # define user to reset password
-    user_email = "user@example.com"
+    user_email = sys.argv[1]
     
     user = User.query.filter(User.email == user_email).first()
     if user == None:
         print(f'User {user_email} not found.')
-        exit()
+        sys.exit(1)
 
     chars = string.ascii_letters + string.digits + string.punctuation
     password = "".join(secrets.choice(chars) for _ in range(16))

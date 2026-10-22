@@ -4,7 +4,8 @@ from flask_restful import Resource
 from datetime import datetime, timezone, time
 
 from config import db
-from models import StatusUpdate, UnitTask
+from models import StatusUpdate, UnitTask, Unit
+from rest.auth import can_access_project
 from app_helpers import unit_task_recursively_update_children
 
 class StatusUpdates(Resource):
@@ -27,13 +28,24 @@ class StatusUpdates(Resource):
         unit_filter = request.args.get("unit_id")
         #project_filter = request.args.get("project_id")
         
-        if task_filter != None or unit_filter != None:
-            updates_query = StatusUpdate.query.join(UnitTask, UnitTask.id == StatusUpdate.task_id)
-            
-            if task_filter != None:
-                updates_query = updates_query.filter(UnitTask.id == task_filter)
-            elif unit_filter != None:
-                updates_query = updates_query.filter(UnitTask.unit_id == unit_filter)
+        if task_filter == None and unit_filter == None:
+            return make_response({"error": "Task or Unit filter required."}, 422)
+
+        updates_query = StatusUpdate.query.join(UnitTask, UnitTask.id == StatusUpdate.task_id)
+        if task_filter != None:
+            task = UnitTask.query.filter_by(id=task_filter).first()
+            if not task:
+                return make_response({"error": f"UnitTask ID: {task_filter} not found"}, 404)
+            if not can_access_project(task.unit.project_id):
+                return make_response({"error": "User not authorized for this project"}, 403)
+            updates_query = updates_query.filter(UnitTask.id == task_filter)
+        else:
+            unit = Unit.query.filter_by(id=unit_filter).first()
+            if not unit:
+                return make_response({"error": f"Unit ID: {unit_filter} not found"}, 404)
+            if not can_access_project(unit.project_id):
+                return make_response({"error": "User not authorized for this project"}, 403)
+            updates_query = updates_query.filter(UnitTask.unit_id == unit_filter)
         
         # elif project_filter != None:
         #    updates_query = updates_query.join(UnitTask, UnitTask.id == StatusUpdate.task_id).join(MasterTask, MasterTask.id == UnitTask.task_id).filter(MasterTask.project_id == project_filter)
@@ -50,21 +62,22 @@ class StatusUpdates(Resource):
         task = UnitTask.query.filter(UnitTask.id == data['task_id']).first()
         if task == None:
             return make_response({"error": "UnitTask associated with this StatusUpdate not found."}, 422)
+        if not can_access_project(task.unit.project_id):
+            return make_response({"error": "User not authorized for this project"}, 403)
         
-        # ensure status is valid and progressing forward
-        if task.latest_update != None:
-            is_valid, message = validate_status_change(task.latest_update['status'], data['task_status'])
-            if not is_valid:
-                #raise ValueError(message)
-                return make_response({"errors": message}, 422)
-                #abort(422, message)
-            
         try:
             # cast to int if is string
-            status = data['task_status']
-            if isinstance(status, str):
-                status = int(status)
+            status = int(data['task_status'])
+        except (KeyError, TypeError, ValueError):
+            return make_response({"errors": "Status must be an integer"}, 422)
+
+        # ensure status is valid and progressing forward
+        if task.latest_update != None:
+            is_valid, message = validate_status_change(task.latest_update['status'], status)
+            if not is_valid:
+                return make_response({"errors": message}, 422)
             
+        try:
             new_record = StatusUpdate(
                 task_id = data['task_id'],
                 task_status = status,
@@ -113,27 +126,36 @@ class StatusUpdateByID(Resource):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if not can_access_project(model.unit_task.unit.project_id):
+            return make_response({"error": "User not authorized for this project"}, 403)
         return make_response(model.to_dict(only=self.__class__.response_fields), 200)
            
     def patch(self, id):
         model = self.__class__.find_model_by_id(id)
         if not model:
             return make_response({"error": f"Model ID: {id} not found"}, 404)
+        if not can_access_project(model.unit_task.unit.project_id):
+            return make_response({"error": "User not authorized for this project"}, 403)
         
         data = request.get_json()
         
         # check for mismatched date or status for completed tasks
         date_mismatch = False
         if 'record_date' in data:
-            dt_model = datetime.strptime(str(model.timestamp), "%Y-%m-%d %H:%M:%S")
-            dt_data = datetime.strptime(str(data.get('record_date')), "%Y-%m-%d")
-            if dt_model.date() != dt_data.date():
+            try:
+                dt_data = datetime.strptime(str(data.get('record_date')), "%Y-%m-%d")
+            except ValueError:
+                return make_response({"error": "record_date must be YYYY-MM-DD"}, 422)
+            if model.timestamp is None or model.timestamp.date() != dt_data.date():
                 date_mismatch = True
 
         status_mismatch = False
         if 'task_status' in data:
-            if data.get('task_status') is not model.task_status:
-                status_mismatch = True
+            try:
+                if int(data.get('task_status')) != model.task_status:
+                    status_mismatch = True
+            except (TypeError, ValueError):
+                return make_response({"error": "Status must be an integer"}, 422)
 
         #print("UnitTask status:", model.unit_task.status_code)
         #print("task status:", model.task_status)
@@ -177,7 +199,7 @@ class StatusUpdateByID(Resource):
                 data_changed = True
 
             if data_changed == False:
-                raise Exception('No valid data fields being modified')
+                raise ValueError('No valid data fields being modified')
         except ValueError as e:
             return make_response({"error": e.args}, 422)
         

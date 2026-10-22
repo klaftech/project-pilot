@@ -11,10 +11,9 @@ from sqlalchemy import Index
 from sqlalchemy import event, func
 
 from config import db, bcrypt
-from helpers import get_next_monday, get_previous_monday
+from helpers import get_next_monday, get_previous_monday, utc_now, utc_today, to_utc_naive
 
 import json
-import ipdb
 import re
 from datetime import datetime, timezone, timedelta, time, date
 from dateutil.parser import parse as parse_datetime
@@ -26,7 +25,7 @@ from dotenv import load_dotenv
 # load environment variables from the .env file (if present)
 load_dotenv()
 signup_allowed_domain = os.getenv('SIGNUP_ALLOWED_DOMAIN')
-signup_allowed_email_exceptions = os.getenv('SIGNUP_ALLOWED_EMAIL_EXCEPTIONS').split(",")
+signup_allowed_email_exceptions = [e.strip() for e in os.getenv('SIGNUP_ALLOWED_EMAIL_EXCEPTIONS', '').split(",") if e.strip()]
 
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
@@ -82,7 +81,8 @@ class User(db.Model, SerializerMixin):
             if not value.endswith(f'@{signup_allowed_domain}') and value not in signup_allowed_email_exceptions:
                 raise ValueError('Email must be part of the allowed domain.')
         else:
-            if signup_allowed_email_exceptions and value not in signup_allowed_email_exceptions:
+            # closed by default: with no domain configured, only listed emails may sign up
+            if value not in signup_allowed_email_exceptions:
                 raise ValueError('Email is not allowed.')
             
         # # Check if email belongs to the allowed domain or is on list of exceptions
@@ -112,8 +112,8 @@ class Project(db.Model, SerializerMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
-    start = db.Column(db.DateTime, nullable=True, default=datetime.now(timezone.utc)) #server_default=db.func.now() #default=datetime.strptime("2025-01-05", "%Y-%m-%d")
-    end = db.Column(db.DateTime, nullable=True, default=datetime.now(timezone.utc))
+    start = db.Column(db.DateTime, nullable=True, default=utc_now) #server_default=db.func.now() #default=datetime.strptime("2025-01-05", "%Y-%m-%d")
+    end = db.Column(db.DateTime, nullable=True, default=utc_now)
     project_type = db.Column(db.String, default="house")
     description = db.Column(db.String, nullable=True)
     stats_json = db.Column(JSONB, default=dict)
@@ -177,7 +177,7 @@ class ProjectUser(db.Model, SerializerMixin):
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     deleted = db.Column(db.Boolean, default=False)
-    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc)) #server_default=db.func.now()
+    timestamp = db.Column(db.DateTime, default=utc_now) #server_default=db.func.now()
 
     user = db.relationship('User', back_populates="projects")
     project = db.relationship('Project', back_populates="users")
@@ -245,13 +245,14 @@ def get_stats(model):
     else:
         raise Exception('Unsupported Model Instance')
     
-    today = date.today()
+    today = utc_today()
     previous_monday = get_previous_monday()
     next_monday = get_next_monday()
 
     get_completed = base_count_query.filter(UnitTask.complete_status == True)
     get_in_progress = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.started_status == True).filter(UnitTask.status_code != 310)
-    get_upcoming = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_start < today).filter(UnitTask.sched_start > today-timedelta(days=7))
+    # not yet completed and scheduled to start within the next 7 days
+    get_upcoming = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_start >= today).filter(UnitTask.sched_start < today+timedelta(days=7))
     get_overdue = base_count_query.filter(UnitTask.complete_status == False).filter(UnitTask.sched_end < today)
 
     count_model_total = base_count_query.first()[0]
@@ -273,7 +274,7 @@ def get_stats(model):
     
     # determine first task start date    
     get_first_task = tasks_in_order.first()
-    first_task_date = get_first_task.started_date
+    first_task_date = get_first_task.started_date if get_first_task else None
     
     # determine last task end date
     if count_model_total == 0 or count_model_completed == 0:
@@ -281,11 +282,10 @@ def get_stats(model):
         last_task_date = None
     elif count_model_total - count_model_completed > 0:
         # there are still non-completed tasks in the model
-        last_task_date = datetime.today()
+        last_task_date = utc_now()
     else:
         # all tasks are completed, get last completion date
-        get_last_task = tasks_in_order.all()[count_model_total-1]
-        last_task_date = get_last_task.complete_date    
+        last_task_date = base_query.with_entities(func.max(UnitTask.complete_date)).scalar()
 
     # get difference in days
     if first_task_date == None or last_task_date == None:
@@ -457,11 +457,12 @@ class MasterTask(db.Model, SerializerMixin):
     
     @validates('pin_start', 'pin_end')
     def validate_dates(self, attr, value):
+        if value is None:
+            return None
         if isinstance(value, datetime):
-            return value.astimezone(timezone.utc)
+            return to_utc_naive(value)
         try:
-            parsed = parse_datetime(value)
-            return parsed.astimezone(timezone.utc)
+            return to_utc_naive(parse_datetime(value))
         except (ValueError, TypeError):
             raise ValueError(f"{attr} must be a valid datetime (preferably in ISO 8601).")
         
@@ -797,7 +798,7 @@ class Unit(db.Model, SerializerMixin):
             if in_degree[current_task.id] == 0:
                 #print(f"========> pushing because HEADLESS {current_task}")
                 #start_date = datetime.combine(datetime.now(), time.min) # use today as start
-                start_date = datetime.now(timezone.utc) # UTC
+                start_date = utc_now()
                 unit_task = create_unit_task(current_task, start_date, True)
 
             else:
@@ -813,7 +814,7 @@ class Unit(db.Model, SerializerMixin):
                 if all(parent_task in processed_tasks for parent_task in parents_set):
                     #print(f"========> pushing because all parents are procesed {current_task}")
                     #default_start = datetime.combine(datetime.now(), time.min) # use today as start
-                    default_start = datetime.now(timezone.utc) # UTC
+                    default_start = utc_now()
                     earliest_start = default_start
                     processed_parents = [processed_parent for processed_parent in parents if processed_parent in parents]
                     for parent_task in processed_parents:
@@ -823,7 +824,7 @@ class Unit(db.Model, SerializerMixin):
                             parent_unit_task.sched_end + timedelta(days=1)  # child task to start day after completion of parent task
                         )
                         
-                        unit_task = create_unit_task(current_task, earliest_start)
+                    unit_task = create_unit_task(current_task, earliest_start)
                 else:
                     # some of parents are not yet proccessed, simply pop back on to the merry-go-round
                     # push it back onto the stack to continue the merry-go-round
@@ -966,6 +967,8 @@ class UnitTask(db.Model, SerializerMixin):
     # validate date inputs
     @validates('pin_start','pin_end','sched_start','sched_end','started_date','complete_date')
     def validate_dates(self, attr, value):
+        if value is None:
+            return None
         if not isinstance(value, datetime):
             for format in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S'):
                 try:
@@ -973,7 +976,7 @@ class UnitTask(db.Model, SerializerMixin):
                 except ValueError:
                     pass
             raise ValueError(f'{attr} must be a valid date.')
-        return value
+        return to_utc_naive(value)
     
     
     def set_status_code(self):
@@ -1019,8 +1022,13 @@ class UnitTask(db.Model, SerializerMixin):
                 # if child is not completed yet, set start date of child to be the following day
                 if child_task.complete_status != True and not isinstance(child_task.complete_date, date):
                     if child_task.started_status != True and not isinstance(child_task.started_date, date):
+                        # a child waits for every blocking parent (autostart_children=True), not just this one
+                        blocking_parents = [p for p in child_task.parents if p.master_task.autostart_children != False]
+                        if not all(p.complete_status == True and isinstance(p.complete_date, date) for p in blocking_parents):
+                            print(f'Child task "{child_task.id}" still waiting on other parent tasks')
+                            continue
                         child_task.started_status = True
-                        child_task.started_date = self.complete_date + timedelta(days=1)
+                        child_task.started_date = max(p.complete_date for p in blocking_parents) + timedelta(days=1)
                         db.session.commit()
                         print(f'Child task "{child_task.id}" marked as started')
                     else:
@@ -1289,7 +1297,7 @@ class StatusUpdate(db.Model, SerializerMixin):
     task_status = db.Column(db.Integer, nullable=False)
     message = db.Column(db.String)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc)) #server_default=db.func.now()
+    timestamp = db.Column(db.DateTime, default=utc_now) #server_default=db.func.now()
 
     __table_args__ = (
         db.Index('ix_statusupdate_task_timestamp', 'task_id', 'timestamp'),
@@ -1318,10 +1326,9 @@ class StatusUpdate(db.Model, SerializerMixin):
     @validates('timestamp')
     def validate_dates(self, attr, value):
         if isinstance(value, datetime):
-            return value.astimezone(timezone.utc)
+            return to_utc_naive(value)
         try:
-            parsed = parse_datetime(value)
-            return parsed.astimezone(timezone.utc)
+            return to_utc_naive(parse_datetime(value))
         except (ValueError, TypeError):
             raise ValueError(f"{attr} must be a valid datetime (preferably in ISO 8601).")
     

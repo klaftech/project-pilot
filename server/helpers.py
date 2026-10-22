@@ -19,6 +19,20 @@ def get_previous_monday():
     previous_monday = today - timedelta(days=days_to_subtract)
     return previous_monday
 
+# All DateTime columns are `timestamp without time zone` holding UTC wall-clock values.
+# These helpers keep Python-side values the same way: naive datetimes that mean UTC.
+def utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+def utc_today():
+    return datetime.now(timezone.utc).date()
+
+def to_utc_naive(value):
+    # aware -> converted to UTC; naive -> assumed to already be UTC (not server local time)
+    if value.tzinfo is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value
+
 def validate_date_input(date_string, date_format):
     try:
         datetime.strptime(date_string, date_format)
