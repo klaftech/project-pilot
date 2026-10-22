@@ -12,6 +12,7 @@ class Users(Resource):
         'last_name',
         'email',
         'is_admin',
+        'last_login_at',
     )
     
     def get(self):
@@ -31,6 +32,7 @@ class UserByID(Resource):
         'last_name',
         'email',
         'is_admin',
+        'last_login_at',
     )
 
     def patch(self, id):

@@ -37,6 +37,7 @@ class User(db.Model, SerializerMixin):
     _password_hash = db.Column(db.String)
     selectedProject = db.Column(db.Integer, nullable=True)
     selectedUnit = db.Column(db.Integer, nullable=True)
+    last_login_at = db.Column(db.DateTime, nullable=True)  # naive UTC, set on login/signup
 
     @hybrid_property
     def password_hash(self):
@@ -889,6 +890,8 @@ class UnitTask(db.Model, SerializerMixin):
     
     __table_args__ = (
         db.Index('ix_unittask_status', 'started_status', 'complete_status'),
+        # one UnitTask per MasterTask per unit
+        db.UniqueConstraint('unit_id', 'task_id'),
     )
 
     unit = db.relationship('Unit', back_populates="unit_tasks")

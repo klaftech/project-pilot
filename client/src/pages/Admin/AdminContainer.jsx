@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Switch } from '@mui/material';
 import LoadingWrapper from "@/components/LoadingWrapper"
 import UserContext from '@/context/UserContext.jsx'
+import { stringToDate, formatDateTimePretty } from '@/utils/date.js'
 
 const AdminContainer = () => {
     const [projectUsers, setProjectUsers] = useState([])
@@ -218,6 +219,9 @@ const AdminContainer = () => {
                                         <div>
                                             <div className="font-medium">{u.first_name} {u.last_name}</div>
                                             <div className="text-sm text-gray-500">{u.email}</div>
+                                            <div className="text-xs text-gray-400">
+                                                Last login: {u.last_login_at ? formatDateTimePretty(stringToDate(u.last_login_at)) : "not recorded"}
+                                            </div>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center py-4 px-6">

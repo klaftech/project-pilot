@@ -4,6 +4,7 @@ from flask_restful import Resource
 
 from config import db
 from models import ProjectUser, User, Project, Unit
+from helpers import utc_now
 
 def allowed_projects():
     user = User.query.filter_by(id=session.get('user_id')).first()
@@ -58,6 +59,7 @@ class UserSignup(Resource):
                 email=data['email'],
             )
             user.password_hash=data['password']
+            user.last_login_at = utc_now()
             db.session.add(user)
             db.session.commit()
 
@@ -76,6 +78,8 @@ class UserLogin(Resource):
         user = User.query.filter(User.email == data['email']).first()
         if user and user.authenticate(data['password']):
             session['user_id'] = user.id
+            user.last_login_at = utc_now()
+            db.session.commit()
 
             return make_response(get_user_object(user), 200)
         return make_response({"errors": ["Login Error"]}, 403)
