@@ -134,8 +134,8 @@ export default function ProfilePage() {
                                 )}
                             </div>
                             <div className="space-y-1">
-                                <Label>Email</Label>
-                                <Input value={user?.email ?? ''} disabled />
+                                <Label htmlFor="email">Email</Label>
+                                <Input id="email" value={user?.email ?? ''} disabled />
                             </div>
                             {profileSuccess && <p className="text-sm text-green-600">{profileSuccess}</p>}
                             {profileError && <p className="text-sm text-destructive">{profileError}</p>}

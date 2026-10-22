@@ -1,7 +1,7 @@
 import { useParams } from "react-router"
 import { useNavigate } from "react-router";
 import { useEffect, useState, useContext } from 'react'
-import { stringToDate, formatDatePretty, formatDatePrettyMMDD } from '@/utils/date.js'
+import { stringToDate, formatDatePretty, formatDatePrettyMMDD, isDate } from '@/utils/date.js'
 import { getTaskStatus } from '@/utils/task.js'
 
 import UserContext from '@/context/UserContext.jsx'
@@ -21,7 +21,8 @@ import {
   BadgeAlert,
   SquareCheckBig,
   Circle,
-  Clock
+  Clock,
+  Wrench,
 } from "lucide-react";
 
 // https://npm.runkit.com/react-data-table-component
@@ -129,7 +130,7 @@ const ProjectDetailsById = () => {
 
     const projectStats = [
       {group: "project", label: "Completed", color: "green", total: projectObj.stats.counts.count_completed},
-      {group: "project", label: "In Progress", color: "yellow", total: "N/A"},
+      {group: "project", label: "In Progress", color: "yellow", total: projectObj.stats.counts.count_in_progress},
       {group: "project", label: "Overdue", color: "red", total: projectObj.stats.counts.count_overdue},
       {group: "week", label: "Scheduled", color: "#3a82a1", total: projectObj.stats.week.count_scheduled},
       {group: "week", label: "Scheduled & Completed", color: "#3a82a1", total: projectObj.stats.week.count_scheduled_completed},
@@ -164,22 +165,28 @@ const ProjectDetailsById = () => {
       },
     }
 
+    // a group column is only useful when tasks are spread across more than one group
+    const groupCount = new Set(projectMasterTasklist.map(task => task.group?.id)).size
+    const isCompleted = projectObj.stats.status === "completed"
+    const actualStart = stringToDate(projectObj.stats.completion.start !== "None" ? projectObj.stats.completion.start : null)
+    const actualEnd = stringToDate(projectObj.stats.completion.end !== "None" ? projectObj.stats.completion.end : null)
+
     const columns = [
       {
         name: 'Task',
         selector: row => row.name,
       },
-      {
+      ...(groupCount > 1 ? [{
         name: 'Group',
         selector: row => row.group.name,
-      },
+      }] : []),
       {
         name: 'Order',
         selector: row => row.order,
       },
       {
         name: '',
-        selector: row => <Button variant="light" onClick={()=>navigate('/mastertask/'+row.id)}>View</Button>,
+        selector: row => <Button variant="link" size="sm" onClick={()=>navigate('/mastertask/'+row.id)}>View</Button>,
       },
       // {
       //   name: 'Pinned Start',
@@ -199,7 +206,7 @@ const ProjectDetailsById = () => {
     return (
         <AppWrapper>
           {/* <div className="container mx-auto p-6"> */}
-          <section className="py-32">
+          <section className="py-6 md:py-10">
             <div className="container px-0 md:px-8">
               
               <h1 className="mb-10 px-4 text-3xl font-semibold md:mb-14 md:text-4xl">
@@ -217,10 +224,10 @@ const ProjectDetailsById = () => {
                   <div className="order-2 flex items-center gap-2 md:order-none">
                     <span className="flex h-14 w-16 shrink-0 items-center justify-center rounded-md bg-muted">
                       {/* <ThumbsUp /> */}
-                      {progressStatus[projectObj.stats.status]['icon'] ?? <Wrench className="size-5 shrink-0" />}
+                      {progressStatus[projectObj.stats.status]?.icon ?? <Wrench className="size-5 shrink-0" />}
                     </span>
                     <div className="flex flex-col gap-1">
-                      <h3 className="font-semibold">{progressStatus[projectObj.stats.status]['label']}</h3>
+                      <h3 className="font-semibold">{progressStatus[projectObj.stats.status]?.label ?? projectObj.stats.status}</h3>
                     </div>
                   </div>
                 </div>
@@ -229,15 +236,24 @@ const ProjectDetailsById = () => {
 
                 <div className="grid items-center gap-4 px-4 py-5 md:grid-cols-4">
                   <p className="order-1 text-2xl font-semibold md:order-none md:col-span-2">
-                    Anticipated Schedule
+                    {isCompleted ? "Actual Schedule" : "Planned Schedule"}
                   </p>
                   <div className="order-2 flex items-center gap-2 md:order-none">
                     <span className="flex h-14 w-16 shrink-0 items-center justify-center rounded-md bg-muted">
                       <Clock />
                     </span>
                     <div className="flex flex-col gap-1">
-                      <h3 className="font-semibold">{formatDatePretty(stringToDate(projectObj.schedule.project_start))} - {formatDatePretty(stringToDate(projectObj.schedule.project_end))}</h3>
-                      <h3 className="font-semibold text-muted-foreground">{projectObj.schedule.project_days} days</h3>
+                      {isCompleted && isDate(actualStart) && isDate(actualEnd) ? (
+                        <>
+                          <h3 className="font-semibold">{formatDatePretty(actualStart)} - {formatDatePretty(actualEnd)}</h3>
+                          <h3 className="font-semibold text-muted-foreground">{projectObj.stats.completion.days} days</h3>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="font-semibold">{formatDatePretty(stringToDate(projectObj.schedule.project_start))} - {formatDatePretty(stringToDate(projectObj.schedule.project_end))}</h3>
+                          <h3 className="font-semibold text-muted-foreground">{projectObj.schedule.project_days} days (original plan)</h3>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

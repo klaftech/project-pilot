@@ -283,7 +283,7 @@ const FormFields = ({ form }) => {
                         </PopoverContent>
                     </Popover>
                     <FormDescription>
-                        Task will not begin before this date.
+                        The task won&apos;t be scheduled to start before this date.
                     </FormDescription>
                     <FormMessage />
                     </FormItem>
@@ -330,7 +330,7 @@ const FormFields = ({ form }) => {
                         </PopoverContent>
                     </Popover>
                     <FormDescription>
-                        Task will not end before this date.
+                        The task won&apos;t be scheduled to finish before this date.
                     </FormDescription>
                     <FormMessage />
                     </FormItem>

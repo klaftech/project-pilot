@@ -31,7 +31,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
 
         // ensure we have task_id to link status to
         if(!modelObj.project_id){
-            throw Exception("Project ID missing")
+            throw new Error("Project ID missing")
         }
 
         const url = fetchParams.url
@@ -40,6 +40,13 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
         console.log('onFormSubmit() fired')
         console.log("fetchParams: ",url, request_method)
         console.log("formData: ",form_data)
+
+        // the API expects plain dates; a Date object would serialize as an ISO timestamp and be ignored
+        for (const key of ['start', 'end']) {
+            if (form_data[key] instanceof Date) {
+                form_data[key] = format(form_data[key], 'yyyy-MM-dd')
+            }
+        }
 
         if(request_method == "POST"){
             form_data = {

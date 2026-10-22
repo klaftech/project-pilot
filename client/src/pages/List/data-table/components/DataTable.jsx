@@ -55,6 +55,7 @@ function DataTable({columns,data}) {
             <div className="flex items-center py-4">
               <Input
                 placeholder="Filter tasks..."
+                aria-label="Filter tasks"
                 value={(table.getColumn("name")?.getFilterValue()) ?? ""}
                 onChange={(event) =>
                   table.getColumn("name")?.setFilterValue(event.target.value)
@@ -68,7 +69,7 @@ function DataTable({columns,data}) {
           </div>
 
           {/* Begin Table */}
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (

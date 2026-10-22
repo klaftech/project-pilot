@@ -7,7 +7,7 @@ import {
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { CircleCheckBig, Eye, Pencil, TrendingUp } from "lucide-react";
-import { formatDatePretty, isDateToday } from '@/utils/date.js'
+import { formatDatePretty, isDateToday, formatDaysAgo, isDate, getToday } from '@/utils/date.js'
 import StatusBadge from "@/components/StatusBadge.jsx";
 
 export function TaskCard({ 
@@ -35,6 +35,15 @@ export function TaskCard({
                 {displayOptions.displayUnit && task.unit && <p className="text-xs text-muted-foreground mt-0.5">{task.unit.name}</p>}
             </div>
 
+            {displayOptions.displayStaleness && (
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>Last update: {formatDaysAgo(task.latest_update?.timestamp)}</span>
+                    {!task.complete_status && isDate(task.end) && task.end < getToday() && (
+                        <span className="rounded bg-red-100 px-1.5 py-0.5 font-medium text-red-700">Past planned end</span>
+                    )}
+                </div>
+            )}
+
             {displayOptions.displayProgress && 
             <Progress value={task.progress} className="h-1.5" />
             }
@@ -53,12 +62,12 @@ export function TaskCard({
 
             {/* Secondary icon actions */}
             {(displayOptions.clickEdit || displayOptions.clickView || displayOptions.clickComplete) && (
-            <div className="flex gap-3 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-3 pt-1 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
                 {displayOptions.clickEdit && 
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Pencil className="size-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" onClick={()=>onClickEdit(task)} />
+                            <button type="button" aria-label="Edit task" onClick={()=>onClickEdit(task)} className="text-muted-foreground hover:text-foreground transition-colors"><Pencil className="size-4" /></button>
                         </TooltipTrigger>
                         <TooltipContent><p>Edit Task</p></TooltipContent>
                     </Tooltip>
@@ -68,7 +77,7 @@ export function TaskCard({
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Eye className="size-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" onClick={()=>onClickView(task)} />
+                            <button type="button" aria-label="View task" onClick={()=>onClickView(task)} className="text-muted-foreground hover:text-foreground transition-colors"><Eye className="size-4" /></button>
                         </TooltipTrigger>
                         <TooltipContent><p>View Task</p></TooltipContent>
                     </Tooltip>
@@ -78,10 +87,15 @@ export function TaskCard({
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <CircleCheckBig 
-                                className={`size-4 cursor-pointer transition-colors ${task.complete_status ? "text-green-500" : "text-muted-foreground hover:text-green-500"}`}
+                            <button
+                                type="button"
+                                aria-label="Mark complete"
+                                disabled={task.complete_status}
                                 onClick={()=>{ if(!task.complete_status){ onClickComplete(task) }}}
-                            />
+                                className={`transition-colors ${task.complete_status ? "text-green-500" : "text-muted-foreground hover:text-green-500"}`}
+                            >
+                                <CircleCheckBig className="size-4" />
+                            </button>
                         </TooltipTrigger>
                         <TooltipContent><p>Mark Complete</p></TooltipContent>
                     </Tooltip>

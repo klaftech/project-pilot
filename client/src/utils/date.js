@@ -114,3 +114,17 @@ export function getPreviousPreviousMonday() {
 
     return prevprevMonday;
 }
+// whole days between a past date and today (0 = today); does not modify its argument
+export const daysAgo = (date) => {
+    const day = new Date(date)
+    day.setHours(0, 0, 0, 0)
+    return Math.round((getToday().getTime() - day.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+export const isSameDay = (a, b) => isDate(a) && isDate(b) && a.toDateString() === b.toDateString()
+
+export const formatDaysAgo = (date) => {
+    if (!isDate(date)) return "never"
+    const days = daysAgo(date)
+    return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`
+}

@@ -54,28 +54,6 @@ import {
 // },
 
 const columns = [
-  columnHelper.display({
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  }),
   
   columnHelper.accessor(
     "name", {
@@ -150,7 +128,7 @@ const columns = [
 
       // hide dropdown if task is completed
       if(taskObj.status_code == 200){
-        return (<></>)
+        return (<span className="text-sm text-muted-foreground">Completed</span>)
       }
 
       const field = {

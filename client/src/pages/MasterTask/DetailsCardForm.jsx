@@ -8,7 +8,10 @@ import {
     CardTitle,
   } from "@/components/ui/card"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
+import { useNavigate } from 'react-router'
+import { toast } from "sonner"
+import UserContext from '@/context/UserContext'
 import FormWrapper from '@/components/form/master_task/FormWrapper'
 import FormFields from '@/components/form/master_task/FormFields'
 import ShowAlert from "@/components/ShowAlert"
@@ -16,6 +19,26 @@ import ShowAlert from "@/components/ShowAlert"
 const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
     
     const [show, setShow] = useState(false)
+    const [confirmDelete, setConfirmDelete] = useState(false)
+    const { user } = useContext(UserContext)
+    const navigate = useNavigate()
+    const isAdmin = !!user?.is_admin
+
+    const handleDelete = async () => {
+        if (!confirmDelete) {
+            setConfirmDelete(true)
+            return
+        }
+        const res = await fetch('/api/mastertasks/' + taskObj.id, { method: 'DELETE' })
+        if (res.ok) {
+            toast("Task deleted")
+            navigate('/project/' + (taskObj.project?.id ?? ''))
+        } else {
+            const data = await res.json().catch(() => ({}))
+            toast(data.error || "This task could not be deleted.")
+            setConfirmDelete(false)
+        }
+    }
     
     useEffect(() => {
         const timeId = setTimeout(() => {
@@ -36,20 +59,28 @@ const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Edit Master Task</CardTitle>
+                <CardTitle>{isAdmin ? "Edit Master Task" : "Master Task"}</CardTitle>
                 <CardDescription>
-                    Make change to your task here. Click save when your done.
+                    {isAdmin ? "Make changes to your task here. Click save when you're done." : "Only administrators can change task templates."}
                     {show && <ShowAlert message="Changes saved" />}
                 </CardDescription>
             </CardHeader>
             
             <FormWrapper formScenario="update" taskEditObj={taskObj} pushUpdateTask={pushUpdateTask} submitHook={submitHook}>
                 <CardContent className="space-y-2">
-                    <FormFields form={()=>true}/>
+                    {/* a disabled fieldset disables every control inside it for non-admins */}
+                    <fieldset disabled={!isAdmin}>
+                        <FormFields form={()=>true}/>
+                    </fieldset>
                 </CardContent>
-                <CardFooter>
-                    <Button type="submit">Save changes</Button>
-                </CardFooter>
+                {isAdmin && (
+                    <CardFooter className="flex flex-wrap justify-between gap-2">
+                        <Button type="submit">Save changes</Button>
+                        <Button type="button" variant={confirmDelete ? "destructive" : "outline"} onClick={handleDelete}>
+                            {confirmDelete ? "Confirm delete" : "Delete task"}
+                        </Button>
+                    </CardFooter>
+                )}
             </FormWrapper>
                     
                 {/* 

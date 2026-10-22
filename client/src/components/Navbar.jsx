@@ -451,11 +451,11 @@ const AppNavbar = ({
             </NavLink>
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" aria-label="Open menu">
                   <Menu className="size-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent className="overflow-y-auto">
+              <SheetContent className="overflow-y-auto" aria-describedby={undefined}>
                 <SheetHeader>
                   <SheetTitle>
                     <NavLink to={logo.url} className="flex items-center gap-2">

@@ -158,7 +158,7 @@ const FormFields = ({ form }) => {
                         </PopoverContent>
                     </Popover>
                     <FormDescription>
-                        All unit task will be scheduled to begin after this date.
+                        Tasks without prerequisites are scheduled to start on this date. Leave empty to start today.
                     </FormDescription>
                     <FormMessage />
                     </FormItem>

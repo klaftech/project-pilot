@@ -19,7 +19,8 @@ import {
 import { useParams } from "react-router"
 import { taskBuilder } from '@/utils/task.js'
 import { stringToDate } from '@/utils/date.js'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useContext } from 'react'
+import UserContext from '@/context/UserContext'
 
 import DetailsCardDependencies from "./DetailsCardDependencies.jsx"
 import DetailsCardForm from './DetailsCardForm.jsx'
@@ -38,6 +39,7 @@ function MasterTaskDetailsById() {
     //console.log(params)
     const taskId = params.taskId
 
+    const { user } = useContext(UserContext)
     const [masterTaskObj, setMasterTaskObj] = useState()
     const [error, setError] = useState(null)
 
@@ -107,7 +109,7 @@ function MasterTaskDetailsById() {
                     {!error && masterTaskObj && <DetailsCardForm taskObj={masterTaskObj} pushUpdateTask={handleTaskUpdate} reloadTaskObj={handleReloadTaskObj} />}
                 </TabsContent>
                 <TabsContent value="dependencies">
-                    {!error && masterTaskObj && <DetailsCardDependencies taskObj={masterTaskObj} reloadTasks={reloadTasks} />}
+                    {!error && masterTaskObj && <fieldset disabled={!user?.is_admin}><DetailsCardDependencies taskObj={masterTaskObj} reloadTasks={reloadTasks} /></fieldset>}
                 </TabsContent>
                 
                 {/*

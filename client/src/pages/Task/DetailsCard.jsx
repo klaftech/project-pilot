@@ -17,7 +17,7 @@ const DetailsCard = ({ task }) => {
             <CardHeader>
                 <CardTitle>Task Details for <u>{task.name}</u></CardTitle>
                 {/* <CardDescription>
-                    Make change to your task here. Click save when your done.
+                    Make changes to your task here. Click save when you're done.
                     {show && <ShowAlert message="Changes saved" />}
                 </CardDescription> */}
             </CardHeader>

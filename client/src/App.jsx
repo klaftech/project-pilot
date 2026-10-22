@@ -1,27 +1,30 @@
 import { Routes, Route, useNavigate, useLocation } from "react-router";
-import { useEffect, useContext } from 'react'
+import { useEffect, useContext, lazy, Suspense } from 'react'
+import LoadingWrapper from '@/components/LoadingWrapper'
 
-import ProjectDetailsById from '@/pages/Project/ProjectDetailsById'
-import UnitDetailsById from '@/pages/Unit/UnitDetailsById'
-import UnitCreateWrapper from '@/pages/Unit/UnitCreateWrapper'
-import MasterTaskDetailsById from '@/pages/MasterTask/MasterTaskDetailsById'
-import TaskDetailsById from '@/pages/Task/TaskDetailsById'
-import TasksContainer from '@/pages/Tasks/TasksContainer';
+// pages load on first visit; Home, Login and Signup stay in the main bundle
+const ProjectDetailsById = lazy(() => import('@/pages/Project/ProjectDetailsById'))
+const UnitDetailsById = lazy(() => import('@/pages/Unit/UnitDetailsById'))
+const UnitCreateWrapper = lazy(() => import('@/pages/Unit/UnitCreateWrapper'))
+const MasterTaskDetailsById = lazy(() => import('@/pages/MasterTask/MasterTaskDetailsById'))
+const TaskDetailsById = lazy(() => import('@/pages/Task/TaskDetailsById'))
+const TasksContainer = lazy(() => import('@/pages/Tasks/TasksContainer'))
+const ListContainer = lazy(() => import('@/pages/List/ListContainer'))
+const ScheduleContainer = lazy(() => import('@/pages/Schedule/ScheduleContainer'))
+const OverviewContainer = lazy(() => import('@/pages/Overview/OverviewContainer'))
+const AdminContainer = lazy(() => import('@/pages/Admin/AdminContainer'))
+const ProfilePage = lazy(() => import('@/pages/Profile/Profile'))
+const ToastDemo = lazy(() => import('@/dev/_ToastDemo'))
+const TaskInnerForm = lazy(() => import('@/dev/_TaskInnerForm'))
+const AppDev = lazy(() => import('@/dev/_AppDev'))
+
 import TasksHomeContainer from '@/pages/Tasks/TasksHomeContainer';
-import ListContainer from '@/pages/List/ListContainer'
-import ScheduleContainer from "@/pages/Schedule/ScheduleContainer";
-import OverviewContainer from '@/pages/Overview/OverviewContainer'
-import AdminContainer from '@/pages/Admin/AdminContainer'
 import Signup from '@/pages/Signup/Signup'
 import Login from '@/pages/Login/Login'
 import Logout from '@/pages/Logout/Logout'
-import ProfilePage from '@/pages/Profile/Profile'
 import HTTP404 from '@/pages/404/HTTP404'
 import Navbar from '@/components/Navbar'
 
-import ToastDemo from "@/dev/_ToastDemo";
-import TaskInnerForm from '@/dev/_TaskInnerForm'
-import AppDev from '@/dev/_AppDev'
 
 import UserContext from '@/context/UserContext'
 import { toast } from "sonner"
@@ -80,6 +83,7 @@ function App() {
     return (
         <>
         {/* since adding to App instead of individual pages, navigation pane doesn't auto-close on selection, moved to save on projects reload */}
+        <Suspense fallback={<AppWrapper><LoadingWrapper /></AppWrapper>}>
         <Routes>
             <Route index element={<TasksHomeContainer />} />
             <Route path="project/:projectId" element={<ProjectDetailsById />} />
@@ -107,6 +111,7 @@ function App() {
             
             <Route path="*" element={<HTTP404 endpoint={location.pathname} />} />
         </Routes>
+        </Suspense>
         </>
     )
 }

@@ -11,7 +11,7 @@ const AppWrapper = ({ children }) => {
                 </div>
             </main>
             <div className="p-7 text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary  ">
-                Developed by Klaftech Data Systems
+                Developed by <a href="https://klaftech.com" target="_blank" rel="noreferrer">KlafTech Data Systems</a>
             </div>
             <Analytics />
         </>

@@ -4,7 +4,10 @@ import ShowAlert from '@/components/ShowAlert'
 
 
 import { useState, useContext } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, Link } from 'react-router'
+import ProjectsContext from '@/context/ProjectsContext'
+import UnitsContext from '@/context/UnitsContext'
+import UnitFilter from '@/components/UnitFilter'
 
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -25,6 +28,10 @@ export function TasksContainer() {
 
     const navigate = useNavigate();
     const {user, setUser} = useContext(UserContext);
+    const {projects} = useContext(ProjectsContext);
+    const {units} = useContext(UnitsContext);
+    const selectedProject = projects.find(p => p.id == user?.selectedProject)
+    const selectedUnit = units.find(u => u.id == user?.selectedUnit)
 
     const [isOpen, setIsOpen] = useState(false)
     const [formScenario, setFormScenario] = useState(false)
@@ -93,9 +100,18 @@ export function TasksContainer() {
                 <ChevronRight />
                 */}
                 
-                {user && user.selectedProject && <Badge>Project {user.selectedProject}</Badge>}
-                <ChevronRight />
-                {user && user.selectedUnit && <Badge>Unit {user.selectedUnit}</Badge>}
+            </div>
+
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
+                <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm">
+                    {selectedProject && <Link to={`/project/${selectedProject.id}`} className="font-medium hover:underline">{selectedProject.name}</Link>}
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                    {selectedUnit && <Link to={`/unit/${selectedUnit.id}`} className="font-medium hover:underline">{selectedUnit.name}</Link>}
+                </nav>
+                <div className="flex flex-wrap items-center gap-3">
+                    <UnitFilter />
+                    <Button asChild variant="outline" size="sm"><Link to="/list">All tasks for this unit</Link></Button>
+                </div>
             </div>
 
             <DialogPopupForm isOpen={isOpen} setIsOpen={setIsOpen} title="Create Task" description="Make changes to your task here. Click save when you're done." >

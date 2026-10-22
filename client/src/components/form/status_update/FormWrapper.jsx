@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react'
 import { useForm } from 'react-hook-form'
 import { format, parse } from "date-fns"
 import { fromZonedTime } from "date-fns-tz"
+import { isSameDay } from '@/utils/date'
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -34,7 +35,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
 
         // ensure we have task_id to link status to
         if(!modelObj.task_id){
-            throw Exception("Task ID missing")
+            throw new Error("Task ID missing")
         }
 
         const url = fetchParams.url
@@ -43,6 +44,11 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
         console.log('onFormSubmit() fired')
         console.log("fetchParams: ",url, request_method)
         console.log("formData: ",form_data)
+
+        // left on today: let the server record the exact time instead of midnight
+        if(request_method == "POST" && isSameDay(form_data.record_date, new Date())){
+            delete form_data.record_date
+        }
 
         if(form_data.record_date != undefined){
             // Step 1: Parse the field value into a local Date object
@@ -103,7 +109,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
             onSubmitHook(data)
             
             // reset the form
-            form.reset(defaultFormValues)
+            form.reset({...defaultFormValues, record_date: new Date()})
             console.log("onFormSubmit(): form reset")
             
 
@@ -167,7 +173,7 @@ const FormWrapper = ({ formScenario, modelObj, onSubmitHook, children }) => {
         } else {
             console.log('useEffect. form reset to default values')
             setFetchParams(defaultFetchParams)
-            form.reset(defaultFormValues)
+            form.reset({...defaultFormValues, record_date: new Date()})
         }
     },[modelObj])
     //console.log({...form})

@@ -20,6 +20,7 @@ export const taskBuilder = (task) => {
         "started_date": stringToDate(task.started_date),
         "complete_status": task.complete_status,
         "complete_date": stringToDate(task.complete_date),
+        "latest_update": task.latest_update ? { "status": task.latest_update.status, "timestamp": stringToDate(task.latest_update.timestamp) } : null,
         //"dependencies": task.dependencies.map(task => taskBuilder(task)) //as of now we dont need full recursive dependencies.
         "dependencies": task.parents ? task.parents.map(task => task.id) : [], //sending array of IDs. if changing this, ensure that updated in GanttChart.jsx as well 
         "group": {

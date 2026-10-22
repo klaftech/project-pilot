@@ -14,6 +14,7 @@ export const ToDoList = ({ tasks, isLoaded, handleClickEdit, handleClickView, ha
         displayStatus: false,
         displaySchedule: false,
         displayProgress: true,
+        displayStaleness: true,
         clickEdit: false,
         clickView: false,
         clickComplete: false,
@@ -22,7 +23,11 @@ export const ToDoList = ({ tasks, isLoaded, handleClickEdit, handleClickView, ha
     
     const title = "Pending Updates"
 
-    const tasklist = tasks.map((task) => {
+    // never-updated first, then the longest since the last update
+    const updatedAt = (task) => task.latest_update?.timestamp?.getTime() ?? -Infinity
+    const sorted = [...tasks].sort((a, b) => updatedAt(a) - updatedAt(b))
+
+    const tasklist = sorted.map((task) => {
         return <TaskCard key={task.id} task={task} displayOptions={displayOptions} onClickStatusUpdate={handleClickStatusUpdate} />
     })
 

@@ -2,130 +2,111 @@ import { useState } from "react";
 import { useNavigate } from 'react-router'
 import { Gantt, ViewMode } from "gantt-task-react";
 import { ViewSwitcher } from "./ViewSwitcher";
-import { getStartEndDateForProject } from "./helper";
 
-//import './app.css'
 import "gantt-task-react/dist/index.css";
 
-const App = ({ tasks, setTasks }) => {
+const NAME_WIDTH = 190
+const DATE_WIDTH = 82
+
+const shortDate = (date) => date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+
+// compact task list: wider names, short dates (the library default truncates both)
+const TaskListHeader = ({ headerHeight }) => (
+  <div className="flex border-b text-xs font-medium text-muted-foreground" style={{ height: headerHeight }}>
+    <div className="flex items-end px-2 pb-2" style={{ width: NAME_WIDTH }}>Task</div>
+    <div className="flex items-end px-2 pb-2" style={{ width: DATE_WIDTH }}>Start</div>
+    <div className="flex items-end px-2 pb-2" style={{ width: DATE_WIDTH }}>Finish</div>
+  </div>
+)
+
+const TaskListTable = ({ rowHeight, tasks, onExpanderClick }) => (
+  <div className="text-xs">
+    {tasks.map(task => (
+      <div key={task.id} className="flex items-center border-b border-muted odd:bg-muted/30" style={{ height: rowHeight }}>
+        <div className="truncate px-2" style={{ width: NAME_WIDTH }} title={task.name}>
+          {task.type === 'project'
+            ? <button type="button" className="font-semibold" onClick={() => onExpanderClick(task)}>{task.hideChildren ? '▸' : '▾'} {task.name}</button>
+            : <span className="pl-3">{task.name}</span>}
+        </div>
+        <div className="px-2 tabular-nums" style={{ width: DATE_WIDTH }}>{shortDate(task.start)}</div>
+        <div className="px-2 tabular-nums" style={{ width: DATE_WIDTH }}>{shortDate(task.end)}</div>
+      </div>
+    ))}
+  </div>
+)
+
+const stateLabels = { completed: 'Completed', in_progress: 'In progress', projected: 'Projected' }
+
+const TooltipContent = ({ task }) => (
+  <div className="rounded-md border bg-white p-3 text-xs shadow-md">
+    <p className="mb-1 font-semibold">{task.name}</p>
+    {task.scheduleState && <p className="text-muted-foreground">{stateLabels[task.scheduleState]}</p>}
+    <p>{task.scheduleState === 'completed' ? 'Actual' : 'Projected'}: {shortDate(task.start)} – {shortDate(task.end)}</p>
+    {task.plannedStart && <p className="text-muted-foreground">Planned: {shortDate(task.plannedStart)} – {shortDate(task.plannedEnd)}</p>}
+  </div>
+)
+
+const isSmallScreen = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+
+const GanttChart = ({ tasks, setTasks }) => {
   const navigate = useNavigate();
   const [view, setView] = useState(ViewMode.Month);
-  const [isChecked, setIsChecked] = useState(true);
+  // the task list takes most of a phone screen; start with it hidden there
+  const [isChecked, setIsChecked] = useState(!isSmallScreen());
 
-  let columnWidth = 65;
-  if (view === ViewMode.Year) {
-    columnWidth = 350;
-  } else if (view === ViewMode.Month) {
-    columnWidth = 300;
-  } else if (view === ViewMode.Week) {
-    columnWidth = 250;
-  }
+  // open on recent history plus what's ahead, not on the first task (often a year back)
+  const [viewDate] = useState(() => new Date(Date.now() - 60 * 24 * 60 * 60 * 1000));
 
-  const handleTaskChange = (task) => {
-    console.log("On date change Id:" + task.id);
-    let newTasks = tasks.map((t) => (t.id === task.id ? task : t));
-    if (task.project) {
-      const [start, end] = getStartEndDateForProject(newTasks, task.project);
-      const project = newTasks[newTasks.findIndex((t) => t.id === task.project)];
-      if (
-        project.start.getTime() !== start.getTime() ||
-        project.end.getTime() !== end.getTime()
-      ) {
-        const changedProject = { ...project, start, end };
-        newTasks = newTasks.map((t) =>
-          t.id === task.project ? changedProject : t
-        );
-      }
-    }
-    setTasks(newTasks);
-  };
-
-  const handleTaskDelete = (task) => {
-    const conf = window.confirm("Are you sure about " + task.name + " ?");
-    if (conf) {
-      setTasks(tasks.filter((t) => t.id !== task.id));
-    }
-    return conf;
-  };
-
-  const handleProgressChange = async (task) => {
-    setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
-    console.log("On progress change Id:" + task.id);
-  };
-
-  const handleDblClick = (task) => {
-    //alert("On Double Click event Id:" + task.id);
-    if(task.type == "task"){
-      navigate('/task/'+task.id)
-    }
-  };
+  const columnWidths = { [ViewMode.Year]: 350, [ViewMode.Month]: 160, [ViewMode.Week]: 120 }
+  const columnWidth = columnWidths[view] ?? 65
 
   const handleClick = (task) => {
-    //console.log("On Click event Id:" + task.id);
-    if(task.type == "task"){
-      navigate('/task/'+task.id)
+    if (task.type == "task") {
+      navigate('/task/' + task.id)
     }
-  };
-
-  const handleSelect = (task, isSelected) => {
-    console.log(
-      task.name + " has " + (isSelected ? "selected" : "unselected")
-    );
   };
 
   const handleExpanderClick = (task) => {
     setTasks(tasks.map((t) => (t.id === task.id ? task : t)));
-    console.log("On expander click Id:" + task.id);
   };
 
   return (
     <>
-      <ViewSwitcher
-        onViewModeChange={(viewMode) => setView(viewMode)}
-        onViewListChange={setIsChecked}
-        isChecked={isChecked}
-        currentView={view}
-      />
-      
-      <h2>Project Workflow</h2>
-
-      <div className="flex gap-6">
-        <Gantt
-            tasks={tasks}
-            viewMode={view}
-            locale="en-US"
-            todayColor="#f0f080"
-            onDateChange={handleTaskChange}
-            onDelete={handleTaskDelete}
-            onProgressChange={handleProgressChange}
-            onDoubleClick={handleDblClick}
-            onClick={handleClick}
-            onSelect={handleSelect}
-            onExpanderClick={handleExpanderClick}
-            listCellWidth={isChecked ? "155px" : ""}
-            columnWidth={columnWidth}
-          />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5"><span className="inline-block size-3 rounded-sm bg-green-500" />Completed (actual)</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block size-3 rounded-sm bg-blue-500" />In progress</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block size-3 rounded-sm bg-slate-400" />Projected</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block size-3 rounded-sm bg-yellow-200" />Today</span>
+        </div>
+        <ViewSwitcher
+          onViewModeChange={(viewMode) => setView(viewMode)}
+          onViewListChange={setIsChecked}
+          isChecked={isChecked}
+          currentView={view}
+        />
       </div>
-      
-      {/*
-      <h3>Project Workflow with Limited Height</h3>
-      <Gantt
-        tasks={scheduledTasks}
-        viewMode={view}
-        onDateChange={handleTaskChange}
-        onDelete={handleTaskDelete}
-        onProgressChange={handleProgressChange}
-        onDoubleClick={handleDblClick}
-        onClick={handleClick}
-        onSelect={handleSelect}
-        onExpanderClick={handleExpanderClick}
-        listCellWidth={isChecked ? "155px" : ""}
-        ganttHeight={300}
-        columnWidth={columnWidth}
-      /> 
-      */}
+
+      {/* the chart scrolls inside its own box instead of widening the page */}
+      <div className="w-full min-w-0 overflow-x-auto rounded-md border bg-white">
+        <Gantt
+          tasks={tasks}
+          viewMode={view}
+          viewDate={viewDate}
+          locale="en-US"
+          todayColor="#f0f08080"
+          onClick={handleClick}
+          onDoubleClick={handleClick}
+          onExpanderClick={handleExpanderClick}
+          listCellWidth={isChecked ? `${NAME_WIDTH + 2 * DATE_WIDTH}px` : ""}
+          columnWidth={columnWidth}
+          TaskListHeader={TaskListHeader}
+          TaskListTable={TaskListTable}
+          TooltipContent={TooltipContent}
+        />
+      </div>
     </>
   );
 };
 
-export default App;
+export default GanttChart;

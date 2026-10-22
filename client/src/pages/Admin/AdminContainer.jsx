@@ -10,6 +10,7 @@ const AdminContainer = () => {
     const [projectUsers, setProjectUsers] = useState([])
     const [projects, setProjects] = useState([])
     const [users, setUsers] = useState([])
+    const [search, setSearch] = useState("")
     const [loaded, setLoaded] = useState(false)
     const [error, setError] = useState(null)
     const {user} = useContext(UserContext);
@@ -197,7 +198,17 @@ const AdminContainer = () => {
     return (
         <AppWrapper>
             <div className="container py-8 px-4">
-                <h1 className="text-3xl font-bold mb-8">Project Access Administration</h1>
+                <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                    <h1 className="text-3xl font-bold">Project Access Administration</h1>
+                    <input
+                        type="search"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search users..."
+                        aria-label="Search users"
+                        className="h-9 w-64 rounded-md border bg-white px-3 text-sm"
+                    />
+                </div>
                 
                 <TableContainer component={Paper} className="shadow-lg">
                     <Table>
@@ -213,7 +224,7 @@ const AdminContainer = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {users.map(u => (
+                            {users.filter(u => `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(search.trim().toLowerCase())).map(u => (
                                 <TableRow key={u.id} className="hover:bg-gray-50">
                                     <TableCell className="py-4 px-6">
                                         <div>
@@ -229,15 +240,21 @@ const AdminContainer = () => {
                                             checked={u.is_admin || false}
                                             onChange={() => handleAdminToggle(u.id, u.is_admin)}
                                             color="primary"
+                                            inputProps={{ 'aria-label': `Administrator: ${u.first_name} ${u.last_name}` }}
                                         />
                                     </TableCell>
-                                    {projects.map(project => (
+                                    {u.is_admin ? (
+                                        // admins see every project; per-project membership has no effect for them
+                                        <TableCell colSpan={projects.length} className="text-center py-4 px-6 text-sm text-gray-500">
+                                            All projects (admin)
+                                        </TableCell>
+                                    ) : projects.map(project => (
                                         <TableCell key={`${u.id}-${project.id}`} className="text-center py-4 px-6">
                                             <Switch
                                                 checked={hasAccess(u.id, project.id)}
                                                 onChange={() => handleToggle(u.id, project.id, hasAccess(u.id, project.id))}
-                                                disabled={u.is_admin}
                                                 color="primary"
+                                                inputProps={{ 'aria-label': `${project.name} access: ${u.first_name} ${u.last_name}` }}
                                             />
                                         </TableCell>
                                     ))}

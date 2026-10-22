@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react'
 import { useFormContext, Controller } from 'react-hook-form'
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format, parse } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -19,14 +19,6 @@ import {
     FieldGroup,
     FieldLabel,
 } from "@/components/ui/field"
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-  } from "@/components/ui/command"
 import {
     Popover,
     PopoverContent,
@@ -68,75 +60,37 @@ const FormFields = ({ form, formScenario, taskObj }) => {
             <FormField
                 control={actualForm.control}
                 name="task_status"
-                render={({ field }) => (
+                render={({ field }) => {
+                    // completed updates keep their status; show it read-only
+                    const options = isReadyOnly
+                        ? status_options.filter(status => status.code === field.value)
+                        : getFilteredStatusOptions(taskObj, status_options)
+                    return (
                     <FormItem className="flex flex-col">
-                    <FormLabel>Current Status</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild disabled={isReadyOnly}>
-                        <FormControl>
-                            <Button
-                            variant="outline"
-                            role="combobox"
-                            disabled={isReadyOnly}
-                            className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            {field.value
-                                ? status_options.find(
-                                    (status) => status.code === field.value
-                                )?.title
-                                : "Select Status"}
-                            <ChevronsUpDown className="opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                        <Command>
-                            {/* <CommandInput
-                            placeholder="Search status..."
-                            className="h-9"
-                            /> */}
-                            <CommandList>
-                            <CommandEmpty>No status found.</CommandEmpty>
-                            <CommandGroup>
-                                {getFilteredStatusOptions(taskObj, status_options).map((status) => (
-                                <CommandItem
-                                    value={status.title}
+                    <FormLabel id="status-label">New status</FormLabel>
+                    <FormControl>
+                        <div role="radiogroup" aria-labelledby="status-label" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {options.map((status) => (
+                                <Button
                                     key={status.code}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={status.code === field.value}
+                                    variant={status.code === field.value ? "default" : "outline"}
                                     disabled={isReadyOnly}
-                                    //onSelect={field.onChange}
-                                    onSelect={() => {
-                                        if (isReadyOnly) return
-                                        //form.setValue("group_id", group.id)
-                                        field.onChange(status.code)
-                                    }}
+                                    className="h-11 justify-center"
+                                    onClick={() => { if (!isReadyOnly) field.onChange(status.code) }}
                                 >
                                     {status.title}
-                                    <Check
-                                    className={cn(
-                                        "ml-auto",
-                                        status.code === field.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                    />
-                                </CommandItem>
-                                ))}
-                            </CommandGroup>
-                            </CommandList>
-                        </Command>
-                        </PopoverContent>
-                    </Popover>
-                    {/* <FormDescription>
-                        Select updated status.
-                    </FormDescription> */}
+                                </Button>
+                            ))}
+                        </div>
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
-                )}
+                    )
+                }}
             />
-            
             <FormField
                 control={actualForm.control}
                 name="record_date"
