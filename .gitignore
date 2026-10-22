@@ -3,7 +3,13 @@
 server/local
 server/__pycache__
 server/instance
-server/migrations
 server/rest/__pycache__
 client/dev
 .vercel
+
+# database exports contain user data and password hashes
+exports/
+__pycache__/
+
+# local review notes, scripts and data checks
+/docs
