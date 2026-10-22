@@ -56,20 +56,66 @@ client/
 
 ## Local development
 
-Requires Python 3, Node, and a PostgreSQL instance.
+Requires Python 3.12 (3.11 also tested), Node, and a PostgreSQL instance.
 
 ```bash
+# Configuration
+cp .env.example .env               # then fill in SECRET_KEY, DATABASE_URI, signup settings
+
 # Frontend
 npm install --prefix client
 npm run build --prefix client
 
-# Backend
-pip install -r requirements.txt
-flask db upgrade
-python server/app.py
+# Backend (pipenv; Python 3.12 for this project only, OS and pyenv-global Python untouched)
+pyenv install 3.12                 # once, if `pipenv --python 3.12` can't find a 3.12 interpreter
+pipenv --python 3.12               # creates the project virtualenv
+pipenv install --dev               # installs exactly what Pipfile.lock pins
+(cd server && pipenv run flask db upgrade)
+pipenv run python server/app.py
 ```
 
-Configure your database connection and secret key in the environment before first run.
+## Upgrading Python packages
+
+`Pipfile` is the source of truth and Vercel installs the committed `Pipfile.lock`, so every change ends
+with both files committed together.
+
+```bash
+# 1. edit version ranges in Pipfile if needed, then re-resolve
+pipenv lock                        # or: pipenv upgrade <package>
+# 2. install exactly the lock and check it
+pipenv install --dev --deploy      # --deploy fails if Pipfile and Pipfile.lock disagree
+pipenv run pip-audit               # no known vulnerabilities
+# 3. against a throwaway _test database: regression scenarios pass,
+#    (cd server && pipenv run flask db upgrade) works on an empty DB, app pages load
+git add Pipfile Pipfile.lock
+```
+
+Hold back major or breaking lines until they've been tried deliberately: `bcrypt` 5 rejects passwords over
+72 bytes, SQLAlchemy 2.1 removes 2.0 deprecations, `python-dateutil` 3 is a new major.
+`Flask-RESTful` is unmaintained (last release 0.3.10); plan to replace it with plain Flask views eventually.
+
+## Maintenance scripts
+
+Run from the repo root. Each script reads `DATABASE_URI` from the environment or `.env`.
+
+```bash
+# reset a user's password (prints the new random password)
+python server/password_reset.py user@example.com
+
+# run SQL; read-only unless --write is passed (then it asks for confirmation)
+python server/run_sql.py --list                    # built-in data checks
+python server/run_sql.py duplicate_unit_tasks
+python server/run_sql.py -q "SELECT count(*) FROM users" --csv out.csv
+
+# full read-only export to exports/<db>-<timestamp>/ (pg_dump archive, schema.sql, per-table CSVs, manifest.json)
+# exports/ is git-ignored: it contains user data and password hashes
+python server/export_db.py
+pg_restore --no-owner --no-privileges -d <empty_db> exports/<dir>/<db>.dump   # restore
+
+# regression scenarios; needs a throwaway Postgres whose name ends in _test (all tables are dropped)
+TEST_DATABASE_URI=postgresql://user@127.0.0.1:5432/pp_test python -I docs/review/scenarios.py server
+```
+
 
 ---
 
