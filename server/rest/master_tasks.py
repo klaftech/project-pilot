@@ -3,7 +3,7 @@ from flask import request, abort, make_response, session
 from flask_restful import Resource
 
 from config import db, app
-from models import User, MasterTask, MasterTaskDependency, Project, Group
+from models import User, MasterTask, MasterTaskDependency, Project, Group, TaskType
 from rest.auth import can_access_project, current_user_is_admin, admin_required_response
 from app_helpers import find_task_model_by_id, validate_date_input, master_task_recursively_update_children
 from datetime import datetime, timezone, time
@@ -134,6 +134,8 @@ class MasterTasks(Resource):
                 group_id = data['group_id'],
                 days_length = data['days_length']
             )
+            # link to the cross-project task type with the same name (created if new)
+            new_record.task_type = TaskType.for_name(data['name'])
 
             if 'autostart_children' in data:
                 new_record.autostart_children = True

@@ -398,6 +398,32 @@ class Group(db.Model, SerializerMixin):
 
 
 
+class TaskType(db.Model, SerializerMixin):
+    # the same kind of work across projects (e.g. "Framing"); each project's MasterTask points at one,
+    # so analytics can compare projects even if a template's task is renamed
+    __tablename__ = "task_types"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False, unique=True)
+
+    master_tasks = db.relationship('MasterTask', back_populates="task_type")
+    serialize_rules = ('-master_tasks',)
+
+    @classmethod
+    def for_name(cls, name):
+        # case/space-insensitive match on the type name, created on first use
+        clean = " ".join(name.split())
+        existing = cls.query.filter(func.lower(cls.name) == clean.lower()).first()
+        if existing:
+            return existing
+        task_type = cls(name=clean)
+        db.session.add(task_type)
+        db.session.flush()
+        return task_type
+
+    def __repr__(self):
+        return f'<TaskType {self.name}>'
+
+
 class MasterTask(db.Model, SerializerMixin):
     __tablename__ = "master_tasks"
     id = db.Column(db.Integer, primary_key=True)
@@ -409,6 +435,7 @@ class MasterTask(db.Model, SerializerMixin):
     pin_end = db.Column(db.DateTime, default=None, nullable=True)
     autostart_children = db.Column(db.Boolean, default=True) # determine whether to auto-start children tasks upon completion of this task (should be False for non-blocking tasks)
     override_start_date = db.Column(db.Boolean, default=False) # determines whether to override start date of task with date of started task status update
+    task_type_id = db.Column(db.Integer, db.ForeignKey('task_types.id'), nullable=True)
 
     __table_args__ = (
         db.Index('ix_mastertask_name_id', 'name', 'id'),
@@ -417,6 +444,7 @@ class MasterTask(db.Model, SerializerMixin):
     project = db.relationship('Project', back_populates="master_tasks")
     group = db.relationship('Group', back_populates="master_tasks")
     unit_tasks = db.relationship('UnitTask', back_populates="master_task")
+    task_type = db.relationship('TaskType', back_populates="master_tasks")
 
     serialize_rules = (
         '-parent_tasks',
@@ -435,7 +463,8 @@ class MasterTask(db.Model, SerializerMixin):
         '-project.stats',
         '-project.schedule',
         '-group.master_tasks',
-        '-group.project'
+        '-group.project',
+        '-task_type'
     )
 
     @validates('days_length')
@@ -1037,7 +1066,8 @@ class UnitTask(db.Model, SerializerMixin):
                             print(f'Child task "{child_task.id}" still waiting on other parent tasks')
                             continue
                         child_task.started_status = True
-                        child_task.started_date = max(p.complete_date for p in blocking_parents) + timedelta(days=1)
+                        # ready the day the last blocking parent completed: same-day handoffs are common in practice
+                        child_task.started_date = max(p.complete_date for p in blocking_parents)
                         db.session.commit()
                         print(f'Child task "{child_task.id}" marked as started')
                     else:

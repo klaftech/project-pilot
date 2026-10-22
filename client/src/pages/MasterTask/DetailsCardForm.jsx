@@ -9,8 +9,6 @@ import {
   } from "@/components/ui/card"
 
 import { useState, useEffect, useContext } from 'react'
-import { useNavigate } from 'react-router'
-import { toast } from "sonner"
 import UserContext from '@/context/UserContext'
 import FormWrapper from '@/components/form/master_task/FormWrapper'
 import FormFields from '@/components/form/master_task/FormFields'
@@ -19,27 +17,9 @@ import ShowAlert from "@/components/ShowAlert"
 const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
     
     const [show, setShow] = useState(false)
-    const [confirmDelete, setConfirmDelete] = useState(false)
     const { user } = useContext(UserContext)
-    const navigate = useNavigate()
     const isAdmin = !!user?.is_admin
 
-    const handleDelete = async () => {
-        if (!confirmDelete) {
-            setConfirmDelete(true)
-            return
-        }
-        const res = await fetch('/api/mastertasks/' + taskObj.id, { method: 'DELETE' })
-        if (res.ok) {
-            toast("Task deleted")
-            navigate('/project/' + (taskObj.project?.id ?? ''))
-        } else {
-            const data = await res.json().catch(() => ({}))
-            toast(data.error || "This task could not be deleted.")
-            setConfirmDelete(false)
-        }
-    }
-    
     useEffect(() => {
         const timeId = setTimeout(() => {
             // After 3 seconds set the show value to false
@@ -74,11 +54,8 @@ const DetailsCardForm = ({ taskObj, pushUpdateTask, reloadTaskObj }) => {
                     </fieldset>
                 </CardContent>
                 {isAdmin && (
-                    <CardFooter className="flex flex-wrap justify-between gap-2">
+                    <CardFooter>
                         <Button type="submit">Save changes</Button>
-                        <Button type="button" variant={confirmDelete ? "destructive" : "outline"} onClick={handleDelete}>
-                            {confirmDelete ? "Confirm delete" : "Delete task"}
-                        </Button>
                     </CardFooter>
                 )}
             </FormWrapper>

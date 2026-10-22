@@ -30,6 +30,7 @@ from rest.units import Units, UnitByID, get_unit_stats
 from rest.unit_tasks import UnitTasks, UnitTaskByID, get_project_pending_update
 from rest.projects import get_projects, get_project_details, get_projects_minimal
 from rest.project_users import ProjectUsers, ProjectUserByID
+from rest.analytics import get_analytics
 
 # the following adds route-specific authorization
 @app.before_request

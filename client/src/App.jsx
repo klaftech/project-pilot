@@ -13,6 +13,7 @@ const ListContainer = lazy(() => import('@/pages/List/ListContainer'))
 const ScheduleContainer = lazy(() => import('@/pages/Schedule/ScheduleContainer'))
 const OverviewContainer = lazy(() => import('@/pages/Overview/OverviewContainer'))
 const AdminContainer = lazy(() => import('@/pages/Admin/AdminContainer'))
+const AnalyticsContainer = lazy(() => import('@/pages/Analytics/AnalyticsContainer'))
 const ProfilePage = lazy(() => import('@/pages/Profile/Profile'))
 const ToastDemo = lazy(() => import('@/dev/_ToastDemo'))
 const TaskInnerForm = lazy(() => import('@/dev/_TaskInnerForm'))
@@ -96,6 +97,7 @@ function App() {
             <Route path="schedule" element={<ScheduleContainer />} />
             <Route path="overview" element={<OverviewContainer />} />
             <Route path="admin" element={<AdminContainer />} />
+            <Route path="analytics" element={<AnalyticsContainer />} />
             <Route path="signup" element={<Signup />} />
             <Route path="login" element={<Login />} />
             <Route path="logout" element={<Logout updateUser={setUser} />} />
