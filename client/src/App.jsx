@@ -23,6 +23,8 @@ import TasksHomeContainer from '@/pages/Tasks/TasksHomeContainer';
 import Signup from '@/pages/Signup/Signup'
 import Login from '@/pages/Login/Login'
 import Logout from '@/pages/Logout/Logout'
+import ForgotPassword from '@/pages/PasswordReset/ForgotPassword'
+import ResetPassword from '@/pages/PasswordReset/ResetPassword'
 import HTTP404 from '@/pages/404/HTTP404'
 import Navbar from '@/components/Navbar'
 
@@ -31,6 +33,12 @@ import UserContext from '@/context/UserContext'
 import { toast } from "sonner"
 import ShowAlert from "@/components/ShowAlert";
 import AppWrapper from '@/components/AppWrapper'
+
+// reachable without a session
+const passwordPages = {
+    "/forgot-password": ForgotPassword,
+    "/reset-password": ResetPassword,
+}
 
 function App() {
     
@@ -42,7 +50,7 @@ function App() {
     let location = useLocation()
 
     useEffect(() => {
-        if(location.pathname != "/signup"){
+        if(location.pathname != "/signup" && !passwordPages[location.pathname]){
             fetchUser()
         }
     }, [])
@@ -65,6 +73,11 @@ function App() {
     // ********************** ENG USER AUTHORIZATION **********************
     // ********************************************************************
     
+    const PasswordPage = passwordPages[location.pathname]
+    if(PasswordPage) return (
+        <PasswordPage />
+    )
+
     if((!user) && (location.pathname != "/signup")) return (
         <Login />
     )

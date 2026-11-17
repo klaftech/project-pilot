@@ -21,7 +21,7 @@ from models import db, User, Project, Group, MasterTask, MasterTaskDependency, T
 
 
 # from app_helpers import find_task_model_by_id
-from rest.auth import UserSignup, UserLogin, UserLogout, UserAuthorize, UserProfile
+from rest.auth import UserSignup, UserLogin, UserLogout, UserAuthorize, UserProfile, PasswordForgot, PasswordReset
 from rest.users import Users, UserByID
 from rest.groups import Groups, GroupByID
 from rest.updates import StatusUpdates, StatusUpdateByID
@@ -35,7 +35,7 @@ from rest.analytics import get_analytics
 # the following adds route-specific authorization
 @app.before_request
 def authenticate_user():
-    open_access_list = [None, "static", "usersignup", "userlogin", "userlogout", "userauthorize"]
+    open_access_list = [None, "static", "usersignup", "userlogin", "userlogout", "userauthorize", "passwordforgot", "passwordreset"]
     
     # if the user is in session OR the request endpoint is open-access, the request will be processed as usual
     if request.endpoint not in open_access_list and not session.get("user_id"):
@@ -50,6 +50,8 @@ api.add_resource(UserLogin, '/api/login')
 api.add_resource(UserLogout, '/api/logout')
 api.add_resource(UserAuthorize, '/api/authorize')
 api.add_resource(UserProfile, '/api/profile')
+api.add_resource(PasswordForgot, '/api/password/forgot')
+api.add_resource(PasswordReset, '/api/password/reset')
 
 api.add_resource(Users, '/api/users')
 api.add_resource(UserByID, '/api/users/<int:id>')

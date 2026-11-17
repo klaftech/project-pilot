@@ -111,6 +111,22 @@ class User(db.Model, SerializerMixin):
     def __repr__(self):
         return f'<User {self.first_name} {self.last_name}>'
 
+class PasswordResetToken(db.Model):
+    __tablename__ = "password_reset_tokens"
+
+    # only the SHA-256 of the emailed token is stored, so a database export can't be used to reset passwords
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)  # naive UTC
+    expires_at = db.Column(db.DateTime, nullable=False)                   # naive UTC
+    used_at = db.Column(db.DateTime, nullable=True)                       # naive UTC; set once redeemed or superseded
+
+    user = db.relationship('User')
+
+    def __repr__(self):
+        return f'<PasswordResetToken user={self.user_id} expires={self.expires_at}>'
+
 class Project(db.Model, SerializerMixin):
     __tablename__ = "projects"
 

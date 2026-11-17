@@ -1,12 +1,23 @@
 # library imports
+import os
+import sys
+import hashlib
+import secrets
+from html import escape
+from datetime import timedelta
 from flask import request, abort, make_response, session
 from flask_restful import Resource
 
 from sqlalchemy import func
 
 from config import db
-from models import ProjectUser, User, Project, Unit
+from models import ProjectUser, User, Project, Unit, PasswordResetToken
 from helpers import utc_now
+from mailer import send_email, mailgun_configured
+
+RESET_TOKEN_TTL = timedelta(hours=1)
+# a new reset email is not sent while the previous one is younger than this
+RESET_RESEND_INTERVAL = timedelta(minutes=2)
 
 def allowed_projects():
     user = User.query.filter_by(id=session.get('user_id')).first()
@@ -56,6 +67,25 @@ def get_user_object(user):
             user_obj['selectedUnit'] = None
     return user_obj
 
+def find_user_by_email(email):
+    email = email.strip()
+    user = User.query.filter(User.email == email).first()
+    if not user:
+        # emails are case-insensitive; only fall back when the match is unambiguous
+        matches = User.query.filter(func.lower(User.email) == email.lower()).all()
+        user = matches[0] if len(matches) == 1 else None
+    return user
+
+def hash_reset_token(token):
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+def reset_base_url():
+    # never build links from the Host header in production: a forged Host would point the emailed link elsewhere
+    base = os.getenv('APP_BASE_URL')
+    if not base and not os.getenv('VERCEL'):
+        base = request.host_url
+    return base.rstrip('/') if base else None
+
 class UserSignup(Resource):
     def post(self):
         try:
@@ -85,12 +115,7 @@ class UserLogin(Resource):
         data = request.get_json(silent=True) or {}
         if not data.get('email') or not data.get('password'):
             return make_response({"errors": ["Email and password are required"]}, 400)
-        email = data['email'].strip()
-        user = User.query.filter(User.email == email).first()
-        if not user:
-            # emails are case-insensitive; only fall back when the match is unambiguous
-            matches = User.query.filter(func.lower(User.email) == email.lower()).all()
-            user = matches[0] if len(matches) == 1 else None
+        user = find_user_by_email(data['email'])
         if user and user.authenticate(data['password']):
             session['user_id'] = user.id
             user.last_login_at = utc_now()
@@ -146,3 +171,102 @@ class UserProfile(Resource):
         db.session.commit()
 
         return make_response(get_user_object(user), 202)
+
+class PasswordForgot(Resource):
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        # same response whether or not the account exists, so this can't be used to probe for emails
+        generic = make_response({"message": "If that email has an account, a reset link has been sent."}, 200)
+        if not data.get('email'):
+            return make_response({"error": "Email is required"}, 400)
+
+        user = find_user_by_email(data['email'])
+        if not user:
+            return generic
+
+        now = utc_now()
+        outstanding = PasswordResetToken.query.filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > now,
+        ).all()
+        if any(t.created_at > now - RESET_RESEND_INTERVAL for t in outstanding):
+            return generic
+
+        base = reset_base_url()
+        if not base:
+            print("password reset: APP_BASE_URL is not set, no email sent", file=sys.stderr)
+            return generic
+
+        # only the newest link works
+        for t in outstanding:
+            t.used_at = now
+        token = secrets.token_urlsafe(32)
+        db.session.add(PasswordResetToken(
+            user_id=user.id,
+            token_hash=hash_reset_token(token),
+            created_at=now,
+            expires_at=now + RESET_TOKEN_TTL,
+        ))
+        db.session.commit()
+
+        # the token travels in the URL fragment, which browsers never send to the server, so it stays out of request logs
+        link = f"{base}/reset-password#token={token}"
+        if not mailgun_configured():
+            if not os.getenv('VERCEL'):
+                print(f"password reset (Mailgun not configured) for {user.email}: {link}", flush=True)
+            else:
+                print("password reset: Mailgun is not configured, no email sent", file=sys.stderr)
+            return generic
+
+        text = (
+            f"Hi {user.first_name},\n\n"
+            "We received a request to reset your ProjectPilot password. "
+            "Open the link below to choose a new one. It expires in 1 hour and can be used once.\n\n"
+            f"{link}\n\n"
+            "If you didn't ask for this, you can ignore this email; your password won't change."
+        )
+        html = (
+            f"<p>Hi {escape(user.first_name)},</p>"
+            "<p>We received a request to reset your ProjectPilot password. "
+            "The link below expires in 1 hour and can be used once.</p>"
+            f'<p><a href="{escape(link)}">Reset your password</a></p>'
+            "<p>If you didn't ask for this, you can ignore this email; your password won't change.</p>"
+        )
+        try:
+            send_email(user.email, "Reset your ProjectPilot password", text, html)
+        except Exception as e:
+            print(f"password reset: Mailgun send failed: {e!r}", file=sys.stderr)
+        return generic
+
+class PasswordReset(Resource):
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        token = data.get('token')
+        password = data.get('password')
+        if not token or not password:
+            return make_response({"error": "Token and password are required"}, 400)
+        if password != data.get('confirmPassword'):
+            return make_response({"error": "Passwords do not match"}, 422)
+        if len(password) < 4:
+            return make_response({"error": "Password must be at least 4 characters"}, 422)
+
+        now = utc_now()
+        reset = PasswordResetToken.query.filter(
+            PasswordResetToken.token_hash == hash_reset_token(token),
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > now,
+        ).first()
+        if not reset:
+            return make_response({"error": "This reset link is invalid or has expired. Please request a new one."}, 400)
+
+        reset.user.password_hash = password
+        # redeem this link and retire any others still outstanding
+        PasswordResetToken.query.filter(
+            PasswordResetToken.user_id == reset.user_id,
+            PasswordResetToken.used_at.is_(None),
+        ).update({PasswordResetToken.used_at: now}, synchronize_session=False)
+        db.session.commit()
+
+        session.clear()
+        return make_response({"message": "Password updated. Please log in."}, 200)
