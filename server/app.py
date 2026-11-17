@@ -31,11 +31,12 @@ from rest.unit_tasks import UnitTasks, UnitTaskByID, get_project_pending_update
 from rest.projects import get_projects, get_project_details, get_projects_minimal
 from rest.project_users import ProjectUsers, ProjectUserByID
 from rest.analytics import get_analytics
+from rest.reports import get_portfolio_report, get_personal_report, send_report_preview, weekly_report_cron
 
 # the following adds route-specific authorization
 @app.before_request
 def authenticate_user():
-    open_access_list = [None, "static", "usersignup", "userlogin", "userlogout", "userauthorize", "passwordforgot", "passwordreset"]
+    open_access_list = [None, "static", "usersignup", "userlogin", "userlogout", "userauthorize", "passwordforgot", "passwordreset", "weekly_report_cron"]
     
     # if the user is in session OR the request endpoint is open-access, the request will be processed as usual
     if request.endpoint not in open_access_list and not session.get("user_id"):

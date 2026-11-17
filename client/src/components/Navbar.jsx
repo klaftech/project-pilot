@@ -331,6 +331,12 @@ const AppNavbar = ({
       icon: <Book className="size-5 shrink-0" />,
       url: "/overview",
     },
+    {
+      title: "Reports",
+      description: user.is_admin ? "Portfolio and activity reports" : "Your activity report",
+      icon: <Book className="size-5 shrink-0" />,
+      url: "/reports",
+    },
     ...(user.is_admin ? [{
       title: "Analytics",
       description: "Delays and blockers across projects",

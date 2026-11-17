@@ -20,16 +20,19 @@ RESET_TOKEN_TTL = timedelta(hours=1)
 RESET_RESEND_INTERVAL = timedelta(minutes=2)
 
 def allowed_projects():
-    user = User.query.filter_by(id=session.get('user_id')).first()
+    return projects_for_user(User.query.filter_by(id=session.get('user_id')).first())
+
+def projects_for_user(user):
+    # the same rule for a request's user and for background jobs (weekly report emails)
     if not user:
         return []
-    
+
     if user.is_admin:
         #print("Admin user, returning all projects")
         projects = Project.query.order_by(Project.name.asc()).all()
     else:
         projects = Project.query.join(ProjectUser, ProjectUser.project_id == Project.id).filter(
-            ProjectUser.user_id == session.get('user_id'),
+            ProjectUser.user_id == user.id,
             ProjectUser.deleted == False
         ).order_by(Project.name.asc()).all()
     return projects
@@ -50,7 +53,7 @@ def can_access_project(project_id):
     return any(project.id == project_id for project in allowed_projects())
 
 def get_user_object(user):
-    user_obj = user.to_dict(only=('id','first_name','last_name','email','is_admin','selectedProject','selectedUnit'))
+    user_obj = user.to_dict(only=('id','first_name','last_name','email','is_admin','selectedProject','selectedUnit','weekly_report'))
 
     projects = allowed_projects()
     if not user_obj.get('selectedProject') or user_obj['selectedProject'] not in [p.id for p in projects]:
@@ -156,6 +159,10 @@ class UserProfile(Resource):
                 setattr(user, 'selectedProject', data['selectedProject'])
             if 'selectedUnit' in data:
                 setattr(user, 'selectedUnit', data['selectedUnit'])
+            if 'weekly_report' in data:
+                if not isinstance(data['weekly_report'], bool):
+                    raise Exception("weekly_report must be true or false")
+                user.weekly_report = data['weekly_report']
             if 'password' in data:
                 if data['password'] != data['confirmPassword']:
                     raise Exception("Passwords do not match")

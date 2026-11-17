@@ -38,6 +38,7 @@ class User(db.Model, SerializerMixin):
     selectedProject = db.Column(db.Integer, nullable=True)
     selectedUnit = db.Column(db.Integer, nullable=True)
     last_login_at = db.Column(db.DateTime, nullable=True)  # naive UTC, set on login/signup
+    weekly_report = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())  # weekly summary email opt-in
 
     @hybrid_property
     def password_hash(self):
@@ -126,6 +127,21 @@ class PasswordResetToken(db.Model):
 
     def __repr__(self):
         return f'<PasswordResetToken user={self.user_id} expires={self.expires_at}>'
+
+class ReportDelivery(db.Model):
+    __tablename__ = "report_deliveries"
+    # one weekly summary per user per period: the unique row is claimed before sending, so overlapping cron runs can't double-send
+    __table_args__ = (db.UniqueConstraint('user_id', 'period_end'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    period_end = db.Column(db.Date, nullable=False)   # last day (UTC) the summary covers
+    scope = db.Column(db.String, nullable=False)       # 'portfolio' or 'personal'
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)  # naive UTC
+    sent_at = db.Column(db.DateTime, nullable=True)                       # naive UTC; null while sending
+
+    def __repr__(self):
+        return f'<ReportDelivery user={self.user_id} period_end={self.period_end} sent={self.sent_at}>'
 
 class Project(db.Model, SerializerMixin):
     __tablename__ = "projects"

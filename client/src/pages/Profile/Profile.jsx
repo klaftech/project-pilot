@@ -38,6 +38,7 @@ export default function ProfilePage() {
     const [profileError, setProfileError] = useState(null)
     const [passwordSuccess, setPasswordSuccess] = useState(null)
     const [passwordError, setPasswordError] = useState(null)
+    const [emailError, setEmailError] = useState(null)
 
     const {
         register: registerProfile,
@@ -83,6 +84,15 @@ export default function ProfilePage() {
             setProfileSuccess('Profile updated successfully.')
         } catch {
             setProfileError('Failed to update profile. Please try again.')
+        }
+    }
+
+    const onWeeklyReportChange = async (checked) => {
+        setEmailError(null)
+        try {
+            setUser(await patchProfile({ weekly_report: checked }))
+        } catch {
+            setEmailError('Failed to update your email preference. Please try again.')
         }
     }
 
@@ -144,6 +154,22 @@ export default function ProfilePage() {
                             <Button type="submit">Save Changes</Button>
                         </CardFooter>
                     </form>
+                </Card>
+
+                {/* Email */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Email</CardTitle>
+                        <CardDescription>A summary of the past week, every Monday morning.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <label className="flex items-center gap-3 text-sm">
+                            <input type="checkbox" className="size-4 accent-foreground" checked={user?.weekly_report ?? true}
+                                onChange={(e) => onWeeklyReportChange(e.target.checked)} />
+                            Send me the weekly report email
+                        </label>
+                        {emailError && <p className="text-sm text-destructive">{emailError}</p>}
+                    </CardContent>
                 </Card>
 
                 {/* Password */}
