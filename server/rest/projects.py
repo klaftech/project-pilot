@@ -4,7 +4,7 @@ from flask_restful import Resource
 
 # joinedload tells SQLAlchemy to fetch related data using a SQL JOIN, all in one query, instead of doing separate queries later (lazy loading)
 from sqlalchemy.orm import joinedload
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from collections import defaultdict
 from sqlalchemy import func
@@ -12,6 +12,7 @@ from sqlalchemy import func
 from config import db, app
 from models import Project, ProjectUser, Unit, UnitTask, User, MasterTask, StatusUpdate, latest_updates_by_task, summarize_unit_tasks
 from rest.auth import allowed_projects
+from helpers import utc_now, utc_today
 
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
@@ -47,10 +48,12 @@ def get_project_details(project_id):
 
     return make_response(model.to_dict(rules=(response_fields)), 200)
 
-# used for the overview matrix: one request for every unit, its summary and its tasks
+# used for the overview grid and the wall display: one request for every unit, its summary and its tasks.
+# Timing and unit finishes come from analytics.build_analytics so the overview agrees with Analytics and Reports.
 @app.route('/api/projects/<int:project_id>/overview', methods=['GET'])
 def get_project_overview(project_id):
     from rest.unit_tasks import UnitTasks
+    from analytics import build_analytics, STUCK
     model = Project.query.filter_by(id=project_id).first()
     if not model:
         return make_response({"error": f"Project ID: {project_id} not found"}, 404)
@@ -65,31 +68,104 @@ def get_project_overview(project_id):
              .all())
     latest = latest_updates_by_task([t.id for t in tasks])
     fields = tuple(f for f in UnitTasks.response_fields if f != 'latest_update')
+    analytics = build_analytics([model], include_task_facts=True)
+    facts = analytics['task_facts']
+    unit_rows = {u['id']: u for u in analytics['units']}
 
     tasks_by_unit = defaultdict(list)
     for task in tasks:
         tasks_by_unit[task.unit_id].append(task)
 
+    # columns in template order: each master task's typical planned start, relative to its unit's first task
+    unit_start = {uid: min((t.sched_start for t in ts if t.sched_start), default=None) for uid, ts in tasks_by_unit.items()}
+    offsets = defaultdict(list)
+    for task in tasks:
+        if task.sched_start and unit_start.get(task.unit_id):
+            offsets[task.task_id].append((task.sched_start - unit_start[task.unit_id]).days)
+    masters = MasterTask.query.filter_by(project_id=model.id).options(joinedload(MasterTask.group)).all()
+    masters.sort(key=lambda m: (sorted(offsets[m.id])[len(offsets[m.id]) // 2] if offsets[m.id] else 10**6, m.id))
+    position = {m.id: i for i, m in enumerate(masters)}
+    columns = [{'id': m.id, 'name': m.name, 'group': m.group.name if m.group else None, 'days_length': m.days_length} for m in masters]
+
+    # ?compact=1 (wall display): just what a cell needs, skipping the slow per-task serializer
+    compact = request.args.get('compact') == '1'
+    today = utc_today()
     units = []
     for unit in Unit.query.filter_by(project_id=model.id).order_by(Unit.name).all():
-        unit_tasks = tasks_by_unit.get(unit.id, [])
+        unit_tasks = sorted(tasks_by_unit.get(unit.id, []), key=lambda t: position.get(t.task_id, 10**6))
         rows = []
         for task in unit_tasks:
-            row = task.to_dict(only=fields)
-            row['latest_update'] = latest.get(task.id)
+            if compact:
+                row = {'id': task.id, 'status_code': task.status_code, 'progress': task.progress,
+                       'started_status': task.started_status, 'complete_status': task.complete_status}
+            else:
+                row = task.to_dict(only=fields)
+                row['latest_update'] = latest.get(task.id)
+            row['column'] = position.get(task.task_id)
+            row['timing'] = facts.get(task.id)
             rows.append(row)
-        units.append({'id': unit.id, 'name': unit.name, 'stats': summarize_unit_tasks(unit_tasks), 'tasks': rows})
+        info = unit_rows.get(unit.id, {})
+        open_now = [t for t in unit_tasks if t.started_status and not t.complete_status]
+        upcoming = next((t for t in unit_tasks if not t.started_status and not t.complete_status), None)
+        heard = [latest[t.id]['timestamp'] for t in unit_tasks if t.id in latest]
+        units.append({
+            'id': unit.id, 'name': unit.name, 'stats': summarize_unit_tasks(unit_tasks), 'tasks': rows,
+            'stage': 'finished' if info.get('finished') else 'not_started' if info.get('not_started') else 'in_progress',
+            'schedule': {
+                'finish': info.get('finish'), 'finish_is_projection': info.get('finish_is_projection'),
+                'planned_finish': info.get('planned_finish'),
+                'over_plan_days': info.get('duration_over_plan_days'),
+                'top_contributors': info.get('top_contributors', []),
+            },
+            'current': [t.master_task.name for t in open_now],
+            'next': upcoming.master_task.name if upcoming else None,
+            'stuck': sum(1 for t in unit_tasks if t.status_code == STUCK),
+            'last_update': max(heard) if heard else None,
+        })
 
-    latest_update = (db.session.query(func.max(StatusUpdate.timestamp))
-                     .join(UnitTask, UnitTask.id == StatusUpdate.task_id)
-                     .join(Unit, Unit.id == UnitTask.unit_id)
-                     .filter(Unit.project_id == model.id)
-                     .scalar())
+    week_ago, two_weeks_ago = today - timedelta(days=7), today - timedelta(days=14)
+    done_days = [t.complete_date.date() for t in tasks if t.complete_status and t.complete_date]
+    finishes = [u for u in analytics['units'] if u['finish']]
+    last_finish = max(finishes, key=lambda u: u['finish']) if finishes else None
+    recent = (db.session.query(StatusUpdate, User.first_name, User.last_name)
+              .join(UnitTask, UnitTask.id == StatusUpdate.task_id)
+              .join(Unit, Unit.id == UnitTask.unit_id)
+              .outerjoin(User, User.id == StatusUpdate.user_id)
+              .filter(Unit.project_id == model.id)
+              .order_by(StatusUpdate.timestamp.desc(), StatusUpdate.id.desc())
+              .options(joinedload(StatusUpdate.unit_task).joinedload(UnitTask.master_task), joinedload(StatusUpdate.unit_task).joinedload(UnitTask.unit))
+              .limit(12).all())
+
+    latest_update = recent[0][0].timestamp if recent else None
     return make_response({
         'id': model.id,
         'name': model.name,
-        'master_task_count': MasterTask.query.filter_by(project_id=model.id).count(),
+        'master_task_count': len(masters),
         'latest_update': latest_update.strftime(StatusUpdate.datetime_format) if latest_update else None,
+        'generated_at': utc_now().strftime(StatusUpdate.datetime_format),
+        'columns': columns,
+        'summary': {
+            'units': len(units),
+            'finished': sum(1 for u in units if u['stage'] == 'finished'),
+            'in_progress': sum(1 for u in units if u['stage'] == 'in_progress'),
+            'not_started': sum(1 for u in units if u['stage'] == 'not_started'),
+            'tasks_total': len(tasks),
+            'tasks_done': len(done_days),
+            'completion_pct': round(100 * len(done_days) / len(tasks)) if tasks else 0,
+            'completed_7d': sum(1 for d in done_days if d > week_ago),
+            'completed_prev_7d': sum(1 for d in done_days if two_weeks_ago < d <= week_ago),
+            'behind_plan': sum(1 for u in analytics['units'] if (u['duration_over_plan_days'] or 0) > 0),
+            'open_stuck': analytics['kpis']['open_stuck'],
+            'completion_date': last_finish['finish'] if last_finish else None,
+            'completion_is_projection': bool(last_finish and any(not u['finished'] for u in analytics['units'])),
+        },
+        'blockers': sorted((b for b in analytics['blockers'] if b['open']), key=lambda b: -b['days']),
+        'recent': [{
+            'id': su.id, 'task_id': su.task_id, 'unit_id': su.unit_task.unit_id, 'unit': su.unit_task.unit.name,
+            'task': su.unit_task.master_task.name, 'status': su.task_status,
+            'user': f"{first or ''} {last or ''}".strip() or None,
+            'timestamp': su.timestamp.strftime(StatusUpdate.datetime_format),
+        } for su, first, last in recent],
         'units': units,
     }, 200)
 

@@ -52,8 +52,9 @@ def _p75(values):
     return round(statistics.quantiles(values, n=4)[2], 1)
 
 
-def build_analytics(projects, date_from=None, date_to=None):
-    """projects: Project models the caller may see. date_from/date_to (dates) filter completed tasks."""
+def build_analytics(projects, date_from=None, date_to=None, include_task_facts=False):
+    """projects: Project models the caller may see. date_from/date_to (dates) filter completed tasks.
+    include_task_facts adds per-task timing (used by the overview grid so it agrees with these numbers)."""
     today = utc_now().date()
     project_ids = [p.id for p in projects]
     project_names = {p.id: p.name for p in projects}
@@ -291,7 +292,7 @@ def build_analytics(projects, date_from=None, date_to=None):
         'unlinked_master_tasks': sum(1 for m in masters.values() if not m.task_type_id),
     }
 
-    return {
+    result = {
         'projects': [{'id': p.id, 'name': p.name} for p in projects],
         'period': {'from': date_from.isoformat() if date_from else None, 'to': date_to.isoformat() if date_to else None},
         'kpis': kpis,
@@ -303,3 +304,15 @@ def build_analytics(projects, date_from=None, date_to=None):
         'monthly': monthly,
         'data_health': data_health,
     }
+    if include_task_facts:
+        result['task_facts'] = {
+            task_id: {
+                'ready': f['ready'].isoformat() if f['ready'] else None,
+                'elapsed_days': f['elapsed'], 'planned_days': f['planned'], 'excess_days': f['excess'],
+                # recorded complete before its prerequisites: duration unknown, shown as a data note, not a delay
+                'order_issue': f['before_prereq'],
+                'stuck_since': f['episodes'][-1][0].timestamp.date().isoformat() if f['episodes'] and f['episodes'][-1][1] is None else None,
+            }
+            for task_id, f in facts.items()
+        }
+    return result
