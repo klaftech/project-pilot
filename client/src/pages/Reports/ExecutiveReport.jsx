@@ -29,7 +29,7 @@ const SCORECARD_COLUMNS = [
     { label: 'Tasks completed (previous period)', value: p => p.tasks_completed_prev },
     { label: 'Units behind plan', value: p => p.behind_plan },
     { label: 'Open blockers', value: p => p.open_stuck },
-    { label: 'Quiet tasks', value: p => p.stale },
+    { label: 'Late updates', value: p => p.late_updates },
     { label: 'Completion date', value: p => p.completion_date },
     { label: 'Completion is projected', value: p => (p.completion_is_projection ? 'yes' : 'no') },
 ]
@@ -199,7 +199,7 @@ function Scorecard({ projects, weeks, selected, onSelect, period }) {
                     <thead className="text-left text-xs text-muted-foreground">
                         <tr className="[&>th]:pb-2 [&>th]:pr-3 [&>th]:font-medium">
                             <th>Project</th><th className="w-48">Complete</th><th>Units finished</th><th>Tasks completed</th>
-                            <th>Behind plan</th><th>Blockers</th><th>Quiet</th><th>Completion</th>
+                            <th>Behind plan</th><th>Blockers</th><th>Late updates</th><th>Completion</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -214,7 +214,7 @@ function Scorecard({ projects, weeks, selected, onSelect, period }) {
                                 <td className="tabular-nums">{p.open_stuck > 0
                                     ? <span className="inline-flex items-center gap-1 font-medium" style={{ color: C.critical }}><AlertOctagon className="size-3.5" aria-hidden />{p.open_stuck} open</span>
                                     : <span className="text-muted-foreground">0</span>}</td>
-                                <td className="tabular-nums">{p.stale}</td>
+                                <td className="tabular-nums">{p.late_updates}</td>
                                 <td className="tabular-nums">{p.completion_date ? <>{fmtDate(p.completion_date)}<div className="text-xs text-muted-foreground">{p.completion_is_projection ? 'projected' : 'delivered'}</div></> : '—'}</td>
                             </tr>
                         ))}
@@ -276,11 +276,11 @@ function Attention({ attention, k }) {
     const tabs = [
         { value: 'blockers', label: `Blockers (${k.open_stuck})` },
         { value: 'behind', label: 'Furthest behind' },
-        { value: 'quiet', label: `Quiet (${k.stale_tasks})` },
+        { value: 'quiet', label: `Late updates (${k.late_updates})` },
     ]
     const [tab, setTab] = useState(k.open_stuck ? 'blockers' : 'behind')
     return (
-        <Card title="Needs attention" subtitle={`Open blockers, the units furthest behind plan, and started tasks with no update in ${k.stale_days}+ days`}
+        <Card title="Needs attention" subtitle={`Open blockers, the units furthest behind plan, and late updates: started tasks with no update since ${fmtDay(k.late_window_start)}, a full week after it was due`}
             action={<Segmented label="Attention list" options={tabs} value={tab} onChange={setTab} />}>
             {tab === 'blockers' && (attention.blockers.length === 0 ? <Empty>No open blockers.</Empty> : (
                 <ul className="divide-y text-sm">
@@ -309,9 +309,9 @@ function Attention({ attention, k }) {
                     ))}
                 </ul>
             ))}
-            {tab === 'quiet' && (attention.stale_tasks.length === 0 ? <Empty>Every started task has a recent update.</Empty> : (
+            {tab === 'quiet' && (attention.late_updates.length === 0 ? <Empty>Every started task has a recent update.</Empty> : (
                 <ul className="divide-y text-sm">
-                    {attention.stale_tasks.map(t => (
+                    {attention.late_updates.map(t => (
                         <li key={t.task_id} className="flex items-center justify-between gap-3 py-2.5">
                             <div className="min-w-0">
                                 <Link to={`/task/${t.task_id}`} className="font-medium hover:underline">{t.unit} · {t.task}</Link>
@@ -353,7 +353,7 @@ export default function ExecutiveReport({ data }) {
                     detail={<span className="text-xs text-muted-foreground">{k.median_over_plan_days !== null ? `median build +${k.median_over_plan_days} days over plan` : 'no units measured yet'}</span>} />
                 <StatTile label="Open blockers" value={fmt(k.open_stuck)}
                     icon={k.open_stuck > 0 ? <AlertOctagon className="size-4" style={{ color: C.critical }} aria-hidden /> : null}
-                    detail={<span className="text-xs text-muted-foreground">{fmt(k.stale_tasks)} started tasks quiet {k.stale_days}+ days</span>} />
+                    detail={<span className="text-xs text-muted-foreground">{fmt(k.late_updates)} late updates</span>} />
             </div>
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">

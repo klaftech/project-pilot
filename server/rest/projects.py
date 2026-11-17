@@ -12,7 +12,7 @@ from sqlalchemy import func
 from config import db, app
 from models import Project, ProjectUser, Unit, UnitTask, User, MasterTask, StatusUpdate, latest_updates_by_task, summarize_unit_tasks
 from rest.auth import allowed_projects
-from helpers import utc_now, utc_today
+from helpers import utc_now, utc_today, update_late, late_cutoff, late_window_start, completion_percent
 
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
@@ -90,17 +90,27 @@ def get_project_overview(project_id):
     # ?compact=1 (wall display): just what a cell needs, skipping the slow per-task serializer
     compact = request.args.get('compact') == '1'
     today = utc_today()
+    now = utc_now()
+    window = late_window_start(now)
+    cutoff = late_cutoff(now)
     units = []
     for unit in Unit.query.filter_by(project_id=model.id).order_by(Unit.name).all():
         unit_tasks = sorted(tasks_by_unit.get(unit.id, []), key=lambda t: position.get(t.task_id, 10**6))
         rows = []
         for task in unit_tasks:
+            heard = latest.get(task.id)
+            heard_at = datetime.strptime(heard['timestamp'], StatusUpdate.datetime_format) if heard and heard['timestamp'] else None
             if compact:
                 row = {'id': task.id, 'status_code': task.status_code, 'progress': task.progress,
                        'started_status': task.started_status, 'complete_status': task.complete_status}
             else:
                 row = task.to_dict(only=fields)
-                row['latest_update'] = latest.get(task.id)
+                row['latest_update'] = heard
+            # the Overview's update pills (executive rule, helpers.update_late): an update inside the late window
+            # shows its status; a late one shows the warning
+            row['update_late'] = update_late(task.status_code, task.started_status, task.started_date, heard_at, now)
+            # as before: any task whose latest update falls after the cutoff shows that update's status
+            row['recent_update'] = heard['status'] if heard_at and heard_at > cutoff else None
             row['column'] = position.get(task.task_id)
             row['timing'] = facts.get(task.id)
             rows.append(row)
@@ -120,9 +130,11 @@ def get_project_overview(project_id):
             'current': [t.master_task.name for t in open_now],
             'next': upcoming.master_task.name if upcoming else None,
             'stuck': sum(1 for t in unit_tasks if t.status_code == STUCK),
+            'late_updates': sum(1 for r in rows if r['update_late']),
             'last_update': max(heard) if heard else None,
         })
 
+    stuck_ids = {t.id for t in tasks if t.status_code == STUCK and not t.complete_status}
     week_ago, two_weeks_ago = today - timedelta(days=7), today - timedelta(days=14)
     done_days = [t.complete_date.date() for t in tasks if t.complete_status and t.complete_date]
     finishes = [u for u in analytics['units'] if u['finish']]
@@ -151,15 +163,20 @@ def get_project_overview(project_id):
             'not_started': sum(1 for u in units if u['stage'] == 'not_started'),
             'tasks_total': len(tasks),
             'tasks_done': len(done_days),
-            'completion_pct': round(100 * len(done_days) / len(tasks)) if tasks else 0,
+            'completion_pct': completion_percent(len(done_days), len(tasks)),
+            # closed once every task is complete (reports.open_projects uses the same rule)
+            'is_open': not tasks or len(done_days) < len(tasks),
+            'late_updates': sum(u['late_updates'] for u in units),
+            'late_window_start': window.isoformat(),
             'completed_7d': sum(1 for d in done_days if d > week_ago),
             'completed_prev_7d': sum(1 for d in done_days if two_weeks_ago < d <= week_ago),
             'behind_plan': sum(1 for u in analytics['units'] if (u['duration_over_plan_days'] or 0) > 0),
-            'open_stuck': analytics['kpis']['open_stuck'],
+            # Stuck = status_code 500, the same code every task view shows
+            'open_stuck': sum(u['stuck'] for u in units),
             'completion_date': last_finish['finish'] if last_finish else None,
             'completion_is_projection': bool(last_finish and any(not u['finished'] for u in analytics['units'])),
         },
-        'blockers': sorted((b for b in analytics['blockers'] if b['open']), key=lambda b: -b['days']),
+        'blockers': sorted((b for b in analytics['blockers'] if b['open'] and b['task_id'] in stuck_ids), key=lambda b: -b['days']),
         'recent': [{
             'id': su.id, 'task_id': su.task_id, 'unit_id': su.unit_task.unit_id, 'unit': su.unit_task.unit.name,
             'task': su.unit_task.master_task.name, 'status': su.task_status,

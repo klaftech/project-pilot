@@ -27,7 +27,9 @@ function ReportsContainer() {
     const isAdmin = !!user?.is_admin
     const view = isAdmin && params.get('view') !== 'personal' ? 'portfolio' : 'personal'
     const [weeks, setWeeks] = useState(26)
-    const [selected, setSelected] = useState(null)   // null = all accessible projects
+    const [selected, setSelected] = useState(null)   // null = every project in scope
+    const [includeCompleted, setIncludeCompleted] = useState(false)
+    const [available, setAvailable] = useState(null)  // from the portfolio response: accessible projects + open flag
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -37,23 +39,26 @@ function ReportsContainer() {
         if (!user) return
         const query = new URLSearchParams({ weeks: String(weeks) })
         if (view === 'portfolio' && selected?.length) query.set('project_ids', selected.join(','))
+        if (includeCompleted) query.set('include_completed', '1')
         let cancelled = false
         setLoading(true); setError(null)
         fetch(`/api/reports/${view}?${query}`)
             .then(res => res.ok ? res.json() : res.json().then(d => Promise.reject(d.error || res.status)))
-            .then(d => { if (!cancelled) setData(d) })
+            .then(d => { if (!cancelled) { setData(d); if (d.available_projects) setAvailable(d.available_projects) } })
             .catch(err => { if (!cancelled) setError(typeof err === 'string' ? err : 'Unable to load the report.') })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true }
-    }, [user, view, weeks, selected])
+    }, [user, view, weeks, selected, includeCompleted])
 
     const setView = (next) => {
         setData(null)
         setParams(next === 'personal' ? { view: 'personal' } : {}, { replace: true })
     }
 
+    // completed projects are history: offered only when asked for
+    const chipProjects = (available ?? projects.map(p => ({ ...p, open: true }))).filter(p => includeCompleted || p.open)
     const toggleProject = (id) => {
-        const all = projects.map(p => p.id)
+        const all = chipProjects.map(p => p.id)
         const current = selected ?? all
         const next = current.includes(id) ? current.filter(x => x !== id) : [...current, id]
         setSelected(next.length === all.length ? null : next.length ? next : current)
@@ -74,7 +79,7 @@ function ReportsContainer() {
     }
 
     const shown = data && data.scope === view ? data : null
-    const activeIds = selected ?? projects.map(p => p.id)
+    const activeIds = selected ?? chipProjects.map(p => p.id)
     const firstName = user?.first_name?.trim()
     const title = view === 'portfolio' ? 'Portfolio report' : `${firstName ? `${firstName}'s` : 'My'} activity report`
 
@@ -86,7 +91,7 @@ function ReportsContainer() {
                         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#2a78d6' }}>Reports</p>
                         <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            {shown ? `${fmtPeriod(shown.period)} · compared with the ${shown.period.weeks} weeks before` : 'Loading…'}
+                            {shown ? `${includeCompleted ? 'All projects' : 'Open projects'} · ${fmtPeriod(shown.period)} · compared with the same projects' previous ${shown.period.weeks} weeks` : 'Loading…'}
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 print:hidden">
@@ -110,19 +115,24 @@ function ReportsContainer() {
                             options={[{ value: 'portfolio', label: 'Portfolio' }, { value: 'personal', label: 'My activity' }]} />
                     )}
                     <Segmented label="Period" value={weeks} onChange={setWeeks} options={PERIODS} />
-                    {view === 'portfolio' && projects.length > 1 && (
+                    {view === 'portfolio' && chipProjects.length > 1 && (
                         <div className="flex flex-wrap gap-2">
-                            {projects.map(p => {
+                            {chipProjects.map(p => {
                                 const on = activeIds.includes(p.id)
                                 return (
                                     <button key={p.id} type="button" aria-pressed={on} onClick={() => toggleProject(p.id)}
                                         className={`rounded-full border px-3 py-1 text-sm ${on ? 'border-foreground bg-foreground text-background' : 'bg-white text-muted-foreground'}`}>
-                                        {p.name}
+                                        {p.name}{!p.open && ' (completed)'}
                                     </button>
                                 )
                             })}
                         </div>
                     )}
+                    <label className="inline-flex items-center gap-2 text-sm">
+                        <input type="checkbox" className="size-4 accent-foreground" checked={includeCompleted}
+                            onChange={e => { setSelected(null); setIncludeCompleted(e.target.checked) }} />
+                        Include completed projects
+                    </label>
                 </div>
 
                 {error && <ShowAlert message={error} />}

@@ -68,6 +68,13 @@ pipenv run python server/app.py                      # API on :5555; Vite dev se
   | 500 | stuck |
 
   Allowed transitions are in `rest/updates.py::validate_status_change`. A completion goes through `update_unit_task()`, which also clamps `started_date` so it's never after `complete_date`.
+- **Task status is the stored `status_code`** (set by `UnitTask.set_status_code()`). Read it; never re-derive it from `started_status` / `progress`. The Overview and wall display color cells by it in the original Overview colors: Completed green, Pending yellow, In Progress blue, Stuck red, Scheduled uncolored (`client/src/pages/Overview/overview-format.js`).
+- **Two status-update rules, for two audiences** (`server/helpers.py`):
+  - **Update due** (`update_due`, the Home rule): a started, unfinished task with no update since this week's Monday. This is what field staff are asked for. Used by the Home pending list (`rest/unit_tasks.py`, same condition), the personal report and the personal weekly email.
+  - **Update late** (`update_late`, the executive rule): an update only counts as missed once a full week has passed since it was due. A Pending / In Progress / Stuck task is late when its latest update is no newer than the cutoff: the Sunday before last, at the current time of day. This is the original Overview red-triangle rule; its client helpers were named `getPreviousPreviousMonday()` but counted from `getDay()` (0 = Sunday). A task that became ready after the cutoff and has no update yet isn't late. Used by the Overview grid, the wall display, the portfolio report and the admin weekly email.
+- **Stuck** means `status_code` 500 everywhere, including counts of open blockers.
+- **Completion %** rounds down (`helpers.completion_percent`), like Project and Unit stats.
+- **Open projects:** a project is closed once it has tasks and all are complete (`reports.open_projects`; overview `summary.is_open`). Reports, weekly emails and the wall display cover open projects only, with an opt-in for completed ones. Analytics deliberately keeps completed projects as history.
 - **Latest update:** use `latest_updates_by_task(ids)` for lists (one query). Ties on timestamp resolve to the highest id, the same rule the `UnitTask.latest_update` property uses.
 
 ## Authorization

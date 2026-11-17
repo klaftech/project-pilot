@@ -10,7 +10,7 @@ from config import app, db
 from helpers import utc_now, utc_today
 from mailer import send_email, mailgun_configured
 from models import User, ReportDelivery
-from reports import build_portfolio_report, build_personal_report
+from reports import build_portfolio_report, build_personal_report, open_projects
 from report_email import render_portfolio_email, render_personal_email
 from rest.auth import allowed_projects, current_user_is_admin, projects_for_user, reset_base_url
 
@@ -40,7 +40,9 @@ def get_portfolio_report():
     if weeks is None:
         return make_response({"error": f"weeks must be one of {', '.join(map(str, ALLOWED_WEEKS))}"}, 422)
 
-    projects = allowed_projects()
+    accessible = allowed_projects()
+    open_ids = {p.id for p in open_projects(accessible)}
+    projects = accessible
     requested = request.args.get("project_ids")
     if requested:
         try:
@@ -48,10 +50,16 @@ def get_portfolio_report():
         except ValueError:
             return make_response({"error": "project_ids must be a comma-separated list of ids"}, 422)
         projects = [p for p in projects if p.id in wanted]
+    # completed projects are history: they're left out unless asked for
+    if request.args.get("include_completed") != "1":
+        projects = [p for p in projects if p.id in open_ids]
     if not projects:
-        return make_response({"error": "No accessible projects selected"}, 422)
+        return make_response({"error": "No open projects selected"}, 422)
 
-    return make_response(build_portfolio_report(projects, weeks), 200)
+    report = build_portfolio_report(projects, weeks)
+    # for the page's project chips: every accessible project and whether it's still open
+    report['available_projects'] = [{'id': p.id, 'name': p.name, 'open': p.id in open_ids} for p in accessible]
+    return make_response(report, 200)
 
 
 # the signed-in user's own activity, limited to projects they can access
@@ -60,13 +68,16 @@ def get_personal_report():
     weeks = _weeks()
     if weeks is None:
         return make_response({"error": f"weeks must be one of {', '.join(map(str, ALLOWED_WEEKS))}"}, 422)
-    return make_response(build_personal_report(_current_user(), allowed_projects(), weeks), 200)
+    projects = allowed_projects()
+    if request.args.get("include_completed") != "1":
+        projects = open_projects(projects)
+    return make_response(build_personal_report(_current_user(), projects, weeks), 200)
 
 
 def _render_for(user, period_end, portfolio_cache):
     """(scope, subject, text, html) for a user's weekly summary, or None when there's nothing worth sending."""
     base_url = reset_base_url()
-    projects = projects_for_user(user)
+    projects = open_projects(projects_for_user(user))
     if not projects:
         return None
     if user.is_admin:

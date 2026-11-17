@@ -112,9 +112,9 @@ def render_portfolio_email(week, trend, base_url):
         ('Tasks completed', k['tasks_completed'], _delta(k['tasks_completed'], k['tasks_completed_prev'])),
         ('Status updates', k['updates'], _delta(k['updates'], k['updates_prev'])),
         ('Units delivered', k['units_delivered'], _delta(k['units_delivered'], k['units_delivered_prev'])),
-        ('Open blockers', k['open_stuck'], f'<span style="color:{MUTED}">{k["stale_tasks"]} tasks quiet {k["stale_days"]}+ days</span>'),
+        ('Open blockers', k['open_stuck'], f'<span style="color:{MUTED}">{k["late_updates"]} late updates</span>'),
     ])
-    body += _section(f"Portfolio {k['completion_pct']}% complete")
+    body += _section(f"Open projects {k['completion_pct']}% complete")
     body += _meter(k['completion_pct'])
     body += (f'<div style="font-size:12px;color:{INK_2};margin-top:6px">{k["units_finished"]} of {k["units"]} units finished · '
              f'{k["units_in_progress"]} in progress · {k["units_not_started"]} not started</div>')
@@ -145,7 +145,7 @@ def render_portfolio_email(week, trend, base_url):
             f"Status updates: {k['updates']} (last week {k['updates_prev']})\n"
             f"Units delivered: {k['units_delivered']}\n"
             f"Open blockers: {k['open_stuck']}\n"
-            f"Portfolio: {k['completion_pct']}% complete, {k['units_finished']} of {k['units']} units finished\n\n"
+            f"Open projects: {k['completion_pct']}% complete, {k['units_finished']} of {k['units']} units finished\n\n"
             + ''.join(f"- {p['name']}: {p['completion_pct']}% complete, {p['tasks_completed']} done this week\n" for p in week['project_scorecard'])
             + f"\nFull report: {base_url}/reports\nTurn this email off on your profile: {base_url}/profile\n")
     html = _wrap('Weekly portfolio report', label, body, base_url)

@@ -95,7 +95,7 @@ export default function PersonalReport({ data }) {
                 <StatTile label="Days active" value={fmt(k.active_days)}
                     detail={<Delta now={k.active_days} prev={k.active_days_prev} weeks={w} />} />
                 <StatTile label="Waiting for an update" value={fmt(k.awaiting)}
-                    detail={<span className="text-xs text-muted-foreground">started tasks in your projects with nothing since Monday</span>} />
+                    detail={<span className="text-xs text-muted-foreground">started tasks in your projects with no update since {fmtDay(data.due_since)}</span>} />
             </div>
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -104,7 +104,7 @@ export default function PersonalReport({ data }) {
             </div>
 
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                <Card title="Waiting for an update" subtitle="Longest-quiet first. Open a task to post its status.">
+                <Card title="Waiting for an update" subtitle={`No update since ${fmtDay(data.due_since)}, longest first. Open a task to post its status.`}>
                     {data.awaiting.length === 0 ? <Empty>You&apos;re all caught up.</Empty> : (
                         <ul className="divide-y text-sm">
                             {data.awaiting.map(t => (

@@ -12,6 +12,7 @@ const TasksContainer = lazy(() => import('@/pages/Tasks/TasksContainer'))
 const ListContainer = lazy(() => import('@/pages/List/ListContainer'))
 const ScheduleContainer = lazy(() => import('@/pages/Schedule/ScheduleContainer'))
 const OverviewContainer = lazy(() => import('@/pages/Overview/OverviewContainer'))
+const DisplayContainer = lazy(() => import('@/pages/Overview/DisplayContainer'))
 const AdminContainer = lazy(() => import('@/pages/Admin/AdminContainer'))
 const AnalyticsContainer = lazy(() => import('@/pages/Analytics/AnalyticsContainer'))
 const ReportsContainer = lazy(() => import('@/pages/Reports/ReportsContainer'))
@@ -110,6 +111,7 @@ function App() {
             <Route path="list" element={<ListContainer />} />
             <Route path="schedule" element={<ScheduleContainer />} />
             <Route path="overview" element={<OverviewContainer />} />
+            <Route path="overview/display" element={<DisplayContainer />} />
             <Route path="admin" element={<AdminContainer />} />
             <Route path="analytics" element={<AnalyticsContainer />} />
             <Route path="reports" element={<ReportsContainer />} />

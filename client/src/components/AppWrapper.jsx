@@ -1,12 +1,12 @@
 import Navbar from '@/components/Navbar'
 import { Analytics } from "@vercel/analytics/react"
 
-const AppWrapper = ({ children }) => {
+const AppWrapper = ({ children, fullWidth = false }) => {
     return (
         <>
             <div className="print:hidden"><Navbar /></div>
             <main className="min-h-screen bg-muted/40 print:min-h-0 print:bg-white">
-                <div className="max-w-screen-2xl mx-auto px-4 py-6">
+                <div className={`${fullWidth ? '' : 'max-w-screen-2xl'} mx-auto px-4 py-6`}>
                     {children}
                 </div>
             </main>

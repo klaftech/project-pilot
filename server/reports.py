@@ -7,13 +7,13 @@ from collections import defaultdict
 from datetime import datetime, time, timedelta
 
 from config import db
-from helpers import utc_today, get_previous_monday
+from helpers import utc_now, utc_today, update_due, update_late, late_window_start, get_previous_monday, completion_percent
 from analytics import build_analytics
 from models import Unit, UnitTask, MasterTask, StatusUpdate, User
+from sqlalchemy import func, case
 
 STUCK = 500
 COMPLETED = 200
-STALE_DAYS = 14
 STATUS_LABELS = {1: 'Started', 25: '25%', 50: '50%', 75: '75%', 100: '100%', COMPLETED: 'Completed', STUCK: 'Stuck'}
 
 
@@ -59,12 +59,24 @@ class Period:
 
 
 def _pct(part, whole):
-    return round(100 * part / whole) if whole else 0
+    return completion_percent(part, whole)
+
+
+def open_projects(projects):
+    """Projects still being built: a project is closed once it has tasks and every one of them is complete.
+    The company moves on when a project closes, so reports and the wall display cover open projects only."""
+    ids = [p.id for p in projects]
+    if not ids:
+        return []
+    rows = (db.session.query(Unit.project_id, func.count(UnitTask.id), func.sum(case((UnitTask.complete_status == True, 1), else_=0)))
+            .join(UnitTask, UnitTask.unit_id == Unit.id).filter(Unit.project_id.in_(ids)).group_by(Unit.project_id).all())
+    closed = {pid for pid, total, done in rows if total and done == total}
+    return [p for p in projects if p.id not in closed]
 
 
 def _scope_tasks(project_ids):
     return (db.session.query(UnitTask.id, UnitTask.unit_id, UnitTask.complete_status, UnitTask.complete_date,
-                             UnitTask.complete_user_id, UnitTask.started_status, UnitTask.started_date,
+                             UnitTask.complete_user_id, UnitTask.started_status, UnitTask.started_date, UnitTask.status_code,
                              Unit.project_id, Unit.name.label('unit_name'), MasterTask.name.label('task_name'))
             .join(Unit, Unit.id == UnitTask.unit_id)
             .join(MasterTask, MasterTask.id == UnitTask.task_id)
@@ -86,13 +98,34 @@ def _scope_updates(project_ids, since, user_id=None):
     return query.order_by(StatusUpdate.timestamp, StatusUpdate.id).all()
 
 
-def _latest_update_days(task_ids):
-    """task id -> date of its most recent status update (one query)."""
+def _latest_update_at(task_ids):
+    """task id -> timestamp of its most recent status update (one query)."""
     if not task_ids:
         return {}
     rows = (db.session.query(StatusUpdate.task_id, db.func.max(StatusUpdate.timestamp))
             .filter(StatusUpdate.task_id.in_(task_ids)).group_by(StatusUpdate.task_id).all())
-    return {task_id: ts.date() for task_id, ts in rows if ts}
+    return {task_id: ts for task_id, ts in rows if ts}
+
+
+def _flagged(tasks, today, rule):
+    """open tasks flagged by helpers.update_late ('late') or helpers.update_due ('due'), longest without an update
+    first, plus their latest update times"""
+    open_tasks = _open_started(tasks)
+    heard = _latest_update_at([t.id for t in open_tasks])
+    if rule == 'late':
+        # as of the period's last day, at the current time of day (helpers.late_cutoff)
+        now = datetime.combine(today, utc_now().time())
+        flagged = [t for t in open_tasks if update_late(t.status_code, t.started_status, t.started_date, heard.get(t.id), now)]
+    else:
+        flagged = [t for t in open_tasks if update_due(t.started_status, t.complete_status, heard.get(t.id), today)]
+    flagged.sort(key=lambda t: heard.get(t.id) or t.started_date or datetime.min)
+    return flagged, heard
+
+
+def _task_ref(t, heard, project_names):
+    return {'task_id': t.id, 'unit_id': t.unit_id, 'unit': t.unit_name, 'task': t.task_name,
+            'project': project_names[t.project_id],
+            'last_update': heard[t.id].date().isoformat() if t.id in heard else None}
 
 
 def _open_started(tasks):
@@ -143,12 +176,8 @@ def build_portfolio_report(projects, weeks, today=None):
     updates_now = [u for u in updates if period.in_period(u.timestamp.date())]
     updates_prev = [u for u in updates if period.in_previous(u.timestamp.date())]
 
-    # ---- staleness: started, not complete, nothing heard for STALE_DAYS ----
-    open_tasks = _open_started(tasks)
-    last_heard = _latest_update_days([t.id for t in open_tasks])
-    stale_cutoff = period.today - timedelta(days=STALE_DAYS)
-    stale = [t for t in open_tasks
-             if (last_heard.get(t.id) or (t.started_date.date() if t.started_date else period.today)) < stale_cutoff]
+    # ---- late updates: the executive rule (helpers.update_late) ----
+    late, last_heard = _flagged(tasks, period.today, 'late')
 
     # ---- units ----
     def stage(u):
@@ -157,7 +186,9 @@ def build_portfolio_report(projects, weeks, today=None):
     delivered_now = [u for u in units if u['finished'] and u['finish'] and period.in_period(datetime.fromisoformat(u['finish']).date())]
     delivered_prev = [u for u in units if u['finished'] and u['finish'] and period.in_previous(datetime.fromisoformat(u['finish']).date())]
     behind = [u for u in units if u['duration_over_plan_days'] is not None and u['duration_over_plan_days'] > 0]
-    open_blockers = [b for b in analytics['blockers'] if b['open']]
+    # Stuck = status_code 500, the same code every task view shows; the analytics episode adds days and the note
+    stuck_ids = {t.id for t in tasks if t.status_code == STUCK and not t.complete_status}
+    open_blockers = [b for b in analytics['blockers'] if b['open'] and b['task_id'] in stuck_ids]
 
     # ---- per project scorecard ----
     tasks_by_project = defaultdict(list)
@@ -180,7 +211,7 @@ def build_portfolio_report(projects, weeks, today=None):
             'tasks_completed_prev': sum(1 for t in p_tasks if done_in(t, period.in_previous)),
             'behind_plan': sum(1 for u in behind if u['project_id'] == p.id),
             'open_stuck': sum(1 for b in open_blockers if b['project'] == p.name),
-            'stale': sum(1 for t in stale if t.project_id == p.id),
+            'late_updates': sum(1 for t in late if t.project_id == p.id),
             'completion_date': last['finish'] if last else None,
             'completion_is_projection': bool(last and any(not u['finished'] for u in p_units)),
         })
@@ -252,8 +283,8 @@ def build_portfolio_report(projects, weeks, today=None):
             'units_measured': sum(1 for u in units if u['duration_over_plan_days'] is not None),
             'median_over_plan_days': analytics['kpis']['median_unit_over_plan_days'],
             'open_stuck': len(open_blockers),
-            'stale_tasks': len(stale),
-            'stale_days': STALE_DAYS,
+            'late_updates': len(late),
+            'late_window_start': late_window_start(datetime.combine(period.today, utc_now().time())).isoformat(),
         },
         'series': series,
         'project_scorecard': projects_out,
@@ -263,10 +294,7 @@ def build_portfolio_report(projects, weeks, today=None):
         'attention': {
             'blockers': sorted(open_blockers, key=lambda b: -b['days'])[:8],
             'behind_units': sorted((u for u in behind if not u['finished']), key=lambda u: -u['duration_over_plan_days'])[:6],
-            'stale_tasks': [{'task_id': t.id, 'unit_id': t.unit_id, 'unit': t.unit_name, 'task': t.task_name,
-                             'project': project_names[t.project_id],
-                             'last_update': last_heard[t.id].isoformat() if t.id in last_heard else None}
-                            for t in sorted(stale, key=lambda t: last_heard.get(t.id) or period.today)[:8]],
+            'late_updates': [_task_ref(t, last_heard, project_names) for t in late[:8]],
         },
     }
 
@@ -300,12 +328,8 @@ def build_personal_report(user, projects, weeks, today=None):
     for u in mine_now:
         status_mix[_status_group(u.task_status)] += 1
 
-    # same rule as the Home page's "pending update" list: started, open, nothing since the previous Monday
-    previous_monday = get_previous_monday()
-    open_tasks = _open_started(tasks)
-    last_heard = _latest_update_days([t.id for t in open_tasks])
-    awaiting = sorted((t for t in open_tasks if (last_heard.get(t.id) is None or last_heard[t.id] < previous_monday)),
-                      key=lambda t: last_heard.get(t.id) or (t.started_date.date() if t.started_date else period.today))
+    # due updates: the Home rule (helpers.update_due), what field staff are asked for
+    awaiting, last_heard = _flagged(tasks, period.today, 'due')
 
     tasks_by_project = defaultdict(list)
     for t in tasks:
@@ -345,9 +369,7 @@ def build_personal_report(user, projects, weeks, today=None):
         'series': series,
         'status_mix': [{'status': k, 'count': status_mix.get(k, 0)} for k in ('Completed', 'Progress', 'Stuck')],
         'projects': projects_out,
-        'awaiting': [{'task_id': t.id, 'unit_id': t.unit_id, 'unit': t.unit_name, 'task': t.task_name,
-                      'project': project_names[t.project_id],
-                      'last_update': last_heard[t.id].isoformat() if t.id in last_heard else None}
-                     for t in awaiting[:10]],
+        'awaiting': [_task_ref(t, last_heard, project_names) for t in awaiting[:10]],
+        'due_since': get_previous_monday(period.today).isoformat(),
         'recent': [_update_row(u, project_names) for u in reversed(recent)],
     }
