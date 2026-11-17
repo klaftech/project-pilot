@@ -17,7 +17,7 @@ export const cellLabel = (code) => getReadableStatus(code)
 export const cellStyle = (task) => CELL[task.status_code] ?? CELL[300]
 
 // pills, in the original badge colors (Tailwind green-500 / red-500 / blue-500 / amber-400)
-export const PILL = { good: '#22c55e', bad: '#ef4444', info: '#3b82f6', check: '#fbbf24' }
+export const PILL = { good: '#22c55e', bad: '#ef4444', info: '#3b82f6', check: '#fbbf24', unknown: '#a8a29e' }
 export const updatePillColor = (status) => (status === 200 ? PILL.good : status === 500 ? PILL.bad : PILL.info)
 
 export const daysSince = (timestamp) => {

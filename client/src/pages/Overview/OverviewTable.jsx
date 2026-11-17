@@ -1,11 +1,12 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { AlertOctagon, Download, MonitorPlay, Search, TriangleAlert } from 'lucide-react'
+import { AlertOctagon, ChevronDown, Download, MonitorPlay, Search, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 
 import LoadingWrapper from '@/components/LoadingWrapper'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu'
 import UserContext from '@/context/UserContext'
 import ProjectsContext from '@/context/ProjectsContext'
 import { useUpdateUser } from '@/hooks/useUpdateUser'
@@ -31,6 +32,9 @@ const SORTS = {
     progress: { label: 'Most complete', fn: (a, b) => b.stats.completion.percent - a.stats.completion.percent },
 }
 const PREFS_KEY = 'overview-grid-prefs'
+// pinned columns (unit 12 + completion 7 + length 5) and each task column, in rem
+const PINNED_REM = 24
+const TASK_COL_REM = 5.5
 
 const readPrefs = () => {
     try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {} } catch { return {} }
@@ -98,6 +102,7 @@ function Legend() {
             <span className="inline-flex items-center gap-1.5"><Pill color={PILL.info}>50%</Pill>latest update, if recent</span>
             <span className="inline-flex items-center gap-1.5"><Pill color={PILL.bad}><TriangleAlert className="size-3" aria-hidden /></Pill>update late: none for a full week after it was due</span>
             <span className="inline-flex items-center gap-1.5"><Pill large color={PILL.good}>4 days</Pill><Pill large color={PILL.bad}>21 days</Pill>task length: within plan / over plan (counted from when the prerequisites were done)</span>
+            <span className="inline-flex items-center gap-1.5"><Pill large color={PILL.unknown}>same day</Pill>completed the day its prerequisites were: recorded together, length unknown</span>
         </div>
     )
 }
@@ -110,17 +115,71 @@ function Cell({ task, onOpen }) {
         <td className="p-0.5">
             <button type="button" onClick={() => onOpen(task)}
                 title={`${task.master_task.name} · ${cellLabel(task.status_code)}${days != null ? ` · ${days} of ${timing.planned_days} planned days` : ''}${task.update_late ? ' · update late' : ''}`}
-                className="flex h-11 w-full min-w-[4.5rem] flex-col items-center justify-center gap-0.5 rounded border border-black/5 outline-offset-1 hover:brightness-95 focus-visible:outline focus-visible:outline-2"
+                className="flex h-11 w-full flex-col items-center justify-center gap-0.5 rounded border border-black/5 outline-offset-1 hover:brightness-95 focus-visible:outline focus-visible:outline-2"
                 style={{ background: style.bg }}>
                 <span className="flex gap-0.5">
                     {task.recent_update != null && <Pill color={updatePillColor(task.recent_update)}>{cellLabel(task.recent_update)}</Pill>}
                     {task.update_late && <Pill color={PILL.bad} title="Update late"><TriangleAlert className="size-3" aria-label="update late" /></Pill>}
                 </span>
-                {timing?.order_issue
+                {task.status_code === 300 ? null : timing?.order_issue
                     ? <Pill large color={PILL.check} dark title="Recorded complete before its prerequisites">check dates</Pill>
-                    : days != null && <Pill large color={days <= timing.planned_days ? PILL.good : PILL.bad} title={`${days} of ${timing.planned_days} planned days`}>{days} {days === 1 ? 'day' : 'days'}</Pill>}
+                    // completed the same day as its prerequisites: almost always entered together after the fact,
+                    // so the real length is unknown rather than zero
+                    : days === 0 && task.complete_status
+                        ? <Pill large color={PILL.unknown} title="Completed the same day its prerequisites were; likely recorded together, so the real length is unknown">same day</Pill>
+                        : days != null && <Pill large color={days <= timing.planned_days ? PILL.good : PILL.bad} title={`${days} of ${timing.planned_days} planned days`}>{days} {days === 1 ? 'day' : 'days'}</Pill>}
             </button>
         </td>
+    )
+}
+
+// the task's history, newest first: prerequisites done, every status update with its author and note, completion
+function Timeline({ task }) {
+    const [updates, setUpdates] = useState(null)
+    const [error, setError] = useState(false)
+    useEffect(() => {
+        let cancelled = false
+        setUpdates(null); setError(false)
+        fetch(`/api/updates?task_id=${task.id}`)
+            .then(res => res.ok ? res.json() : Promise.reject(res.status))
+            .then(data => { if (!cancelled) setUpdates(data) })
+            .catch(() => { if (!cancelled) setError(true) })
+        return () => { cancelled = true }
+    }, [task.id])
+
+    if (error) return <p className="text-sm text-muted-foreground">Couldn&apos;t load this task&apos;s history.</p>
+    if (!updates) return <p className="text-sm text-muted-foreground">Loading history…</p>
+
+    const at = (ts) => Date.parse(ts.replace(' ', 'T') + (ts.length <= 10 ? 'T00:00:00Z' : 'Z'))
+    const events = updates.map(u => ({
+        key: `u${u.id}`, when: u.timestamp, title: cellLabel(u.task_status), color: updatePillColor(u.task_status),
+        who: [u.user?.first_name?.trim(), u.user?.last_name?.trim()].filter(Boolean).join(' '), note: u.message?.trim(),
+        stuck: u.task_status === 500,
+    }))
+    if (task.timing?.ready) events.push({ key: 'ready', when: task.timing.ready, title: 'Prerequisites done', color: '#a8a29e' })
+    // a completion recorded without a matching "Completed" update (e.g. marked complete from a task list)
+    if (task.complete_status && task.complete_date && !updates.some(u => u.task_status === 200)) {
+        events.push({ key: 'done', when: task.complete_date, title: 'Completed', color: PILL.good, note: task.complete_comment?.trim() })
+    }
+    events.sort((a, b) => at(b.when) - at(a.when))
+
+    if (!events.length) return <p className="text-sm text-muted-foreground">No history yet: the task hasn&apos;t started and has no updates.</p>
+    return (
+        <ol className="relative ml-1.5 space-y-4 border-l pl-5">
+            {events.map(e => (
+                <li key={e.key} className="relative">
+                    <span className="absolute -left-[26px] top-1 size-2.5 rounded-full ring-2 ring-white" style={{ background: e.color }} />
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                        <span className="inline-flex items-center gap-1 font-medium">
+                            {e.stuck && <AlertOctagon className="size-3.5" style={{ color: PILL.bad }} aria-hidden />}{e.title}
+                        </span>
+                        <span className="text-xs tabular-nums text-muted-foreground">{e.when.length <= 10 ? fmtDate(e.when) : fmtTimestamp(e.when)}</span>
+                    </div>
+                    {e.who && <p className="text-xs text-muted-foreground">by {e.who}</p>}
+                    {e.note && <p className="mt-1 whitespace-pre-line rounded-md bg-muted/60 px-2.5 py-1.5 text-sm">{e.note}</p>}
+                </li>
+            ))}
+        </ol>
     )
 }
 
@@ -149,12 +208,18 @@ function TaskDrawer({ selection, onClose, onPostUpdate }) {
                             <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                                 <div><dt className="text-xs text-muted-foreground">Prerequisites done</dt><dd>{t?.ready ? fmtDate(t.ready) : 'not yet'}</dd></div>
                                 <div><dt className="text-xs text-muted-foreground">Completed</dt><dd>{task.complete_status && task.complete_date ? fmtTimestamp(task.complete_date) : '—'}</dd></div>
-                                <div><dt className="text-xs text-muted-foreground">Days taken</dt><dd>{t?.order_issue ? 'unknown' : t?.elapsed_days ?? '—'}</dd></div>
+                                <div><dt className="text-xs text-muted-foreground">Days taken</dt><dd>{task.status_code === 300 ? 'not started' : t?.order_issue ? 'unknown' : t?.elapsed_days ?? '—'}</dd></div>
                                 <div><dt className="text-xs text-muted-foreground">Planned days</dt><dd>{task.master_task.days_length}</dd></div>
-                                <div><dt className="text-xs text-muted-foreground">Over plan</dt><dd style={{ color: t?.excess_days > 0 ? C.critical : undefined }}>{t?.excess_days > 0 ? `+${t.excess_days} days` : t?.elapsed_days != null ? 'no' : '—'}</dd></div>
+                                <div><dt className="text-xs text-muted-foreground">{task.status_code === 300 ? 'Waiting to start' : 'Over plan'}</dt>{task.status_code === 300
+                                    ? <dd>{t?.ready ? `${t.elapsed_days} days since prerequisites` : '—'}</dd>
+                                    : <dd style={{ color: t?.excess_days > 0 ? C.critical : undefined }}>{t?.excess_days > 0 ? `+${t.excess_days} days` : t?.elapsed_days != null ? 'no' : '—'}</dd>}</div>
                                 <div><dt className="text-xs text-muted-foreground">Latest update</dt><dd>{task.latest_update ? `${getReadableStatus(task.latest_update.status)} · ${fmtAgo(task.latest_update.timestamp)}` : 'none'}</dd></div>
                             </dl>
                             {t?.order_issue && <p className="text-xs text-muted-foreground">This task was recorded complete before its prerequisites, so its duration isn&apos;t counted.</p>}
+                            <section>
+                                <h3 className="mb-3 text-sm font-semibold">Timeline &amp; notes</h3>
+                                <Timeline key={task.id} task={task} />
+                            </section>
                             <div className="rounded-lg border p-3">
                                 <p className="text-xs text-muted-foreground">Unit</p>
                                 <p className="mt-0.5">{unit.stats.completion.percent}% complete · {overLabel(unit.schedule.over_plan_days)} vs plan</p>
@@ -186,7 +251,6 @@ function UnitCard({ unit, onOpen }) {
                 <span className="text-sm tabular-nums text-muted-foreground">{unit.stats.completion.percent}% · {unit.stats.counts.count_completed}/{unit.stats.counts.count_tasks} · {unit.stats.completion.months} mo</span>
             </div>
             <div className="my-2"><Meter pct={unit.stats.completion.percent} label={`${unit.name} completion`} /></div>
-            <p className="text-sm">{overLabel(unit.schedule.over_plan_days)} vs plan{unit.schedule.finish ? ` · ${unit.schedule.finish_is_projection ? 'projected' : 'finished'} ${fmtDate(unit.schedule.finish)}` : ''}</p>
             {openTasks.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                     {openTasks.map(t => (
@@ -265,13 +329,21 @@ function OverviewTable() {
     return (
         <div className={`min-w-0 space-y-4 ${loading ? 'opacity-70' : ''}`}>
             <header className="flex flex-wrap items-end justify-between gap-3">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: C.series }}>Overview</p>
                     {projects.length > 1 ? (
-                        <select aria-label="Project" value={user.selectedProject ?? ''} onChange={e => updateUser({ selectedProject: Number(e.target.value) })}
-                            className="mt-1 max-w-full rounded-md bg-transparent text-2xl font-semibold tracking-tight md:text-3xl">
-                            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger aria-label="Switch project"
+                                className="-ml-2 mt-0.5 inline-flex max-w-full items-center gap-2 rounded-lg px-2 py-0.5 text-left text-2xl font-semibold tracking-tight outline-none hover:bg-muted focus-visible:bg-muted data-[state=open]:bg-muted md:text-3xl">
+                                <span className="truncate">{project.name}</span>
+                                <ChevronDown className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="min-w-64">
+                                <DropdownMenuRadioGroup value={String(user.selectedProject ?? '')} onValueChange={v => updateUser({ selectedProject: Number(v) })}>
+                                    {projects.map(p => <DropdownMenuRadioItem key={p.id} value={String(p.id)} className="py-2 text-sm">{p.name}</DropdownMenuRadioItem>)}
+                                </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     ) : <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">{project.name}</h1>}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -315,11 +387,12 @@ function OverviewTable() {
                     </div>
 
                     <div className="hidden max-h-[calc(100vh-11rem)] overflow-auto rounded-xl border bg-white md:block">
-                        <table className="border-separate text-sm" style={{ borderSpacing: 0 }}>
+                        {/* fixed layout: columns keep their declared widths, so the pinned columns line up with their offsets */}
+                        <table className="table-fixed border-separate text-sm" style={{ borderSpacing: 0, width: `${PINNED_REM + view.columns.length * TASK_COL_REM}rem` }}>
                             <thead>
                                 {view.grouped && (
                                     <tr className="text-xs text-muted-foreground">
-                                        <th colSpan={5} className="sticky left-0 top-0 z-30 bg-white" />
+                                        <th colSpan={3} className="sticky left-0 top-0 z-30 bg-white" />
                                         {view.columns.reduce((acc, c) => {
                                             const last = acc[acc.length - 1]
                                             if (last && last.group === c.group) last.span++
@@ -331,12 +404,10 @@ function OverviewTable() {
                                 <tr className="text-left align-bottom text-xs text-muted-foreground">
                                     <th className="sticky left-0 top-0 z-30 w-48 min-w-48 border-b bg-white px-3 py-2 font-medium">Unit</th>
                                     <th className="sticky left-48 top-0 z-30 w-28 min-w-28 border-b bg-white px-2 py-2 font-medium">Completion</th>
-                                    <th className="sticky left-[19rem] top-0 z-30 w-20 min-w-20 border-b bg-white px-2 py-2 font-medium" title="Time since the unit's first task started (to its last completion once finished)">Length</th>
-                                    <th className="sticky left-[24rem] top-0 z-30 w-20 min-w-20 border-b bg-white px-2 py-2 font-medium">Vs plan</th>
-                                    <th className="sticky left-[29rem] top-0 z-30 w-28 min-w-28 border-b border-r bg-white px-2 py-2 font-medium">Finish</th>
+                                    <th className="sticky left-[19rem] top-0 z-30 w-20 min-w-20 border-b border-r bg-white px-2 py-2 font-medium" title="Time since the unit's first task started (to its last completion once finished)">Length</th>
                                     {view.columns.map(c => (
-                                        <th key={c.id} className="sticky top-0 z-20 w-16 min-w-16 border-b bg-white px-1 py-2 font-medium leading-tight" title={`${c.name} · ${c.days_length} planned days`}>
-                                            <span className="line-clamp-3">{c.name}</span>
+                                        <th key={c.id} className="sticky top-0 z-20 w-[5.5rem] border-b bg-white px-1 py-2 font-medium leading-tight" title={`${c.name} · ${c.days_length} planned days`}>
+                                            <span className="line-clamp-2 break-words">{c.name}</span>
                                         </th>
                                     ))}
                                 </tr>
@@ -346,7 +417,7 @@ function OverviewTable() {
                                     const byColumn = new Map(u.tasks.map(t => [t.master_task.id, t]))
                                     return (
                                         <tr key={u.id} className="group">
-                                            <td className="sticky left-0 z-10 border-b bg-white px-3 py-1 group-hover:bg-muted">
+                                            <td className="sticky left-0 z-10 overflow-hidden border-b bg-white px-3 py-1 group-hover:bg-muted">
                                                 <Link to={`/unit/${u.id}`} className="font-medium hover:underline">{u.name}</Link>
                                                 <p className="truncate text-xs text-muted-foreground" title={u.current.join(', ')}>
                                                     {u.stuck > 0 && <AlertOctagon className="mr-1 inline size-3" style={{ color: C.critical }} aria-label="stuck" />}
@@ -357,14 +428,7 @@ function OverviewTable() {
                                                 <div className="flex justify-between tabular-nums"><span>{u.stats.completion.percent}%</span><span className="text-muted-foreground">{u.stats.counts.count_completed}/{u.stats.counts.count_tasks}</span></div>
                                                 <div className="mt-1"><Meter pct={u.stats.completion.percent} label={`${u.name} completion`} /></div>
                                             </td>
-                                            <td className="sticky left-[19rem] z-10 whitespace-nowrap border-b bg-white px-2 tabular-nums group-hover:bg-muted">{u.stats.completion.months} mo</td>
-                                            <td className="sticky left-[24rem] z-10 border-b bg-white px-2 tabular-nums group-hover:bg-muted" style={{ color: (u.schedule.over_plan_days ?? 0) > 0 ? C.critical : undefined }}>
-                                                {overLabel(u.schedule.over_plan_days)}
-                                            </td>
-                                            <td className="sticky left-[29rem] z-10 border-b border-r bg-white px-2 tabular-nums group-hover:bg-muted">
-                                                {u.schedule.finish ? fmtDate(u.schedule.finish) : '—'}
-                                                <div className="text-xs text-muted-foreground">{u.schedule.finish ? (u.schedule.finish_is_projection ? 'projected' : 'finished') : ''}</div>
-                                            </td>
+                                            <td className="sticky left-[19rem] z-10 whitespace-nowrap border-b border-r bg-white px-2 tabular-nums group-hover:bg-muted">{u.stats.completion.months} mo</td>
                                             {view.columns.map(c => {
                                                 const task = byColumn.get(c.id)
                                                 return task ? <Cell key={c.id} task={task} onOpen={(t) => openTask(t, u)} /> : <td key={c.id} className="border-b" />

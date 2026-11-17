@@ -106,6 +106,7 @@ def get_project_overview(project_id):
             else:
                 row = task.to_dict(only=fields)
                 row['latest_update'] = heard
+                row['complete_comment'] = task.complete_comment   # shown in the task panel's timeline
             # the Overview's update pills (executive rule, helpers.update_late): an update inside the late window
             # shows its status; a late one shows the warning
             row['update_late'] = update_late(task.status_code, task.started_status, task.started_date, heard_at, now)

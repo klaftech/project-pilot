@@ -5,7 +5,7 @@ import { AlertOctagon, Maximize, Pause, TriangleAlert, WifiOff } from 'lucide-re
 import Logo from '/logo_transparent.png'
 import { getReadableStatus } from '@/utils/status_codes'
 import { C, fmt, fmtDate } from '@/pages/Reports/report-format'
-import { CELL, CELL_ORDER, cellLabel, fmtAgo, overLabel } from '@/pages/Overview/overview-format'
+import { CELL, CELL_ORDER, cellLabel, fmtAgo } from '@/pages/Overview/overview-format'
 
 // Wall display for the executive office: full screen, no navigation, rotates through a portfolio slide and each
 // active project, refreshes itself. Query options: ?seconds=30 (per slide), ?projects=24,26, ?all=1 (include
@@ -150,7 +150,7 @@ function PortfolioSlide({ overviews }) {
 function ProjectSlide({ overview, units, page, pages }) {
     const s = overview.summary
     const columns = overview.columns
-    const template = `minmax(10rem, 13rem) 4.5rem 5rem repeat(${columns.length}, minmax(0, 1fr)) 6rem minmax(10rem, 16rem)`
+    const template = `minmax(10rem, 13rem) 4.5rem 5rem repeat(${columns.length}, minmax(0, 1fr)) minmax(10rem, 16rem)`
     return (
         <div className="flex h-full flex-col gap-4">
             <div className="flex items-end justify-between gap-6">
@@ -177,13 +177,11 @@ function ProjectSlide({ overview, units, page, pages }) {
                             <span className="truncate text-sm leading-none text-[#52514e]" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', maxHeight: '8.5rem' }}>{c.name}</span>
                         </div>
                     ))}
-                    <div className="pb-1 pl-2 text-base text-[#52514e]">Vs plan</div>
                     <div className="pb-1 pl-2 text-base text-[#52514e]">Now</div>
                 </div>
                 <div className="mt-1 grid gap-[2px]" style={{ gridTemplateColumns: template, gridAutoRows: '1.9rem' }}>
                     {units.map(u => {
                         const byColumn = new Map(u.tasks.map(t => [t.column, t]))
-                        const over = u.schedule.over_plan_days
                         return [
                             <div key={`${u.id}-n`} className="flex items-center truncate pr-2 text-lg font-medium">{u.name}</div>,
                             <div key={`${u.id}-p`} className="flex items-center text-lg font-semibold tabular-nums">{u.stats.completion.percent}%</div>,
@@ -198,7 +196,6 @@ function ProjectSlide({ overview, units, page, pages }) {
                                     </div>
                                 )
                             }),
-                            <div key={`${u.id}-o`} className="flex items-center pl-2 text-lg font-semibold tabular-nums" style={{ color: (over ?? 0) > 0 ? C.critical : C.ink }}>{overLabel(over)}</div>,
                             <div key={`${u.id}-c`} className="flex items-center truncate pl-2 text-base text-[#52514e]">{u.current.join(', ') || (u.next ? `Next: ${u.next}` : '')}</div>,
                         ]
                     })}
